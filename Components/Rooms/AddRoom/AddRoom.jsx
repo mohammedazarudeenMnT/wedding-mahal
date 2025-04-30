@@ -7,7 +7,7 @@ import Image from "next/image";
 import { FaUpload } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { amenityIcons } from "../../../utils/amenityIcons";
-import { Select, SelectItem } from "@nextui-org/react";
+import { Select, SelectItem } from "@heroui/select";
 import { MdFreeBreakfast, MdLunchDining, MdDinnerDining } from "react-icons/md";
 import { GiCakeSlice } from "react-icons/gi";
 
@@ -103,6 +103,34 @@ const facilities = [
   name: item.name,
 }));
 
+const typeOptions = [
+  { label: "Room", value: "Room" },
+  { label: "Hall", value: "Hall" },
+];
+
+const complementaryFoodOptions = [
+  {
+    label: "Breakfast",
+    value: "Breakfast",
+    icon: <MdFreeBreakfast className="text-xl" />,
+  },
+  {
+    label: "Lunch",
+    value: "Lunch",
+    icon: <MdLunchDining className="text-xl" />,
+  },
+  {
+    label: "Dinner",
+    value: "Dinner",
+    icon: <MdDinnerDining className="text-xl" />,
+  },
+  {
+    label: "Snacks",
+    value: "Snacks",
+    icon: <GiCakeSlice className="text-xl" />,
+  },
+];
+
 export default function AddRoomForm({ params = {} }) {
   const hasAddPermission = usePagePermission("rooms", "add");
   const hasEditPermission = usePagePermission("rooms", "edit");
@@ -127,6 +155,7 @@ export default function AddRoomForm({ params = {} }) {
     bedModel: "",
     maxGuests: "",
     amenities: [],
+    type: "Room", // Default value
     complementaryFoods: [],
   });
 
@@ -140,31 +169,9 @@ export default function AddRoomForm({ params = {} }) {
     bedModel: "",
     maxGuests: "",
     amenities: [],
+    type: "Room",
     complementaryFoods: [],
   };
-
-  const complementaryFoodOptions = [
-    {
-      label: "Breakfast",
-      value: "Breakfast",
-      icon: <MdFreeBreakfast className="text-xl" />,
-    },
-    {
-      label: "Lunch",
-      value: "Lunch",
-      icon: <MdLunchDining className="text-xl" />,
-    },
-    {
-      label: "Dinner",
-      value: "Dinner",
-      icon: <MdDinnerDining className="text-xl" />,
-    },
-    {
-      label: "Snacks",
-      value: "Snacks",
-      icon: <GiCakeSlice className="text-xl" />,
-    },
-  ];
 
   useEffect(() => {
     if (isEditMode) {
@@ -185,6 +192,7 @@ export default function AddRoomForm({ params = {} }) {
               bedModel: roomData.bedModel,
               maxGuests: roomData.maxGuests,
               amenities: roomData.amenities.map((a) => `${a.icon}-${a.name}`),
+              type: roomData.type || "Room",
               complementaryFoods: roomData.complementaryFoods || [],
             });
             setNumberOfRooms(roomData.roomNumbers.length);
@@ -321,21 +329,50 @@ export default function AddRoomForm({ params = {} }) {
 
     const submitData = new FormData();
 
-    Object.entries(formData).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((item) => submitData.append(key, item));
-      } else {
-        submitData.append(key, value);
-      }
+    // Handle type first
+    submitData.append("type", formData.type);
+
+    // Common fields
+    submitData.append("name", formData.name);
+    submitData.append("description", formData.description);
+    submitData.append("igst", formData.igst);
+    submitData.append("price", formData.price);
+    submitData.append("size", formData.size);
+
+    if (formData.type === "Hall") {
+      // Hall-specific fields
+      submitData.append("capacity", formData.maxGuests); // Use maxGuests as capacity
+
+      const hallNumbersData = roomNumbers.map((number) => ({
+        number: number.trim(),
+        bookeddates: [],
+      }));
+
+      submitData.append("hallNumbers", JSON.stringify(hallNumbersData));
+      submitData.append("numberOfHalls", numberOfRooms.toString());
+    } else {
+      // Room-specific fields
+      submitData.append("bedModel", formData.bedModel);
+      submitData.append("additionalGuestCosts", formData.additionalGuestCosts);
+      submitData.append("maxGuests", formData.maxGuests);
+
+      const roomNumbersData = roomNumbers.map((number) => ({
+        number: number.trim(),
+        bookeddates: [],
+      }));
+
+      submitData.append("roomNumbers", JSON.stringify(roomNumbersData));
+      submitData.append("numberOfRooms", numberOfRooms.toString());
+
+      formData.complementaryFoods.forEach((food) => {
+        submitData.append("complementaryFoods", food);
+      });
+    }
+
+    // Append common fields
+    formData.amenities.forEach((amenity) => {
+      submitData.append("amenities", amenity);
     });
-
-    const roomNumbersData = filledRoomNumbers.map((number) => ({
-      number: number.trim(),
-      bookeddates: [],
-    }));
-
-    submitData.append("roomNumbers", JSON.stringify(roomNumbersData));
-    submitData.append("numberOfRooms", numberOfRooms.toString());
 
     const mainImageFile = document.getElementById("image-upload").files[0];
     if (mainImageFile) {
@@ -385,13 +422,412 @@ export default function AddRoomForm({ params = {} }) {
   if (!isEditMode && !hasAddPermission) {
     return <div>You don&apos;t have permission to add rooms</div>;
   }
+
+  const renderFormFields = () => {
+    const commonFields = (
+      <>
+        <div className="relative h-64 sm:h-80 lg:h-96 bg-gray-200 mb-4">
+          {/* Image upload section */}
+          {mainImage && (
+            <div className="relative w-full h-full">
+              <Image
+                src={mainImage}
+                alt={`Main ${formData.type} Image`}
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded-lg"
+                priority
+              />
+              <span className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-sm font-bold rounded-br-lg z-10">
+                Main Image
+              </span>
+            </div>
+          )}
+          <label
+            htmlFor="image-upload"
+            className="absolute bottom-2 right-2 bg-white p-2 rounded-full cursor-pointer"
+          >
+            <FaUpload className="text-blue-500" />
+            <input
+              id="image-upload"
+              type="file"
+              className="hidden"
+              onChange={handleImageUpload}
+              accept="image/*"
+              multiple
+            />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {thumbnailImages.map((thumb, index) => (
+            <div key={index} className="relative h-20 bg-gray-200">
+              <Image
+                src={thumb}
+                alt={`Thumbnail ${index + 1}`}
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded-lg"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Type Selection */}
+        <div className="my-4 grid">
+          <label
+            className="block text-sm font-medium text-gray-700"
+            id="type-label"
+          >
+            Type
+          </label>
+          <Select
+            items={typeOptions}
+            variant="bordered"
+            placeholder="Select type"
+            selectedKeys={[formData.type]}
+            onSelectionChange={(keys) => {
+              const selectedType = Array.from(keys)[0];
+              setFormData((prev) => ({ ...prev, type: selectedType }));
+            }}
+            className="max-w-full w-[50%]"
+            aria-labelledby="type-label"
+          >
+            {(item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            )}
+          </Select>
+        </div>
+      </>
+    );
+
+    if (formData.type === "Hall") {
+      return (
+        <>
+          {commonFields}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Hall Size
+              </label>
+              <input
+                type="text"
+                name="size"
+                value={formData.size}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                placeholder="1000 m²"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Capacity
+              </label>
+              <input
+                type="number"
+                name="maxGuests"
+                value={formData.maxGuests}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                placeholder="500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Hall Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                placeholder="Grand Ballroom"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                IGST %
+              </label>
+              <input
+                type="text"
+                name="igst"
+                value={formData.igst}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                placeholder="18"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Price per day
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                placeholder="50000"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Number of Halls
+            </label>
+            <input
+              type="number"
+              value={numberOfRooms}
+              onChange={handleRoomCountChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="1"
+            />
+          </div>
+          <div className="mb-4">
+            <h3 className="font-semibold mb-2">Hall Numbers</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-9 gap-2">
+              {roomNumbers.map((number, index) => (
+                <div key={index} className="relative">
+                  <input
+                    type="text"
+                    value={number}
+                    onChange={(e) =>
+                      handleRoomNumberChange(index, e.target.value)
+                    }
+                    className={`p-2 text-center rounded border w-full ${
+                      number.trim() === ""
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
+                    placeholder={`Hall ${index + 1}`}
+                    required
+                  />
+                  {isEditMode && number && (
+                    <button
+                      onClick={() => handleDeleteRoomNumber(number)}
+                      className="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {commonFields}
+        {/* Existing Room type fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Room Size
+            </label>
+            <input
+              type="text"
+              name="size"
+              value={formData.size}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="35 m²"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Bed Model
+            </label>
+            <input
+              type="text"
+              name="bedModel"
+              value={formData.bedModel}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="King"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Guest
+            </label>
+            <input
+              type="number"
+              name="maxGuests"
+              value={formData.maxGuests}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="2"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Category Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="Deluxe Room"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              IGST %
+            </label>
+            <input
+              type="text"
+              name="igst"
+              value={formData.igst}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="18"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Rent
+            </label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="200"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Additional Guest Cost
+            </label>
+            <input
+              type="number"
+              name="additionalGuestCosts"
+              value={formData.additionalGuestCosts}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border rounded-md shadow-sm p-2"
+              placeholder="2000"
+            />
+          </div>
+        </div>
+        <div className="my-4">
+          <label
+            className="block text-sm font-medium text-gray-700"
+            id="complementary-foods-label"
+          >
+            Complementary Foods
+          </label>
+          <Select
+            items={complementaryFoodOptions}
+            variant="bordered"
+            isMultiple
+            selectionMode="multiple"
+            placeholder="Select complementary foods"
+            selectedKeys={formData.complementaryFoods}
+            onSelectionChange={(keys) => {
+              setFormData((prev) => ({
+                ...prev,
+                complementaryFoods: Array.from(keys),
+              }));
+            }}
+            className="max-w-full"
+            aria-labelledby="complementary-foods-label"
+          >
+            {(item) => (
+              <SelectItem
+                key={item.value}
+                value={item.value}
+                textValue={item.label}
+                startContent={item.icon}
+              >
+                {item.label}
+              </SelectItem>
+            )}
+          </Select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Number of Rooms
+          </label>
+          <input
+            type="number"
+            value={numberOfRooms}
+            onChange={handleRoomCountChange}
+            className="mt-1 block w-full border rounded-md shadow-sm p-2"
+            placeholder="10"
+          />
+        </div>
+        <div className="mb-4">
+          <h3 className="font-semibold mb-2">Room Numbers</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-9 gap-2">
+            {roomNumbers.map((number, index) => (
+              <div key={index} className="relative">
+                <input
+                  type="text"
+                  value={number}
+                  onChange={(e) =>
+                    handleRoomNumberChange(index, e.target.value)
+                  }
+                  className={`p-2 text-center rounded border w-full ${
+                    number.trim() === "" ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder={`Room ${index + 1}`}
+                  required
+                />
+                {isEditMode && number && (
+                  <button
+                    onClick={() => handleDeleteRoomNumber(number)}
+                    className="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-sm">
+            {numberOfRooms > 0 && (
+              <p
+                className={
+                  roomNumbers.filter((n) => n.trim() !== "").length !==
+                  numberOfRooms
+                    ? "text-red-500"
+                    : "text-green-500"
+                }
+              >
+                {`${
+                  roomNumbers.filter((n) => n.trim() !== "").length
+                } of ${numberOfRooms} room numbers filled`}
+              </p>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  // Update the return statement to use the new renderFormFields function
   return (
     <div className="flex flex-col relative gap-4 w-full">
       <div className="p-4 z-0 flex flex-col relative justify-between gap-4 bg-content1 overflow-auto rounded-large shadow-small w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="w-full">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">Room Detail</h1>
+              <h1 className="text-2xl font-bold">
+                {formData.type === "Hall" ? "Hall Detail" : "Room Detail"}
+              </h1>
               <button
                 className="bg-hotel-primary text-white px-4 py-2 rounded"
                 onClick={handleSubmit}
@@ -402,249 +838,13 @@ export default function AddRoomForm({ params = {} }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
               <div className="lg:col-span-3 p-4 z-0 bg-content1 rounded-large shadow-small room-det-bg">
-                <div className="relative h-64 sm:h-80 lg:h-96 bg-gray-200 mb-4">
-                  {mainImage && (
-                    <div className="relative w-full h-full">
-                      <Image
-                        src={mainImage}
-                        alt="Main Room Image"
-                        fill
-                        style={{ objectFit: "cover" }}
-                        className="rounded-lg"
-                        priority
-                      />
-                      <span className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-sm font-bold rounded-br-lg z-10">
-                        Main Image
-                      </span>
-                    </div>
-                  )}
-                  <label
-                    htmlFor="image-upload"
-                    className="absolute bottom-2 right-2 bg-white p-2 rounded-full cursor-pointer"
-                  >
-                    <FaUpload className="text-blue-500" />
-                    <input
-                      id="image-upload"
-                      type="file"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      accept="image/*"
-                      multiple
-                    />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  {thumbnailImages.map((thumb, index) => (
-                    <div key={index} className="relative h-20 bg-gray-200">
-                      <Image
-                        src={thumb}
-                        alt={`Thumbnail ${index + 1}`}
-                        fill
-                        style={{ objectFit: "cover" }}
-                        className="rounded-lg"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Room Size
-                    </label>
-                    <input
-                      type="text"
-                      name="size"
-                      value={formData.size}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="35 m²"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Bed Model
-                    </label>
-                    <input
-                      type="text"
-                      name="bedModel"
-                      value={formData.bedModel}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="King"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Guest
-                    </label>
-                    <input
-                      type="number"
-                      name="maxGuests"
-                      value={formData.maxGuests}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="2"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Category Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="Deluxe Room"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      IGST %
-                    </label>
-                    <input
-                      type="text"
-                      name="igst"
-                      value={formData.igst}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="18"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Rent
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Additional Guest Cost
-                    </label>
-                    <input
-                      type="number"
-                      name="additionalGuestCosts"
-                      value={formData.additionalGuestCosts}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                      placeholder="2000"
-                    />
-                  </div>
-                </div>
-                <div className="my-4">
-                  <label
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                    id="complementary-foods-label"
-                  >
-                    Complementary Foods
-                  </label>
-                  <Select
-                    items={complementaryFoodOptions}
-                    variant="bordered"
-                    isMultiple
-                    selectionMode="multiple"
-                    placeholder="Select complementary foods"
-                    selectedKeys={formData.complementaryFoods}
-                    onSelectionChange={(keys) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        complementaryFoods: Array.from(keys),
-                      }));
-                    }}
-                    className="max-w-full"
-                    aria-labelledby="complementary-foods-label"
-                    labelPlacement="outside"
-                  >
-                    {(item) => (
-                      <SelectItem
-                        key={item.value}
-                        value={item.value}
-                        textValue={item.label}
-                        startContent={item.icon}
-                      >
-                        {item.label}
-                      </SelectItem>
-                    )}
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Number of Rooms
-                  </label>
-                  <input
-                    type="number"
-                    value={numberOfRooms}
-                    onChange={handleRoomCountChange}
-                    className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                    placeholder="10"
-                  />
-                </div>
-                <div className="mb-4">
-                  <h3 className="font-semibold mb-2">Room Numbers</h3>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-9 gap-2">
-                    {roomNumbers.map((number, index) => (
-                      <div key={index} className="relative">
-                        <input
-                          type="text"
-                          value={number}
-                          onChange={(e) =>
-                            handleRoomNumberChange(index, e.target.value)
-                          }
-                          className={`p-2 text-center rounded border w-full ${
-                            number.trim() === ""
-                              ? "border-red-300"
-                              : "border-gray-300"
-                          }`}
-                          placeholder={`Room ${index + 1}`}
-                          required
-                        />
-                        {isEditMode && number && (
-                          <button
-                            onClick={() => handleDeleteRoomNumber(number)}
-                            className="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                            type="button"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2 text-sm">
-                    {numberOfRooms > 0 && (
-                      <p
-                        className={
-                          roomNumbers.filter((n) => n.trim() !== "").length !==
-                          numberOfRooms
-                            ? "text-red-500"
-                            : "text-green-500"
-                        }
-                      >
-                        {`${
-                          roomNumbers.filter((n) => n.trim() !== "").length
-                        } of ${numberOfRooms} room numbers filled`}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                {renderFormFields()}
               </div>
 
               <div className="lg:col-span-2 p-4 z-0 bg-content1 rounded-large shadow-small">
                 <textarea
                   className="w-full h-32 p-2 border rounded mb-4"
-                  placeholder="Enter room description"
+                  placeholder={`Enter ${formData.type.toLowerCase()} description`}
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}

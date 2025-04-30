@@ -20,16 +20,15 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  DropdownTrigger,
-  Dropdown,
-  DropdownMenu,
-  DropdownItem,
-  Chip,
-  User,
-  Pagination,
-  Button,
-} from "@nextui-org/react";
+} from "@heroui/table";
+import { Button } from "@heroui/button";
+import { Dropdown, DropdownTrigger } from "@heroui/dropdown";
+import { DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { Input } from "@heroui/input";
+import { Chip } from "@heroui/chip";
+import { User } from "@heroui/user";
+import { Pagination } from "@heroui/pagination";
+
 import { PlusIcon } from "../../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../../ui/Table/SearchIcon.jsx";
 import { statusOptions } from "./data.js";
