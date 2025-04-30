@@ -24,22 +24,26 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  Button,
-  DropdownTrigger,
+} from "@heroui/table";
+import { Button } from "@heroui/button";
+import {
   Dropdown,
+  DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Chip,
-  User,
-  Pagination,
-} from "@nextui-org/react";
+} from "@heroui/dropdown";
+import { Input } from "@heroui/input";
+import { Chip } from "@heroui/chip";
+import { User } from "@heroui/user";
+
+import { Pagination } from "@heroui/pagination";
 import { PlusIcon } from "../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../ui/Table/SearchIcon.jsx";
 import { capitalize } from "../ui/Table/utils";
 import ConfirmationDialog from "../ui/ConfirmationDialog";
 import ReservationSkeleton from "./ReservationSkeleton.jsx";
 import Invoices from "../Invoice/Invoices";
+import { fr } from "date-fns/locale";
 
 const statusColorMap = {
   booked: "warning",

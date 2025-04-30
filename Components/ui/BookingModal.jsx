@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from "react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  Input,
-  Divider,
-  Button,
-} from "@nextui-org/react";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Divider } from "@heroui/divider";
 import {
   format,
   differenceInDays,

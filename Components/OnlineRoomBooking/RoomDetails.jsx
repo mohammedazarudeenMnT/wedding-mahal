@@ -1,4 +1,5 @@
-import { Button, Modal, ModalContent } from "@nextui-org/react";
+import { Button } from "@heroui/button";
+import { Modal, ModalContent } from "@heroui/modal";
 import Image from "next/image";
 import { useState } from "react";
 import { FaUsers, FaChevronRight, FaChevronLeft, FaBed } from "react-icons/fa";

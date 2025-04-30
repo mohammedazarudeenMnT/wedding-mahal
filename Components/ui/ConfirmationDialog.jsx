@@ -5,9 +5,9 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button,
-  useDisclosure,
-} from "@nextui-org/react";
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { useDisclosure } from "@heroui/use-disclosure";
 
 export default function ConfirmationDialog({
   isOpen,
