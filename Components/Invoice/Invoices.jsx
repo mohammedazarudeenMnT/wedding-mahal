@@ -21,20 +21,26 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  Button,
-  DropdownTrigger,
-  Dropdown,
-  DropdownMenu,
-  DropdownItem,
-  Pagination,
+} from "@heroui/table";
+
+import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
-} from "@nextui-org/react";
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
+import { Pagination } from "@heroui/pagination";
+import { useDisclosure } from "@heroui/use-disclosure";
+
 import { SearchIcon } from "../ui/Table/SearchIcon.jsx";
 import Invoice from "./InvoicePritnt";
 import TableSkeleton from "../ui/TableSkeleton";

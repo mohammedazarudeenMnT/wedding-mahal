@@ -1,73 +1,3 @@
-// import React from 'react';
-
-// export default function TableSkeleton() {
-//   return (
-//     <div className="w-full space-y-4">
-//       {/* Header Controls */}
-//       <div className="flex items-center justify-between mb-4">
-//         <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" /> {/* Search bar */}
-//         <div className="flex gap-2">
-//           {/* Filter buttons */}
-//           <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
-//           <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
-//           <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
-//           <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
-//           <div className="w-32 h-10 bg-blue-500 rounded animate-pulse" /> {/* Add Item button */}
-//         </div>
-//       </div>
-
-//       {/* Table */}
-//       <div className="w-full border rounded-lg overflow-hidden">
-//         {/* Table Header */}
-//         <div className="bg-[#00529C] text-white grid grid-cols-8 gap-4 p-4">
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//           <div className="h-4 w-24 bg-blue-400 rounded animate-pulse" />
-//         </div>
-
-//         {/* Table Body */}
-//         {[...Array(10)].map((_, index) => (
-//           <div
-//             key={index}
-//             className="grid grid-cols-8 gap-4 p-4 border-b hover:bg-gray-50"
-//           >
-//             <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-//             <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-//             <div className="flex gap-2">
-//               <div className="h-8 w-20 bg-blue-100 rounded animate-pulse" />
-//               <div className="h-8 w-20 bg-green-100 rounded animate-pulse" />
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* Pagination */}
-//       <div className="flex items-center justify-between p-4">
-//         <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-//         <div className="flex gap-2">
-//           {[1, 2, 3, 4, 5].map((num) => (
-//             <div
-//               key={num}
-//               className={`h-8 w-8 rounded animate-pulse ${
-//                 num === 1 ? 'bg-blue-500' : 'bg-gray-200'
-//               }`}
-//             />
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
 import {
   Table,
   TableHeader,
@@ -75,10 +5,10 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Skeleton,
-  Button,
-  Input,
-} from "@nextui-org/react";
+} from "@heroui/table";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Skeleton } from "@heroui/skeleton";
 
 export default function TableSkeleton() {
   // Create dummy array for skeleton rows

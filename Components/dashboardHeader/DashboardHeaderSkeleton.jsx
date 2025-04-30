@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "@nextui-org/react";
+import { Skeleton } from "@heroui/skeleton";
 // ...existing imports...
 
 const DashboardHeaderSkeleton = () => {

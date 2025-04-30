@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Button, Input, Select, SelectItem } from "@nextui-org/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
 import { FaBed, FaUsers } from "react-icons/fa";
 import RoomDetails from "./RoomDetails";
 import axios from "axios";
