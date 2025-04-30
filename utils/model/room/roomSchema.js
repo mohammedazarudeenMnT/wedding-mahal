@@ -38,28 +38,94 @@ const roomNumberSchema = new mongoose.Schema(
 // Define the schema for the Room
 const roomSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true }, // Room name (e.g., "Deluxe Room")
-
-    description: { type: String, required: true }, // Room description
-    igst: { type: String, required: true }, // IGST
-    additionalGuestCosts: { type: String, required: true }, // Additional guest costs
-    mainImage: { type: String, required: true }, // URL of the main image
-    thumbnailImages: { type: [String], default: [] }, // Array of URLs for thumbnail images
-    price: { type: Number, required: true }, // Room price
-    size: { type: String, required: true }, // Room size (e.g., "35 m²")
-    bedModel: { type: String, required: true }, // Bed model (e.g., "King Size")
-    maxGuests: { type: Number, required: true }, // Maximum number of guests
-    roomNumbers: { type: [roomNumberSchema], required: true }, // Array of room numbers with status
-    numberOfRooms: { type: Number, required: true }, // Total number of rooms of this type
-    complementaryFoods: { type: [String], default: [] }, // Array of complementary foods
-    amenities: { type: [amenitySchema], default: [] }, // Array of amenities
-    createdAt: { type: Date, default: Date.now }, // Timestamp of when the room was created
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    igst: { type: String, required: true },
+    additionalGuestCosts: {
+      type: String,
+      required: function () {
+        return this.type === "Room";
+      },
+    },
+    mainImage: { type: String, required: true },
+    thumbnailImages: { type: [String], default: [] },
+    price: { type: Number, required: true },
+    size: { type: String, required: true },
+    capacity: {
+      type: Number,
+      required: function () {
+        return this.type === "Hall";
+      },
+    },
+    bedModel: {
+      type: String,
+      required: function () {
+        return this.type === "Room";
+      },
+    },
+    maxGuests: {
+      type: Number,
+      required: function () {
+        return this.type === "Room";
+      },
+    },
+    roomNumbers: {
+      type: [roomNumberSchema],
+      required: function () {
+        return this.type === "Room";
+      },
+      default: undefined, // This prevents empty array from being created
+    },
+    hallNumbers: {
+      type: [roomNumberSchema],
+      required: function () {
+        return this.type === "Hall";
+      },
+      default: undefined, // This prevents empty array from being created
+    },
+    numberOfRooms: {
+      type: Number,
+      required: function () {
+        return this.type === "Room";
+      },
+    },
+    numberOfHalls: {
+      type: Number,
+      required: function () {
+        return this.type === "Hall";
+      },
+    },
+    type: {
+      type: String,
+      enum: ["Room", "Hall"],
+      required: true,
+      default: "Room",
+    },
+    complementaryFoods: {
+      type: [String],
+    },
+    amenities: { type: [amenitySchema], default: [] },
+    createdAt: { type: Date, default: Date.now },
   },
   {
     timestamps: true,
   }
 );
 
-// Create the model for the room
+// Add a pre-save middleware to clean up unused fields
+roomSchema.pre("save", function (next) {
+  if (this.type === "Room") {
+    this.hallNumbers = undefined;
+    this.capacity = undefined;
+    this.numberOfHalls = undefined;
+  } else if (this.type === "Hall") {
+    this.roomNumbers = undefined;
+    this.bedModel = undefined;
+    this.maxGuests = undefined;
+    this.numberOfRooms = undefined;
+    this.additionalGuestCosts = undefined;
+  }
+  next();
+});
 
 export default roomSchema;

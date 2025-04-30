@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import {
-  Button,
-  Input,
-  Select,
-  SelectItem,
-  Modal,
-  ModalContent,
-} from "@nextui-org/react";
+import { Modal, ModalContent } from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
 import { FaBed, FaUsers } from "react-icons/fa";
 import RoomDetails from "./RoomDetails";
 import Link from "next/link";

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Chip } from "@nextui-org/react";
+import React, { useState, useEffect } from "react";
+import { Chip } from "@heroui/chip";
 
 export default function CountdownTimer({ expectedEndTime }) {
-  const [timeLeft, setTimeLeft] = useState('');
+  const [timeLeft, setTimeLeft] = useState("");
   const [isDelayed, setIsDelayed] = useState(false);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function CountdownTimer({ expectedEndTime }) {
 
       if (difference <= 0) {
         setIsDelayed(true);
-        return 'Overdue';
+        return "Overdue";
       }
 
       const hours = Math.floor(difference / (1000 * 60 * 60));
@@ -31,11 +31,7 @@ export default function CountdownTimer({ expectedEndTime }) {
   }, [expectedEndTime]);
 
   return (
-    <Chip
-      size="sm"
-      color={isDelayed ? "danger" : "success"}
-      variant="flat"
-    >
+    <Chip size="sm" color={isDelayed ? "danger" : "success"} variant="flat">
       {timeLeft}
     </Chip>
   );

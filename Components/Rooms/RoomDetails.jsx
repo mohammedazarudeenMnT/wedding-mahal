@@ -1,7 +1,8 @@
 "use client";
 
 import { setHours, setMinutes } from "date-fns";
-import { Button, Modal, ModalContent } from "@nextui-org/react";
+import { Modal, ModalContent } from "@heroui/modal";
+import { Button } from "@heroui/button";
 import { useState } from "react";
 import { FaUsers, FaChevronRight, FaChevronLeft, FaBed } from "react-icons/fa";
 import { amenityIcons } from "../../utils/amenityIcons";

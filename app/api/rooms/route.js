@@ -109,21 +109,36 @@ export async function POST(request) {
     const RoomModel = getModel("Room", Room);
 
     const formData = await request.formData();
+    const type = formData.get("type");
 
-    const name = formData.get("name");
-    const description = formData.get("description");
-    const igst = formData.get("igst");
-    const additionalGuestCosts = formData.get("additionalGuestCosts");
-    const price = parseFloat(formData.get("price"));
-    const size = formData.get("size");
-    const bedModel = formData.get("bedModel");
-    const maxGuests = parseInt(formData.get("maxGuests"));
-    const roomNumbersJson = formData.get("roomNumbers");
-    const roomNumbers = JSON.parse(roomNumbersJson); // Parse the JSON string directly
-    const numberOfRooms = parseInt(formData.get("numberOfRooms"));
-    const complementaryFoods = formData.getAll("complementaryFoods");
-    // Extract and format amenities
-    const amenities = formData.getAll("amenities").map((amenity) => {
+    // Common fields for both types
+    const newRoomData = {
+      name: formData.get("name"),
+      description: formData.get("description"),
+      igst: formData.get("igst"),
+      price: parseFloat(formData.get("price")),
+      size: formData.get("size"),
+      type: type,
+      // ...existing image handling code...
+    };
+
+    if (type === "Hall") {
+      // Hall-specific fields
+      newRoomData.capacity = parseInt(formData.get("capacity"));
+      newRoomData.hallNumbers = JSON.parse(formData.get("hallNumbers"));
+      newRoomData.numberOfHalls = parseInt(formData.get("numberOfHalls"));
+    } else {
+      // Room-specific fields
+      newRoomData.bedModel = formData.get("bedModel");
+      newRoomData.maxGuests = parseInt(formData.get("maxGuests"));
+      newRoomData.additionalGuestCosts = formData.get("additionalGuestCosts");
+      newRoomData.roomNumbers = JSON.parse(formData.get("roomNumbers"));
+      newRoomData.numberOfRooms = parseInt(formData.get("numberOfRooms"));
+      newRoomData.complementaryFoods = formData.getAll("complementaryFoods");
+    }
+
+    // Handle amenities
+    newRoomData.amenities = formData.getAll("amenities").map((amenity) => {
       const [icon, name] = amenity.split("-");
       return { icon, name };
     });
@@ -206,20 +221,9 @@ export async function POST(request) {
     }
 
     const newRoom = new RoomModel({
-      name,
-      description,
-      igst,
-      additionalGuestCosts,
+      ...newRoomData,
       mainImage: mainImageUrl,
       thumbnailImages: thumbnailImageUrls,
-      price,
-      size,
-      bedModel,
-      maxGuests,
-      roomNumbers, // Use the parsed data directly
-      numberOfRooms,
-      amenities,
-      complementaryFoods,
     });
 
     await newRoom.save();
@@ -227,7 +231,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       room: newRoom,
-      message: "Room Added Successfully",
+      message: `${type} Added Successfully`,
     });
   } catch (error) {
     console.error("Error processing the form data:", error);

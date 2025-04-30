@@ -18,15 +18,18 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  Button,
-  DropdownTrigger,
+} from "@heroui/table";
+import {
   Dropdown,
+  DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Chip,
-  Pagination,
-} from "@nextui-org/react";
+} from "@heroui/dropdown";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Chip } from "@heroui/chip";
+import { Pagination } from "@heroui/pagination";
+
 import { PlusIcon } from "../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../ui/Table/SearchIcon.jsx";
 import { PiFadersHorizontal } from "react-icons/pi";
