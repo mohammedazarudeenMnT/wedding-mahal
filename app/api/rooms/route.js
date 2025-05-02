@@ -21,25 +21,48 @@ async function updateRoomStatuses(RoomModel, GuestModel) {
   );
 
   for (const room of rooms) {
-    for (const roomNumber of room.roomNumbers) {
-      for (const bookedDate of roomNumber.bookeddates) {
-        // Skip if no booking number
-        if (!bookedDate.bookingNumber) continue;
+    // Handle room numbers for Room type
+    if (room.type === "Room" && room.roomNumbers) {
+      for (const roomNumber of room.roomNumbers) {
+        for (const bookedDate of roomNumber.bookeddates) {
+          if (!bookedDate.bookingNumber) continue;
 
-        const guest = guestBookings.get(bookedDate.bookingNumber);
-        if (guest) {
-          // Update status to match guest status
-          bookedDate.status = guest.status;
-          updatedCount++;
-        } else if (
-          bookedDate.status === "booked" &&
-          new Date(bookedDate.checkOut) < now
-        ) {
-          bookedDate.status = "checkout";
-          updatedCount++;
+          const guest = guestBookings.get(bookedDate.bookingNumber);
+          if (guest) {
+            bookedDate.status = guest.status;
+            updatedCount++;
+          } else if (
+            bookedDate.status === "booked" &&
+            new Date(bookedDate.checkOut) < now
+          ) {
+            bookedDate.status = "checkout";
+            updatedCount++;
+          }
         }
       }
     }
+
+    // Handle hall numbers for Hall type
+    if (room.type === "Hall" && room.hallNumbers) {
+      for (const hallNumber of room.hallNumbers) {
+        for (const bookedDate of hallNumber.bookeddates) {
+          if (!bookedDate.bookingNumber) continue;
+
+          const guest = guestBookings.get(bookedDate.bookingNumber);
+          if (guest) {
+            bookedDate.status = guest.status;
+            updatedCount++;
+          } else if (
+            bookedDate.status === "booked" &&
+            new Date(bookedDate.checkOut) < now
+          ) {
+            bookedDate.status = "checkout";
+            updatedCount++;
+          }
+        }
+      }
+    }
+
     await room.save();
   }
 

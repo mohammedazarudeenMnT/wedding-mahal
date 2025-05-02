@@ -126,10 +126,17 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
   };
 
   const getAvailableRoomCount = () => {
-    if (!room?.roomNumbers) return 0;
-    return room.roomNumbers.filter(
-      (roomNum) => getRoomStatus(roomNum, dateRange) === "available"
-    ).length;
+    if (room.type === "Room") {
+      if (!room?.roomNumbers) return 0;
+      return room.roomNumbers.filter(
+        (roomNum) => getRoomStatus(roomNum, dateRange) === "available"
+      ).length;
+    } else {
+      if (!room?.hallNumbers) return 0;
+      return room.hallNumbers.filter(
+        (hallNum) => getRoomStatus(hallNum, dateRange) === "available"
+      ).length;
+    }
   };
 
   const complementaryFoodIcons = {
@@ -146,13 +153,20 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
   return (
     <div className="bg-hotel-primary-bg rounded-lg p-6 shadow-sm overflow-auto">
       <div className="sticky top-0 z-10 pb-4">
-        <h1 className="text-2xl font-semibold mb-2">{room.name} Room</h1>
+        <h1 className="text-2xl font-semibold mb-2">
+          {room.name} {room.type}
+        </h1>
         <div className="flex flex-col gap-1">
           <p className="text-gray-600">
             Occupied:{" "}
             <span className="font-medium">
-              {room.numberOfRooms - getAvailableRoomCount()}/
-              {room.numberOfRooms} Rooms
+              {room.type === "Room"
+                ? `${room.numberOfRooms - getAvailableRoomCount()}/${
+                    room.numberOfRooms
+                  } Rooms`
+                : `${room.numberOfHalls - getAvailableRoomCount()}/${
+                    room.numberOfHalls
+                  } Halls`}
             </span>
           </p>
         </div>
@@ -160,41 +174,77 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
 
       {/* Room Numbers Grid */}
       <div className="grid grid-cols-6 gap-2 mb-6">
-        {room.roomNumbers.map((roomNumber) => {
-          const status = getRoomStatus(roomNumber, dateRange);
-          const activeBooking = roomNumber.bookeddates?.find((booking) => {
-            const bookingDate = new Date(booking.checkIn);
-            const selectedDate = new Date(dateRange.from);
-            return (
-              booking.status !== "maintenance" &&
-              bookingDate.toDateString() === selectedDate.toDateString()
-            );
-          });
+        {room.type === "Room"
+          ? room.roomNumbers.map((roomNumber) => {
+              const status = getRoomStatus(roomNumber, dateRange);
+              const activeBooking = roomNumber.bookeddates?.find((booking) => {
+                const bookingDate = new Date(booking.checkIn);
+                const selectedDate = new Date(dateRange.from);
+                return (
+                  booking.status !== "maintenance" &&
+                  bookingDate.toDateString() === selectedDate.toDateString()
+                );
+              });
 
-          // Decide whether to render a link or plain div based on booking status
-          const ContentWrapper = activeBooking ? Link : "div";
-          const wrapperProps = activeBooking
-            ? {
-                href: `/dashboard/bookings/${activeBooking.bookingNumber}`,
-                className: `cursor-pointer ${statusColors[status]}`,
-              }
-            : {
-                className: statusColors[status],
-              };
+              // Decide whether to render a link or plain div based on booking status
+              const ContentWrapper = activeBooking ? Link : "div";
+              const wrapperProps = activeBooking
+                ? {
+                    href: `/dashboard/bookings/${activeBooking.bookingNumber}`,
+                    className: `cursor-pointer ${statusColors[status]}`,
+                  }
+                : {
+                    className: statusColors[status],
+                  };
 
-          return (
-            <ContentWrapper key={roomNumber.number} {...wrapperProps}>
-              <div
-                className="p-2 h-12 flex items-center justify-center"
-                title={`Room ${roomNumber.number}${
-                  activeBooking ? ` - ${activeBooking.bookingNumber}` : ""
-                }`}
-              >
-                {roomNumber.number}
-              </div>
-            </ContentWrapper>
-          );
-        })}
+              return (
+                <ContentWrapper key={roomNumber.number} {...wrapperProps}>
+                  <div
+                    className="p-2 h-12 flex items-center justify-center"
+                    title={`Room ${roomNumber.number}${
+                      activeBooking ? ` - ${activeBooking.bookingNumber}` : ""
+                    }`}
+                  >
+                    {roomNumber.number}
+                  </div>
+                </ContentWrapper>
+              );
+            })
+          : room.hallNumbers.map((hallNumber) => {
+              const status = getRoomStatus(hallNumber, dateRange);
+              // Use the same rendering logic but for halls
+              const activeBooking = hallNumber.bookeddates?.find((booking) => {
+                const bookingDate = new Date(booking.checkIn);
+                const selectedDate = new Date(dateRange.from);
+                return (
+                  booking.status !== "maintenance" &&
+                  bookingDate.toDateString() === selectedDate.toDateString()
+                );
+              });
+
+              const ContentWrapper = activeBooking ? Link : "div";
+              const wrapperProps = activeBooking
+                ? {
+                    href: `/dashboard/bookings/${activeBooking.bookingNumber}`,
+                    className: `cursor-pointer ${statusColors[status]}`,
+                  }
+                : {
+                    className: statusColors[status],
+                  };
+
+              return (
+                <ContentWrapper key={hallNumber.number} {...wrapperProps}>
+                  <div
+                    className="p-2 h-12 flex items-center justify-center"
+                    title={`Hall ${hallNumber.number}${
+                      activeBooking ? ` - ${activeBooking.bookingNumber}` : ""
+                    }`}
+                  >
+                    {hallNumber.number}
+                  </div>
+                </ContentWrapper>
+              );
+            })}
       </div>
 
       <h3 className="text-xl font-semibold mb-4">Room Details</h3>
@@ -235,14 +285,23 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
         <div className="flex items-center gap-2">
           <span className="text-base">{room.size} m²</span>
         </div>
-        <div className="flex items-center gap-2">
-          <FaBed className="w-4 h-4" />
-          <span className="text-base">{room.bedModel}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <FaUsers className="w-4 h-4" />
-          <span className="text-base">{room.maxGuests} guests</span>
-        </div>
+        {room.type === "Room" ? (
+          <>
+            <div className="flex items-center gap-2">
+              <FaBed className="w-4 h-4" />
+              <span className="text-base">{room.bedModel}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaUsers className="w-4 h-4" />
+              <span className="text-base">{room.maxGuests} guests</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <FaUsers className="w-4 h-4" />
+            <span className="text-base">Capacity: {room.capacity}</span>
+          </div>
+        )}
       </div>
 
       <p className="text-gray-600 mb-6">

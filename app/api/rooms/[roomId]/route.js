@@ -37,31 +37,96 @@ export async function PUT(request, { params }) {
     await getHotelDatabase();
     const RoomModel = getModel("Room", Room);
     const formData = await request.formData();
-
-    // Parse form data
+    const type = formData.get("type");
     const updateData = {};
 
+    // Common fields
     if (formData.has("name")) updateData.name = formData.get("name");
     if (formData.has("description"))
       updateData.description = formData.get("description");
     if (formData.has("igst")) updateData.igst = formData.get("igst");
-    if (formData.has("additionalGuestCosts"))
-      updateData.additionalGuestCosts = formData.get("additionalGuestCosts");
-    if (formData.has("price")) {
-      const price = parseFloat(formData.get("price"));
-      if (!isNaN(price)) updateData.price = price;
-    }
+    if (formData.has("price"))
+      updateData.price = parseFloat(formData.get("price"));
     if (formData.has("size")) updateData.size = formData.get("size");
-    if (formData.has("bedModel"))
-      updateData.bedModel = formData.get("bedModel");
-    if (formData.has("maxGuests"))
-      updateData.maxGuests = parseInt(formData.get("maxGuests"));
-    if (formData.has("numberOfRooms"))
-      updateData.numberOfRooms = parseInt(formData.get("numberOfRooms"));
 
-    const roomNumber = formData.get("roomNumber");
-    const action = formData.get("action");
-    const bookingNumber = formData.get("bookingNumber");
+    // Type-specific fields
+    if (type === "Hall") {
+      if (formData.has("capacity"))
+        updateData.capacity = parseInt(formData.get("capacity"));
+      if (formData.has("numberOfHalls"))
+        updateData.numberOfHalls = parseInt(formData.get("numberOfHalls"));
+
+      // Handle hall numbers update
+      if (formData.has("hallNumbers")) {
+        const numberOfHalls = parseInt(formData.get("numberOfHalls"));
+        const newHallNumbers = JSON.parse(formData.get("hallNumbers"));
+
+        const existingRoom = await RoomModel.findById(roomId);
+        if (!existingRoom) {
+          return NextResponse.json(
+            { success: false, message: "Hall not found" },
+            { status: 404 }
+          );
+        }
+
+        // Create a map of existing hall numbers to their booking data
+        const existingBookingsMap = new Map(
+          existingRoom.hallNumbers?.map((hall) => [
+            hall.number,
+            hall.bookeddates,
+          ]) || []
+        );
+
+        // Merge existing booking data with new hall numbers
+        updateData.hallNumbers = newHallNumbers.map((hall) => ({
+          number: hall.number,
+          bookeddates: existingBookingsMap.get(hall.number) || [],
+        }));
+
+        updateData.numberOfHalls = numberOfHalls;
+      }
+    } else {
+      // Existing room-specific fields handling
+      if (formData.has("bedModel"))
+        updateData.bedModel = formData.get("bedModel");
+      if (formData.has("maxGuests"))
+        updateData.maxGuests = parseInt(formData.get("maxGuests"));
+      if (formData.has("additionalGuestCosts"))
+        updateData.additionalGuestCosts = formData.get("additionalGuestCosts");
+      if (formData.has("numberOfRooms"))
+        updateData.numberOfRooms = parseInt(formData.get("numberOfRooms"));
+
+      // Handle room numbers update (existing code)
+      if (formData.has("roomNumbers")) {
+        const numberOfRooms = parseInt(formData.get("numberOfRooms"));
+        const newRoomNumbers = JSON.parse(formData.get("roomNumbers"));
+
+        // Get existing room to preserve booking data
+        const existingRoom = await RoomModel.findById(roomId);
+        if (!existingRoom) {
+          return NextResponse.json(
+            { success: false, message: "Room not found" },
+            { status: 404 }
+          );
+        }
+
+        // Create a map of existing room numbers to their booking data
+        const existingBookingsMap = new Map(
+          existingRoom.roomNumbers.map((room) => [
+            room.number,
+            room.bookeddates,
+          ])
+        );
+
+        // Merge existing booking data with new room numbers
+        updateData.roomNumbers = newRoomNumbers.map((room) => ({
+          number: room.number,
+          bookeddates: existingBookingsMap.get(room.number) || [],
+        }));
+
+        updateData.numberOfRooms = numberOfRooms;
+      }
+    }
 
     // Update complementary foods handling
     updateData.complementaryFoods = formData.getAll("complementaryFoods");
@@ -166,34 +231,6 @@ export async function PUT(request, { params }) {
     if (thumbnailImageUrls.length > 0)
       updateData.thumbnailImages = thumbnailImageUrls;
 
-    // Handle room numbers update
-    if (formData.has("roomNumbers")) {
-      const numberOfRooms = parseInt(formData.get("numberOfRooms"));
-      const newRoomNumbers = JSON.parse(formData.get("roomNumbers"));
-
-      // Get existing room to preserve booking data
-      const existingRoom = await RoomModel.findById(roomId);
-      if (!existingRoom) {
-        return NextResponse.json(
-          { success: false, message: "Room not found" },
-          { status: 404 }
-        );
-      }
-
-      // Create a map of existing room numbers to their booking data
-      const existingBookingsMap = new Map(
-        existingRoom.roomNumbers.map((room) => [room.number, room.bookeddates])
-      );
-
-      // Merge existing booking data with new room numbers
-      updateData.roomNumbers = newRoomNumbers.map((room) => ({
-        number: room.number,
-        bookeddates: existingBookingsMap.get(room.number) || [],
-      }));
-
-      updateData.numberOfRooms = numberOfRooms;
-    }
-
     const room = await RoomModel.findById(roomId);
 
     if (!room) {
@@ -202,6 +239,10 @@ export async function PUT(request, { params }) {
         { status: 404 }
       );
     }
+
+    const roomNumber = formData.get("roomNumber");
+    const action = formData.get("action");
+    const bookingNumber = formData.get("bookingNumber");
 
     const roomNumberIndex = room.roomNumbers.findIndex(
       (r) => r.number === roomNumber
@@ -274,7 +315,7 @@ export async function PUT(request, { params }) {
 
     if (!updatedRoom) {
       return NextResponse.json(
-        { success: false, message: "Room not found." },
+        { success: false, message: `${type} not found.` },
         { status: 404 }
       );
     }
@@ -283,10 +324,7 @@ export async function PUT(request, { params }) {
       {
         success: true,
         room: updatedRoom,
-        message:
-          action === "clear"
-            ? "Unavailable dates cleared successfully"
-            : "Room Updated Successfully",
+        message: `${type} Updated Successfully`,
       },
       { status: 200 }
     );

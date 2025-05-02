@@ -388,14 +388,23 @@ export default function RoomList() {
                           <span className="flex items-center">
                             <span className="mr-1">{room.size} m²</span>
                           </span>
-                          <span className="flex items-center">
-                            <FaBed className="w-3 h-3 mr-1" />
-                            <span>{room.bedModel}</span>
-                          </span>
-                          <span className="flex items-center">
-                            <FaUsers className="w-3 h-3 mr-1" />
-                            <span>{room.maxGuests} guests</span>
-                          </span>
+                          {room.type === "Room" ? (
+                            <>
+                              <span className="flex items-center">
+                                <FaBed className="w-3 h-3 mr-1" />
+                                <span>{room.bedModel}</span>
+                              </span>
+                              <span className="flex items-center">
+                                <FaUsers className="w-3 h-3 mr-1" />
+                                <span>{room.maxGuests} guests</span>
+                              </span>
+                            </>
+                          ) : (
+                            <span className="flex items-center">
+                              <FaUsers className="w-3 h-3 mr-1" />
+                              <span>Capacity: {room.capacity}</span>
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                           {room.description}
@@ -418,12 +427,17 @@ export default function RoomList() {
                           <p className="text-sm">
                             Availability:{" "}
                             <span className="font-medium">
-                              {
-                                room.roomNumbers.filter((roomNum) =>
-                                  getRoomStatusMemoized(roomNum, dateRange)
-                                ).length
-                              }
-                              /{room.numberOfRooms} Rooms
+                              {room.type === "Room"
+                                ? `${
+                                    room.roomNumbers.filter((roomNum) =>
+                                      getRoomStatusMemoized(roomNum, dateRange)
+                                    ).length
+                                  }/${room.numberOfRooms} Rooms`
+                                : `${
+                                    room.hallNumbers.filter((hallNum) =>
+                                      getRoomStatusMemoized(hallNum, dateRange)
+                                    ).length
+                                  }/${room.numberOfHalls} Halls`}
                             </span>
                           </p>
                           <p className="text-xl font-semibold flex items-center mt-3">
