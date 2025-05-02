@@ -57,7 +57,7 @@ export function SidebarDemo() {
       label: "Calendar View",
       href: `/dashboard/calendarView`,
       icon: (
-        <IconCalendar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconCalendar className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
