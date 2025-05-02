@@ -244,65 +244,62 @@ export async function PUT(request, { params }) {
     const action = formData.get("action");
     const bookingNumber = formData.get("bookingNumber");
 
-    const roomNumberIndex = room.roomNumbers.findIndex(
-      (r) => r.number === roomNumber
-    );
-    if (roomNumberIndex !== -1) {
-      // if (action === "clear") {
-      //   // Remove the booking from bookeddates
-      //   room.roomNumbers[roomNumberIndex].bookeddates = room.roomNumbers[
-      //     roomNumberIndex
-      //   ].bookeddates.filter(
-      //     (booking) => booking.bookingNumber !== bookingNumber
-      //   );
-      // }
-      if (action === "clear" && roomNumber && bookingNumber) {
-        const roomIndex = room.roomNumbers.findIndex(
-          (r) => r.number === roomNumber
+    // Handle booking updates based on room type
+    if (action === "clear" && roomNumber && bookingNumber) {
+      const isHall = room.type === "Hall";
+      const numbersArray = isHall ? room.hallNumbers : room.roomNumbers;
+
+      const numberIndex = numbersArray.findIndex(
+        (item) => item.number === roomNumber
+      );
+
+      if (numberIndex !== -1) {
+        // Remove the specific booking from bookeddates array
+        numbersArray[numberIndex].bookeddates = numbersArray[
+          numberIndex
+        ].bookeddates.filter(
+          (booking) => booking.bookingNumber !== bookingNumber
         );
-        if (roomIndex !== -1) {
-          // Remove the specific booking from bookeddates array
-          room.roomNumbers[roomIndex].bookeddates = room.roomNumbers[
-            roomIndex
-          ].bookeddates.filter(
-            (booking) => booking.bookingNumber !== bookingNumber
-          );
 
-          // Update only the room numbers array
-          const updateResult = await RoomModel.findByIdAndUpdate(
-            roomId,
-            {
-              $set: {
-                roomNumbers: room.roomNumbers,
-              },
+        // Update the appropriate array based on type
+        const updateField = isHall ? "hallNumbers" : "roomNumbers";
+        const updateResult = await RoomModel.findByIdAndUpdate(
+          roomId,
+          {
+            $set: {
+              [updateField]: numbersArray,
             },
-            { new: true }
+          },
+          { new: true }
+        );
+
+        if (!updateResult) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Failed to update ${
+                isHall ? "hall" : "room"
+              } booking data`,
+            },
+            { status: 500 }
           );
-
-          if (!updateResult) {
-            return NextResponse.json(
-              { success: false, message: "Failed to update room booking data" },
-              { status: 500 }
-            );
-          }
-
-          return NextResponse.json({
-            success: true,
-            room: updateResult,
-            message:
-              "Booking cancelled and room availability updated successfully",
-          });
         }
-      } else {
-        // Add new booked dates
-        if (bookingNumber && unavailableDates.length === 2) {
-          room.roomNumbers[roomNumberIndex].bookeddates.push({
-            bookingNumber: bookingNumber,
-            checkIn: new Date(unavailableDates[0]),
-            checkout: new Date(unavailableDates[1]),
-            status: "booked",
-          });
-        }
+
+        return NextResponse.json({
+          success: true,
+          room: updateResult,
+          message: "Booking cancelled and availability updated successfully",
+        });
+      }
+    } else {
+      // Add new booked dates
+      if (bookingNumber && unavailableDates.length === 2) {
+        room.roomNumbers[roomNumberIndex].bookeddates.push({
+          bookingNumber: bookingNumber,
+          checkIn: new Date(unavailableDates[0]),
+          checkout: new Date(unavailableDates[1]),
+          status: "booked",
+        });
       }
     }
 
