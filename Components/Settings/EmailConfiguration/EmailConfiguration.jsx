@@ -1,82 +1,125 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, Select, SelectItem } from "@nextui-org/react";
-import { toast } from 'react-toastify';
+import { Select, SelectItem } from "@heroui/select";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { toast } from "react-toastify";
 import axios from "axios";
 
 const emailProviders = [
   { label: "Gmail", value: "gmail", host: "smtp.gmail.com", port: "587" },
-  { label: "Outlook/Office365", value: "outlook", host: "smtp.office365.com", port: "587" },
-  { label: "Yahoo Mail", value: "yahoo", host: "smtp.mail.yahoo.com", port: "587" },
+  {
+    label: "Outlook/Office365",
+    value: "outlook",
+    host: "smtp.office365.com",
+    port: "587",
+  },
+  {
+    label: "Yahoo Mail",
+    value: "yahoo",
+    host: "smtp.mail.yahoo.com",
+    port: "587",
+  },
   { label: "Custom SMTP", value: "custom", host: "", port: "" },
 ];
 
 const EmailProviderInstructions = ({ selectedProvider }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  
+
   const instructions = {
-    'gmail': {
-      title: 'Gmail Setup Guide',
+    gmail: {
+      title: "Gmail Setup Guide",
       steps: [
-        { title: '1. Enable 2-Step Verification', 
-          detail: 'Go to Google Account Security settings and enable 2-Step Verification' },
-        { title: '2. Generate App Password', 
-          detail: 'In Google Account → Security → App Passwords, generate a new 16-character password' },
-        { title: '3. Configuration Details', 
-          detail: 'Use smtp.gmail.com as host, 587 as port, your Gmail address as username, and the App Password as password' }
-      ]
+        {
+          title: "1. Enable 2-Step Verification",
+          detail:
+            "Go to Google Account Security settings and enable 2-Step Verification",
+        },
+        {
+          title: "2. Generate App Password",
+          detail:
+            "In Google Account → Security → App Passwords, generate a new 16-character password",
+        },
+        {
+          title: "3. Configuration Details",
+          detail:
+            "Use smtp.gmail.com as host, 587 as port, your Gmail address as username, and the App Password as password",
+        },
+      ],
     },
-    'outlook': {
-      title: 'Outlook/Office365 Setup Guide',
+    outlook: {
+      title: "Outlook/Office365 Setup Guide",
       steps: [
-        { title: '1. Enable 2-Step Verification', 
-          detail: 'Access Microsoft Account Security settings to enable 2-Step Verification' },
-        { title: '2. Create App Password', 
-          detail: 'Generate an App Password from Microsoft Account Security settings' },
-        { title: '3. Configuration Details', 
-          detail: 'Use smtp.office365.com as host, 587 as port, complete email address as username' }
-      ]
+        {
+          title: "1. Enable 2-Step Verification",
+          detail:
+            "Access Microsoft Account Security settings to enable 2-Step Verification",
+        },
+        {
+          title: "2. Create App Password",
+          detail:
+            "Generate an App Password from Microsoft Account Security settings",
+        },
+        {
+          title: "3. Configuration Details",
+          detail:
+            "Use smtp.office365.com as host, 587 as port, complete email address as username",
+        },
+      ],
     },
-    'yahoo': {
-      title: 'Yahoo Mail Setup Guide',
+    yahoo: {
+      title: "Yahoo Mail Setup Guide",
       steps: [
-        { title: '1. Security Setup', 
-          detail: 'Enable 2-Step Verification in Yahoo Account Security' },
-        { title: '2. Generate Password', 
-          detail: 'Create an App Password from Yahoo Account Security settings' },
-        { title: '3. Configuration Details', 
-          detail: 'Use smtp.mail.yahoo.com as host, 587 as port, full Yahoo email as username' }
-      ]
-    }
+        {
+          title: "1. Security Setup",
+          detail: "Enable 2-Step Verification in Yahoo Account Security",
+        },
+        {
+          title: "2. Generate Password",
+          detail: "Create an App Password from Yahoo Account Security settings",
+        },
+        {
+          title: "3. Configuration Details",
+          detail:
+            "Use smtp.mail.yahoo.com as host, 587 as port, full Yahoo email as username",
+        },
+      ],
+    },
   };
 
-  if (!selectedProvider || selectedProvider === 'custom') return null;
+  if (!selectedProvider || selectedProvider === "custom") return null;
   const guide = instructions[selectedProvider];
 
   return (
     <div className="mt-4 mb-6 transition-all duration-300 ease-in-out">
       <div className="max-w-full lg:w-2/3 mx-auto bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg shadow-sm">
-        <div 
+        <div
           className="bg-blue-200 p-4 rounded-t-lg flex justify-between items-center cursor-pointer hover:bg-blue-300 transition-colors duration-200"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center space-x-2">
-            <span className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+            <span
+              className={`transform transition-transform duration-200 ${
+                isExpanded ? "rotate-180" : ""
+              }`}
+            >
               ▼
             </span>
             <h3 className="text-blue-900 font-medium text-lg">{guide.title}</h3>
           </div>
           <span className="text-blue-600 text-sm">
-            {isExpanded ? 'Hide Details' : 'Show Details'}
+            {isExpanded ? "Hide Details" : "Show Details"}
           </span>
         </div>
-        
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
           <div className="p-6 space-y-6">
             {guide.steps.map((step, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="flex items-start space-x-4 p-4 rounded-lg hover:bg-blue-50 transition-colors duration-200"
               >
                 <div className="flex-shrink-0">
@@ -112,7 +155,7 @@ const EmailConfiguration = () => {
   });
   const [testData, setTestData] = useState({
     email: "",
-    message: ""
+    message: "",
   });
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -139,20 +182,20 @@ const EmailConfiguration = () => {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [id]: value
+      [id]: value,
     }));
   };
 
   const handleProviderChange = (value) => {
     setSelectedProvider(value);
-    const provider = emailProviders.find(p => p.value === value);
-    if (provider && value !== 'custom') {
-      setFormData(prev => ({
+    const provider = emailProviders.find((p) => p.value === value);
+    if (provider && value !== "custom") {
+      setFormData((prev) => ({
         ...prev,
         smtpHost: provider.host,
-        smtpPort: provider.port
+        smtpPort: provider.port,
       }));
     }
   };
@@ -161,7 +204,10 @@ const EmailConfiguration = () => {
     e.preventDefault();
     try {
       setSaveLoading(true);
-      const response = await axios.post(`/api/settings/emailConfiguration`, formData);
+      const response = await axios.post(
+        `/api/settings/emailConfiguration`,
+        formData
+      );
       if (response.data.success) {
         toast.success("Email configuration saved successfully");
       }
@@ -174,26 +220,27 @@ const EmailConfiguration = () => {
   };
 
   const handleTestEmail = async () => {
-    if (!testData.email || !testData.email.includes('@')) {
+    if (!testData.email || !testData.email.includes("@")) {
       toast.error("Please enter a valid email address");
       return;
     }
-  
+
     try {
       setTestLoading(true);
       setError(null);
       const response = await axios.put(`/api/settings/emailConfiguration`, {
         testEmail: testData.email,
-        message: testData.message
+        message: testData.message,
       });
       if (response.data.success) {
         setError(null);
         toast.success("Test email sent successfully");
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 
-        err.response?.data?.details || 
-        err.message || 
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.details ||
+        err.message ||
         "Failed to send test email";
       setError(errorMessage);
       toast.error(errorMessage);
@@ -212,20 +259,19 @@ const EmailConfiguration = () => {
 
   return (
     <section className="mx-auto space-y-8 bg-white rounded-lg p-4 md:p-8 shadow-sm min-h-[811px]">
-      
       {error && (
         <div className="bg-red-50 text-red-500 p-4 rounded-lg mb-4">
           <p>{error}</p>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="py-3">
           <div className="mb-6 flex flex-col md:flex-row md:items-center">
             <label className="w-full md:w-1/2 mb-2 md:mb-0">
               Email Provider
             </label>
-            <Select 
+            <Select
               className="w-full md:w-1/3"
               value={selectedProvider}
               onChange={(e) => handleProviderChange(e.target.value)}
@@ -308,7 +354,7 @@ const EmailConfiguration = () => {
               />
             </div>
           </div>
-          
+
           <div className="my-4">
             <h2 className="text-lg font-[500]">Send Test Message</h2>
             <div className="flex my-3">
@@ -318,7 +364,9 @@ const EmailConfiguration = () => {
               <Input
                 id="test-email"
                 value={testData.email}
-                onChange={(e) => setTestData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) =>
+                  setTestData((prev) => ({ ...prev, email: e.target.value }))
+                }
                 placeholder="test@example.com"
                 className="w-1/3"
               />
@@ -330,11 +378,13 @@ const EmailConfiguration = () => {
               <Input
                 id="test-message"
                 value={testData.message}
-                onChange={(e) => setTestData(prev => ({ ...prev, message: e.target.value }))}
+                onChange={(e) =>
+                  setTestData((prev) => ({ ...prev, message: e.target.value }))
+                }
                 placeholder="Write your Content"
                 className="w-1/3"
               />
-              <Button 
+              <Button
                 className="bg-hotel-primary text-white w-1/12 rounded-full"
                 onClick={handleTestEmail}
                 isLoading={testLoading}
@@ -343,10 +393,9 @@ const EmailConfiguration = () => {
               </Button>
             </div>
           </div>
-          
         </div>
         <div className="flex justify-end mt-auto">
-          <Button 
+          <Button
             type="submit"
             className="min-w-40 mt-6 bg-hotel-primary text-white rounded-full"
             isLoading={saveLoading}
@@ -360,4 +409,3 @@ const EmailConfiguration = () => {
 };
 
 export default EmailConfiguration;
-

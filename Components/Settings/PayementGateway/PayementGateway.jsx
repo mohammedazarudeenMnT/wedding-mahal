@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import {
-  Button
- 
-} from "@nextui-org/react";
-import axios from 'axios';
+import { Button } from "@heroui/button";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export default function RazorPayConfig() {
@@ -33,7 +30,9 @@ export default function RazorPayConfig() {
       toast.success("Keys fetched successfully");
     } catch (error) {
       console.error("Error fetching Razorpay keys:", error);
-      toast.error(error.response?.data?.error || "Failed to fetch Razorpay keys");
+      toast.error(
+        error.response?.data?.error || "Failed to fetch Razorpay keys"
+      );
     } finally {
       setIsLoading(false);
       setAction("");
@@ -46,7 +45,7 @@ export default function RazorPayConfig() {
       return;
     }
 
-    if (!apiKey.startsWith('rzp_') || apiKey.length < 20) {
+    if (!apiKey.startsWith("rzp_") || apiKey.length < 20) {
       toast.error("Invalid Razorpay API key format");
       return;
     }
@@ -55,18 +54,18 @@ export default function RazorPayConfig() {
     setAction("Saving");
 
     try {
-      const { data } = await axios.post(
-        `/api/settings/payementGateway`,
-        { apiKey, secretKey }
-      );
-      
+      const { data } = await axios.post(`/api/settings/payementGateway`, {
+        apiKey,
+        secretKey,
+      });
+
       setInitialApiKey(apiKey);
       setInitialSecretKey(secretKey);
       toast.success(data.message);
     } catch (error) {
       console.error("Error saving configuration:", error);
-      const errorMessage = error.response?.data?.message || 
-                          "Failed to update configuration";
+      const errorMessage =
+        error.response?.data?.message || "Failed to update configuration";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -120,7 +119,9 @@ export default function RazorPayConfig() {
                 type="button"
                 radius="full"
                 className={`bg-hotel-primary text-white w-[150px] ${
-                  isSaveEnabled ? "bg-hotel-primary  hover:bg-hotel-primary " : "disabled"
+                  isSaveEnabled
+                    ? "bg-hotel-primary  hover:bg-hotel-primary "
+                    : "disabled"
                 }`}
                 onClick={action === "" ? handleSave : null}
                 disabled={isLoading || (!isSaveEnabled && action === "")}

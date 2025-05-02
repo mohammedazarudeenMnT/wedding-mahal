@@ -2,23 +2,26 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  Input,
-  Button,
-  Tooltip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Switch,
   Table,
   TableHeader,
   TableBody,
   TableColumn,
   TableRow,
   TableCell,
-  Pagination,
-} from "@nextui-org/react";
+} from "@heroui/table";
+import { Button } from "@heroui/button";
+import { Switch } from "@heroui/switch";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
+import { Input } from "@heroui/input";
+import { Pagination } from "@heroui/pagination";
+import { Tooltip } from "@heroui/tooltip";
+
 import { Calendar, Info, ChevronDown, Trash2, PenSquare } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
