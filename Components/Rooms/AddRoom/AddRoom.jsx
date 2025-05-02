@@ -190,20 +190,29 @@ export default function AddRoomForm({ params = {} }) {
               additionalGuestCosts: roomData.additionalGuestCosts,
               size: roomData.size,
               bedModel: roomData.bedModel,
-              maxGuests: roomData.maxGuests,
+              // Set maxGuests based on room type
+              maxGuests:
+                roomData.type === "Hall"
+                  ? roomData.capacity
+                  : roomData.maxGuests,
               amenities: roomData.amenities.map((a) => `${a.icon}-${a.name}`),
               type: roomData.type || "Room",
               complementaryFoods: roomData.complementaryFoods || [],
             });
-            setNumberOfRooms(roomData.roomNumbers.length);
 
-            const newRoomNumbers = Array(roomData.roomNumbers.length).fill("");
+            // Set numbers based on type
+            const numbers =
+              roomData.type === "Room"
+                ? roomData.roomNumbers
+                : roomData.hallNumbers;
+            setNumberOfRooms(numbers.length);
 
-            roomData.roomNumbers.forEach((room, index) => {
-              newRoomNumbers[index] = room.number;
+            const newNumbers = Array(numbers.length).fill("");
+            numbers.forEach((item, index) => {
+              newNumbers[index] = item.number;
             });
 
-            setRoomNumbers(newRoomNumbers);
+            setRoomNumbers(newNumbers);
             setMainImage(roomData.mainImage);
             setThumbnailImages(roomData.thumbnailImages);
           }
@@ -270,29 +279,35 @@ export default function AddRoomForm({ params = {} }) {
     });
   };
 
-  const handleDeleteRoomNumber = async (roomNumber) => {
+  const handleDeleteRoomNumber = async (number) => {
     if (!isEditMode) return;
 
     if (
-      !confirm(`Are you sure you want to delete room number ${roomNumber}?`)
+      !confirm(
+        `Are you sure you want to delete ${formData.type.toLowerCase()} number ${number}?`
+      )
     ) {
       return;
     }
 
     try {
       const response = await axios.delete(
-        `/api/rooms/${roomId}/roomnumber/${roomNumber}`
+        `/api/rooms/${roomId}/roomnumber/${number}`
       );
 
       if (response.data.success) {
-        setRoomNumbers((prev) => prev.filter((num) => num !== roomNumber));
+        setRoomNumbers((prev) => prev.filter((num) => num !== number));
         setNumberOfRooms((prev) => prev - 1);
-        toast.success("Room number deleted successfully");
+        toast.success(`${formData.type} number deleted successfully`);
       }
     } catch (error) {
-      console.error("Error deleting room number:", error);
+      console.error(
+        `Error deleting ${formData.type.toLowerCase()} number:`,
+        error
+      );
       const errorMessage =
-        error.response?.data?.message || "Failed to delete room number";
+        error.response?.data?.message ||
+        `Failed to delete ${formData.type.toLowerCase()} number`;
       toast.error(errorMessage);
     }
   };
@@ -310,20 +325,21 @@ export default function AddRoomForm({ params = {} }) {
       return;
     }
 
-    const filledRoomNumbers = roomNumbers.filter(
-      (number) => number.trim() !== ""
-    );
+    const filledNumbers = roomNumbers.filter((number) => number.trim() !== "");
+    const expectedCount = numberOfRooms;
 
-    if (filledRoomNumbers.length !== numberOfRooms) {
+    if (filledNumbers.length !== expectedCount) {
       toast.error(
-        `Please fill in exactly ${numberOfRooms} room numbers. Currently have ${filledRoomNumbers.length}.`
+        `Please fill in exactly ${expectedCount} ${formData.type.toLowerCase()} numbers. Currently have ${
+          filledNumbers.length
+        }.`
       );
       return;
     }
 
-    const uniqueNumbers = new Set(filledRoomNumbers);
-    if (uniqueNumbers.size !== filledRoomNumbers.length) {
-      toast.error("Room numbers must be unique.");
+    const uniqueNumbers = new Set(filledNumbers);
+    if (uniqueNumbers.size !== filledNumbers.length) {
+      toast.error(`${formData.type} numbers must be unique.`);
       return;
     }
 
@@ -343,12 +359,12 @@ export default function AddRoomForm({ params = {} }) {
       // Hall-specific fields
       submitData.append("capacity", formData.maxGuests); // Use maxGuests as capacity
 
-      const hallNumbersData = roomNumbers.map((number) => ({
+      const hallNumbers = roomNumbers.map((number) => ({
         number: number.trim(),
         bookeddates: [],
       }));
 
-      submitData.append("hallNumbers", JSON.stringify(hallNumbersData));
+      submitData.append("hallNumbers", JSON.stringify(hallNumbers));
       submitData.append("numberOfHalls", numberOfRooms.toString());
     } else {
       // Room-specific fields
@@ -487,11 +503,14 @@ export default function AddRoomForm({ params = {} }) {
             placeholder="Select type"
             selectedKeys={[formData.type]}
             onSelectionChange={(keys) => {
-              const selectedType = Array.from(keys)[0];
-              setFormData((prev) => ({ ...prev, type: selectedType }));
+              if (!isEditMode) {
+                const selectedType = Array.from(keys)[0];
+                setFormData((prev) => ({ ...prev, type: selectedType }));
+              }
             }}
             className="max-w-full w-[50%]"
             aria-labelledby="type-label"
+            isDisabled={isEditMode}
           >
             {(item) => (
               <SelectItem key={item.value} value={item.value}>

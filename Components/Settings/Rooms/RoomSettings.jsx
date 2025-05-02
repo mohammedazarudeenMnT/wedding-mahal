@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Select, SelectItem, Input, Button, Switch } from "@nextui-org/react";
+import { Select, SelectItem } from "@heroui/select";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Switch } from "@heroui/switch";
+
 import axios from "axios";
 import { toast } from "react-toastify";
 

@@ -40,11 +40,12 @@ export default function HotelManagementInterface() {
     fetchHotelData();
   }, []);
 
-  if (loading) return (
-    <div className="flex justify-center items-center min-h-[200px]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00529C]"></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00529C]"></div>
+      </div>
+    );
   if (error) return <p className="text-red-500 p-4 text-center">{error}</p>;
 
   const tabs = [
@@ -59,8 +60,14 @@ export default function HotelManagementInterface() {
   ];
 
   return (
-    <section aria-label="Hotel Management Settings" className="max-w-[1440px] mx-auto">
-      <nav aria-label="Settings Navigation" className="bg-hotel-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6">
+    <section
+      aria-label="Hotel Management Settings"
+      className="max-w-[1440px] mx-auto"
+    >
+      <nav
+        aria-label="Settings Navigation"
+        className="bg-hotel-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6"
+      >
         <div className="min-w-max lg:max-w-[70rem] mx-auto">
           <div className="flex flex-nowrap">
             {tabs.map((tab) => (
@@ -81,21 +88,23 @@ export default function HotelManagementInterface() {
         </div>
       </nav>
 
-      <div 
-        className="w-full mx-auto px-4 lg:px-6 pt-1 pb-8" 
-        role="tabpanel" 
+      <div
+        className="w-full mx-auto px-4 lg:px-6 pt-1 pb-8"
+        role="tabpanel"
         aria-label="Settings Content Panel"
         aria-labelledby={`${selectedTab}-tab`}
       >
         <div className="">
-          {selectedTab === "general" && <General initialHotelData={hotelData} />}
+          {selectedTab === "general" && (
+            <General initialHotelData={hotelData} />
+          )}
           {selectedTab === "email" && <EmailConfiguration />}
-          {selectedTab === "rooms" && <RoomSettings  />}
-          {selectedTab === "inventory" && <InventoryForm  />}
-          {selectedTab === "finance" && <FinanceSettings  />}
-          {selectedTab === "employee" && <EmployeeManagement  />}
-          {selectedTab === "payementGateway" && <RazorPayConfig  />}
-          {selectedTab === "policy" && <Policy  />}
+          {selectedTab === "rooms" && <RoomSettings />}
+          {selectedTab === "inventory" && <InventoryForm />}
+          {selectedTab === "finance" && <FinanceSettings />}
+          {selectedTab === "employee" && <EmployeeManagement />}
+          {selectedTab === "payementGateway" && <RazorPayConfig />}
+          {selectedTab === "policy" && <Policy />}
         </div>
       </div>
     </section>

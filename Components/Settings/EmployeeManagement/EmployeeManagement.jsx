@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  Input,
-  Button,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-} from "@nextui-org/react";
+} from "@heroui/dropdown";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
 import { ChevronDown, Trash2, PenSquare } from "lucide-react";
 
 const generateTimeOptions = () => {

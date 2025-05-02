@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Button, Input } from "@nextui-org/react";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
 import { ChevronDown, Trash2, PenSquare } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";

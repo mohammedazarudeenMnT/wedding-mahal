@@ -3,14 +3,11 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import axios from "axios";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Divider,
-  Spinner,
-} from "@nextui-org/react";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Button } from "@heroui/button";
+import { Spinner } from "@heroui/spinner";
+import { Divider } from "@heroui/divider";
+
 import { toast } from "react-toastify";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Button, Select, SelectItem, Input } from "@nextui-org/react";
+import { Select, SelectItem } from "@heroui/select";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
 import { Trash2, PenSquare } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
