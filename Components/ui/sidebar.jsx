@@ -64,7 +64,7 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
     <>
       <motion.div
         className={cn(
-          "h-full px-4 py-4 hidden md:flex md:flex-col bg-white dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative",
+          "h-screen px-4 py-4 hidden md:flex md:flex-col bg-[#404040] dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
           className
         )}
         animate={{
@@ -73,12 +73,14 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
         }}
         {...props}
       >
-        <div className="flex-1 overflow-hidden">{children}</div>
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          {children}
+        </div>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setOpen(!open)}
-          className=" bg-hotel-primary text-white shadow-lg border border-neutral-200 dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-hotel-primary/90 transition-all duration-200"
+          className="bg-hotel-primary text-[#404040] shadow-lg dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-hotel-primary/90 transition-all duration-200 mt-4"
         >
           {open ? (
             <IconChevronLeft className="h-5 w-5" />
@@ -93,17 +95,18 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
 
 export const MobileSidebar = ({ className, children, ...props }) => {
   const { open, setOpen } = useSidebar();
+
   return (
     <>
       <div
         className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden  items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full"
+          "h-16 px-4 flex flex-row md:hidden items-center justify-between bg-[#404040] dark:bg-neutral-800 w-full fixed top-0 left-0 z-50"
         )}
         {...props}
       >
         <div className="flex justify-end z-20 w-full">
           <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
+            className="text-white dark:text-neutral-200 h-6 w-6"
             onClick={() => setOpen(!open)}
           />
         </div>
@@ -118,21 +121,31 @@ export const MobileSidebar = ({ className, children, ...props }) => {
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-white dark:bg-neutral-900 p-10 z-[100] flex flex-col justify-between",
+                "fixed h-screen w-[280px] top-0 left-0 bg-[#404040] dark:bg-neutral-900 z-[100] flex flex-col",
                 className
               )}
             >
-              <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
-                onClick={() => setOpen(!open)}
-              >
-                <IconX />
+              <div className="flex justify-end p-4">
+                <IconX
+                  className="text-white dark:text-neutral-200 h-6 w-6"
+                  onClick={() => setOpen(false)}
+                />
               </div>
-              {children}
+              <div className="flex-1 overflow-y-auto px-4 pb-6">{children}</div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      {/* Add overlay when mobile sidebar is open */}
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
     </>
   );
 };
@@ -159,8 +172,8 @@ export const SidebarLink = ({ link, className, ...props }) => {
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
         className={cn(
-          "text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0",
-          isActive && "!text-white"
+          "text-white dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0",
+          isActive && "text-[#404040]"
         )}
       >
         {link.label}
@@ -168,9 +181,9 @@ export const SidebarLink = ({ link, className, ...props }) => {
       {link.subLinks && (
         <IconChevronDown
           className={cn(
-            "text-neutral-700 dark:text-neutral-200 h-5 w-5 transition-transform",
+            "text-white dark:text-neutral-200 h-5 w-5 transition-transform",
             isDropdownOpen && "rotate-180",
-            isActive && "!text-white"
+            isActive && "!text-[#404040]"
           )}
         />
       )}
@@ -181,19 +194,19 @@ export const SidebarLink = ({ link, className, ...props }) => {
     <motion.div
       initial={false}
       animate={{ height: "auto" }}
-      className="overflow-hidden"
+      className="overflow-hidden w-full"
     >
       {link.href ? (
         <Link
           href={link.href}
           className={cn(
-            "flex items-center justify-start gap-2 group/sidebar py-2 px-1 cursor-pointer rounded transition-colors duration-200",
+            "flex items-center justify-start gap-2 group/sidebar py-2 px-1 cursor-pointer rounded transition-colors duration-200 w-full",
             isActive
-              ? "bg-hotel-primary rounded-md p-3 text-white [&_*]:text-white"
+              ? "bg-hotel-primary rounded-md p-3 text-[#404040] [&_*]:text-[#404040]"
               : open
-              ? "hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              : "hover:bg-hotel-primary/10 rounded-full p-3", // New style for closed state
-            !open && "justify-center", // Center icons when closed
+              ? "hover:bg-hotel-primary dark:hover:bg-neutral-700"
+              : "hover:bg-hotel-primary/10 rounded-full p-3",
+            !open && "justify-center",
             className
           )}
           onClick={handleClick}
@@ -206,7 +219,7 @@ export const SidebarLink = ({ link, className, ...props }) => {
           className={cn(
             "flex items-center gap-2 group/sidebar py-2 px-1 cursor-pointer rounded transition-colors duration-200",
             open
-              ? "hover:bg-neutral-100 dark:hover:bg-neutral-700 justify-start"
+              ? "hover:bg-hotel-primary dark:hover:bg-neutral-700 justify-start"
               : "hover:bg-hotel-primary/10 rounded-full p-3 justify-center", // New style for closed state
             className
           )}
@@ -236,7 +249,7 @@ export const SidebarLink = ({ link, className, ...props }) => {
                 >
                   <Link
                     href={subLink.href}
-                    className="block py-1 text-sm text-neutral-600 dark:text-neutral-300 hover:text-hotel-primary dark:hover:text-hotel-primary transition-colors duration-200"
+                    className="block py-1 text-sm text-white dark:text-neutral-300 hover:text-hotel-primary dark:hover:text-hotel-primary transition-colors duration-200"
                   >
                     {subLink.label}
                   </Link>

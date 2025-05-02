@@ -7,7 +7,7 @@ interface AdminSettings {
 }
 
 const defaultSettings: AdminSettings = {
-  color: '#00569B',
+  color: '#FFC933',
 };
 
 const AdminSettingsContext = createContext<AdminSettings>(defaultSettings);

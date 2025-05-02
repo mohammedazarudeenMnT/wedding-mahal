@@ -50,7 +50,7 @@ export function SidebarDemo() {
       label: `Dashboard`,
       href: `/dashboard`,
       icon: (
-        <IconLayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconLayoutDashboard className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
@@ -64,35 +64,35 @@ export function SidebarDemo() {
       label: "Bookings",
       href: `/dashboard/bookings`,
       icon: (
-        <IconClipboardCheck className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconClipboardCheck className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
-      label: "Rooms",
+      label: "Property Management",
       href: `/dashboard/rooms`,
       icon: (
-        <IconHome className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconHome className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     // {
     //   label: "Messages",
     //   href: "#",
     //   icon: (
-    //     <IconMessage className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+    //     <IconMessage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
     //   ),
     // },
     {
       label: "Housekeeping",
       href: `/dashboard/house-keeping`,
       icon: (
-        <IconSpray className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconSpray className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Inventory",
       href: `/dashboard/inventory`,
       icon: (
-        <IconPackage className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconPackage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
 
@@ -100,7 +100,7 @@ export function SidebarDemo() {
       label: "Staff Management",
 
       icon: (
-        <IconUserCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUserCircle className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Employee Details", href: `/dashboard/employees` },
@@ -115,7 +115,7 @@ export function SidebarDemo() {
       label: "Financials",
 
       icon: (
-        <IconCash className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconCash className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Invoice", href: `/dashboard/financials/invoices` },
@@ -129,7 +129,7 @@ export function SidebarDemo() {
       label: "Contacts",
 
       icon: (
-        <IconUser className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUser className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Guest", href: `/dashboard/contacts/guest` },
@@ -144,14 +144,14 @@ export function SidebarDemo() {
       label: "CRM",
       href: `/dashboard/crm`,
       icon: (
-        <IconUsersGroup className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUsersGroup className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Settings",
       href: `/dashboard/settings`,
       icon: (
-        <MdOutlineSettings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <MdOutlineSettings className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     // {
