@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar } from "lucide-react"
-import { Buttons } from "@/Components/ui/button"
-import { Input } from "@/Components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select"
+import { useState, useRef } from "react"
+import { Calendar as CalendarIcon, Trash2, Edit } from "lucide-react"
+import { Button } from "@heroui/button"
+import { Input } from "../../ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select"
+import { Calendar } from "../../ui/calendar"
 
 export default function CalendarSettings() {
   const [occasions, setOccasions] = useState([
@@ -23,9 +24,21 @@ export default function CalendarSettings() {
   ])
 
   const [selectedColor, setSelectedColor] = useState("#FFB800")
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [selectedDates, setSelectedDates] = useState([])
+  const colorInputRef = useRef(null)
 
   const handleDelete = (id) => {
     setOccasions(occasions.filter((occasion) => occasion.id !== id))
+  }
+
+  const handleDateSelect = (dates) => {
+    setSelectedDates(dates)
+    setShowCalendar(false)
+  }
+
+  const triggerColorPicker = () => {
+    colorInputRef.current?.click()
   }
 
   return (
@@ -56,13 +69,27 @@ export default function CalendarSettings() {
             <div className="relative w-full max-w-md">
               <Input 
                 id="select-date" 
-                placeholder="Select Dates" 
-                className="border border-gray-300 rounded-md pr-10" 
+                placeholder="Select Dates"
+                value={selectedDates.map(date => date.toLocaleDateString()).join(", ")}
+                readOnly
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="border border-gray-300 rounded-md pr-10 cursor-pointer" 
               />
-              <Calendar 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
-                size={18} 
+              <CalendarIcon 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer" 
+                size={18}
+                onClick={() => setShowCalendar(!showCalendar)}
               />
+              {showCalendar && (
+                <div className="absolute z-50 mt-1 bg-white rounded-lg shadow-lg">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedDates}
+                    onSelect={handleDateSelect}
+                    className="rounded-md border"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -76,83 +103,68 @@ export default function CalendarSettings() {
                 value={selectedColor}
                 onChange={(e) => setSelectedColor(e.target.value)}
                 className="border border-gray-300 rounded-l-md"
+                onClick={triggerColorPicker}
+                readOnly
               />
               <div 
-                className="w-24 h-10 rounded-r-md" 
+                className="w-24 h-10 rounded-r-md cursor-pointer" 
                 style={{ backgroundColor: selectedColor }}
-              ></div>
+                onClick={triggerColorPicker}
+              />
+              <input
+                type="color"
+                ref={colorInputRef}
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+                className="hidden"
+              />
             </div>
           </div>
 
           <div className="flex justify-center space-x-4 pt-4">
-            <Buttons className="bg-yellow-400 hover:bg-yellow-500 text-black px-8">
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-black px-8">
               Save
-            </Buttons>
-            <Buttons variant="outline" className="bg-gray-600 hover:bg-gray-700 text-white border-0 px-8">
+            </Button>
+            <Button variant="bordered" className="bg-gray-600 hover:bg-gray-700 text-white px-8">
               Cancel
-            </Buttons>
+            </Button>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-dashed pt-8">
-          <div className="bg-yellow-400 rounded-t-lg grid grid-cols-4 text-black font-medium">
-            <div className="p-4">Occasion Name</div>
-            <div className="p-4">Select Date</div>
-            <div className="p-4">Color</div>
-            <div className="p-4">Action</div>
+        <div className="mt-12 border rounded-lg overflow-hidden">
+          <div className="bg-yellow-400 grid grid-cols-4 text-black font-medium text-sm">
+            <div className="p-4 pl-6">OCCASION NAME</div>
+            <div className="p-4">SELECT DATE</div>
+            <div className="p-4">COLOR</div>
+            <div className="p-4">ACTION</div>
           </div>
 
-          {occasions.map((occasion) => (
-            <div key={occasion.id} className="grid grid-cols-4 border-b">
-              <div className="p-4">{occasion.name}</div>
-              <div className="p-4">{occasion.dates}</div>
-              <div className="p-4 flex items-center">
-                <span className="mr-2">{occasion.color}</span>
-                <div 
-                  className="w-4 h-4 rounded-sm" 
-                  style={{ backgroundColor: occasion.color }}
-                ></div>
-              </div>
-              <div className="p-4 flex space-x-2">
-                <button 
-                  onClick={() => handleDelete(occasion.id)} 
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          <div className="divide-y divide-gray-200">
+            {occasions.map((occasion) => (
+              <div key={occasion.id} className="grid grid-cols-4 hover:bg-gray-50">
+                <div className="p-4 pl-6 flex items-center">{occasion.name}</div>
+                <div className="p-4 flex items-center text-gray-600">{occasion.dates}</div>
+                <div className="p-4 flex items-center gap-3">
+                  <div 
+                    className="w-6 h-6 rounded-md" 
+                    style={{ backgroundColor: occasion.color }}
+                  />
+                  <span className="text-gray-600 text-sm">{occasion.color}</span>
+                </div>
+                <div className="p-4 flex items-center gap-2">
+                  <button className="p-2 hover:bg-gray-100 rounded-md">
+                    <Edit className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-md"
+                    onClick={() => handleDelete(occasion.id)}
                   >
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  </svg>
-                </button>
-                <button className="text-gray-500 hover:text-gray-700">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-                    <path d="m15 5 4 4"></path>
-                  </svg>
-                </button>
+                    <Trash2 className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
