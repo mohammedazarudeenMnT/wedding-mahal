@@ -7,13 +7,11 @@ import {
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   addDays,
 } from "date-fns"
 
-export default function MonthlyCalendar({ currentDate }) {
+export default function MonthlyCalendar({ currentDate, occasions = [] }) {
   const [days, setDays] = useState([])
-  const [selectedDate, setSelectedDate] = useState(new Date(2025, 3, 12)) // April 12, 2025
 
   useEffect(() => {
     const monthStart = startOfMonth(currentDate)
@@ -32,14 +30,12 @@ export default function MonthlyCalendar({ currentDate }) {
     setDays([...previousMonthDays, ...daysInMonth, ...nextMonthDays])
   }, [currentDate])
 
-  const isSpecialDay = (date) => {
-    const specialDays = [2, 12]
-    return specialDays.includes(date.getDate()) && date.getMonth() === 3 && date.getFullYear() === 2025
-  }
-
-  const isMugarthamDay = (date) => {
-    const mugarthamDays = [18]
-    return mugarthamDays.includes(date.getDate()) && date.getMonth() === 3 && date.getFullYear() === 2025
+  const getOccasionsForDay = (date) => {
+    return occasions.filter(occasion =>
+      occasion.dates.some(occDate => 
+        new Date(occDate).toDateString() === date.toDateString()
+      )
+    )
   }
 
   return (
@@ -56,23 +52,34 @@ export default function MonthlyCalendar({ currentDate }) {
       <div className="grid grid-cols-7 gap-1 text-sm">
         {days.map((day, index) => {
           const isCurrentMonth = isSameMonth(day, currentDate)
-          const isSelected = isSameDay(day, selectedDate)
-          const isSpecial = isSpecialDay(day)
-          const isMugartham = isMugarthamDay(day)
+          const dayOccasions = getOccasionsForDay(day)
+          const hasOccasions = dayOccasions.length > 0
 
           return (
             <div
               key={index}
               className={`
-                h-8 w-8 flex items-center justify-center rounded-full cursor-pointer
+                relative h-8 w-8 flex items-center justify-center
                 ${!isCurrentMonth ? "text-gray-400" : "text-gray-700"}
-                ${isSelected ? "bg-purple-600 text-white" : ""}
-                ${isMugartham && !isSelected ? "bg-yellow-400 text-white" : ""}
-                ${isSpecial && !isSelected && !isMugartham ? "bg-purple-600 text-white" : ""}
               `}
-              onClick={() => setSelectedDate(day)}
             >
-              {format(day, "d")}
+              <span className={`z-10 ${hasOccasions ? 'text-white' : ''}`}>
+                {format(day, "d")}
+              </span>
+              {hasOccasions && (
+                <div 
+                  className="absolute inset-0 rounded-full"
+                  style={{ 
+                    backgroundColor: dayOccasions[0].color,
+                    opacity: isCurrentMonth ? 1 : 0.5 
+                  }}
+                />
+              )}
+              {dayOccasions.length > 1 && (
+                <span className="absolute -bottom-1 text-[8px] text-gray-500">
+                  +{dayOccasions.length - 1}
+                </span>
+              )}
             </div>
           )
         })}
