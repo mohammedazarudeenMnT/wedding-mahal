@@ -15,11 +15,11 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  User,
-  Button,
-  Pagination,
-} from "@nextui-org/react";
+} from "@heroui/table";
+import { User } from "@heroui/user";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { Pagination } from "@heroui/pagination";
 import { useRouter } from "next/navigation";
 import { usePagePermission } from "../../hooks/usePagePermission";
 
@@ -27,6 +27,9 @@ const INITIAL_VISIBLE_COLUMNS = [
   "name",
   "email",
   "mobileno",
+  "propertyType",
+  "eventDates",
+  "eventType",
   "notes",
   "actions",
 ];
@@ -49,6 +52,21 @@ export default function CrmList() {
     {
       key: "mobileno",
       label: "Mobile No",
+      allowsSorting: true,
+    },
+    {
+      key: "propertyType",
+      label: "Property Type",
+      allowsSorting: true,
+    },
+    {
+      key: "eventDates",
+      label: "Event Dates",
+      allowsSorting: true,
+    },
+    {
+      key: "eventType",
+      label: "Event Type",
       allowsSorting: true,
     },
     {
@@ -155,8 +173,6 @@ export default function CrmList() {
       // Add null check for contact
       if (!contact) return null;
 
-      const cellValue = contact[columnKey];
-
       switch (columnKey) {
         case "name":
           return (
@@ -165,10 +181,26 @@ export default function CrmList() {
                 radius: "lg",
                 src: "https://i.pravatar.cc/150",
               }}
-              name={contact.name}
+              name={`${contact.firstName} ${contact.lastName}`}
             >
               {contact.email}
             </User>
+          );
+        case "eventDates":
+          const startDate = new Date(
+            contact.eventStartDate
+          ).toLocaleDateString();
+          const endDate = new Date(contact.eventEndDate).toLocaleDateString();
+          return `${startDate} - ${endDate}`;
+        case "propertyType":
+          return (
+            contact.propertyType.charAt(0).toUpperCase() +
+            contact.propertyType.slice(1)
+          );
+        case "eventType":
+          return (
+            contact.eventType.charAt(0).toUpperCase() +
+            contact.eventType.slice(1)
           );
         case "actions":
           return (
@@ -185,7 +217,7 @@ export default function CrmList() {
             </div>
           );
         default:
-          return cellValue;
+          return contact[columnKey];
       }
     },
     [handleMoveToBooking, hasMovePermission]
