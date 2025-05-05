@@ -11,6 +11,7 @@ import EmployeeManagement from "./EmployeeManagement/EmployeeManagement";
 import Policy from "./Policy/Policy.jsx";
 import axios from "axios";
 import RazorPayConfig from "./PayementGateway/PayementGateway.jsx";
+import CalendarSettings from "./Calendar/CalendarSettings.jsx";
 
 export default function HotelManagementInterface() {
   const [selectedTab, setSelectedTab] = useState("general");
@@ -57,6 +58,7 @@ export default function HotelManagementInterface() {
     { key: "employee", title: "Employee Management" },
     { key: "payementGateway", title: "Payment Gateway" },
     { key: "policy", title: "Policy" },
+    { key: "calendar", title: "Calendar" },
   ];
 
   return (
@@ -105,6 +107,7 @@ export default function HotelManagementInterface() {
           {selectedTab === "employee" && <EmployeeManagement />}
           {selectedTab === "payementGateway" && <RazorPayConfig />}
           {selectedTab === "policy" && <Policy />}
+          {selectedTab === "calendar" && <CalendarSettings />}
         </div>
       </div>
     </section>

@@ -13,13 +13,8 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../Components/ui/card";
-import { Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Calendar, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -37,6 +32,9 @@ import {
 } from "date-fns";
 import axios from "axios";
 import { SimpleCalendar } from "./SimpleCalendar";
+import { DonutChart } from "./donut-chart";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { Button } from "@heroui/button";
 
 // Remove the static revenueData constant and add these utility functions
 const getLastNMonths = (n) => {
@@ -169,29 +167,6 @@ const EmptyState = () => (
     </p>
   </div>
 );
-/* const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center h-[300px] text-center p-4">
-    <svg 
-      className="w-16 h-16 text-gray-300 mb-4" 
-      fill="none" 
-      viewBox="0 0 24 24" 
-      stroke="currentColor"
-    >
-      <path 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        strokeWidth={1.5} 
-        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
-      />
-    </svg>
-    <h3 className="text-base font-medium text-gray-900 mb-1">No bookings found</h3>
-    <p className="text-sm text-gray-500">
-      There are no bookings for the selected date range.
-    </p>
-  </div>
-); */
-
-// First, add this utility function after your other utility functions
 
 export default function Charts() {
   const [bookings, setBookings] = useState([]);
@@ -203,15 +178,36 @@ export default function Charts() {
   const selectTriggerRef = useRef(null); // Ref for the Select Trigger
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [maxRooms, setMaxRooms] = useState(0);
-  const [todayRoomStats, setTodayRoomStats] = useState({
-    checkIn: 0,
-    booked: 0,
-    available: 0,
-    notReady: 0,
-  });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [appliedDateRange, setAppliedDateRange] = useState(null);
   const [revenuePeriod, setRevenuePeriod] = useState("last-6-months");
+  const [selectedHall, setSelectedHall] = useState("All Halls");
+  const [donutDateRange, setDonutDateRange] = useState("this-week");
+  const [donutCalendarOpen, setDonutCalendarOpen] = useState(false);
+  const [appliedDonutRange, setAppliedDonutRange] = useState(null);
+  const [selectedType, setSelectedType] = useState("hall");
+
+  const staticData = {
+    hall: {
+      booked: 20,
+      occupied: 1,
+      available: 10,
+    },
+    room: {
+      booked: 15,
+      occupied: 5,
+      available: 30,
+    },
+  };
+
+  const bookingData = staticData[selectedType];
+
+  // Create donut chart data
+  const chartData = [
+    { name: "Booked", value: bookingData.booked, color: "#FFCA28" },
+    { name: "Occupied", value: bookingData.occupied, color: "#FF7A00" },
+    { name: "Available", value: bookingData.available, color: "#A9A9A9" },
+  ];
 
   // Fetch bookings data using hotelDb
   useEffect(() => {
@@ -279,14 +275,6 @@ export default function Charts() {
 
         setBookings(formattedData.bookings);
         setMaxRooms(totalRooms);
-        setTodayRoomStats(
-          calculateTodayRoomStats(
-            formattedData.bookings,
-            totalRooms,
-            notReadyCount,
-            checkInCount
-          )
-        );
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -343,44 +331,6 @@ export default function Charts() {
     return {
       bookings: Object.values(bookingsByDate),
       maxRooms: totalRooms,
-    };
-  };
-
-  // Update calculateTodayRoomStats function
-  const calculateTodayRoomStats = (
-    bookings,
-    totalRooms,
-    notReadyCount,
-    checkInCount
-  ) => {
-    const today = new Date().toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
-    const todayData = bookings.find((booking) => booking.date === today) || {
-      checkIn: checkInCount, // Use checkInCount directly
-      booked: 0,
-      available: totalRooms,
-      notReady: notReadyCount,
-    };
-
-    // Calculate available rooms after subtracting all other statuses
-    const available = Math.max(
-      0,
-      totalRooms -
-        checkInCount - // Use checkInCount instead of todayData.checkIn
-        (todayData.booked || 0) -
-        notReadyCount
-    );
-
-    return {
-      checkIn: checkInCount, // Use checkInCount
-      booked: todayData.booked || 0,
-      notReady: notReadyCount,
-      available: available,
-      totalRooms,
     };
   };
 
@@ -516,18 +466,16 @@ export default function Charts() {
     maxRooms,
   ]);
 
-  const calculateRoomPercentages = (stats) => {
-    const total =
-      stats.checkIn + stats.booked + stats.available + stats.notReady;
-    return {
-      checkIn: (stats.checkIn / total) * 100,
-      booked: (stats.booked / total) * 100,
-      available: (stats.available / total) * 100,
-      notReady: (stats.notReady / total) * 100,
-    };
+  // Add this function for donut chart date display
+  const getDonutDateDisplay = () => {
+    if (donutDateRange === "custom" && appliedDonutRange) {
+      return `${format(appliedDonutRange.from, "MMM dd")} - ${format(
+        appliedDonutRange.to,
+        "MMM dd"
+      )}`;
+    }
+    return donutDateRange.replace(/-/g, " ");
   };
-
-  const roomPercentages = calculateRoomPercentages(todayRoomStats);
 
   // Update where you display revenue amounts
   const RevenueDisplay = () => {
@@ -541,158 +489,105 @@ export default function Charts() {
   return (
     <div className="p-6 space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Room Availability Card */}
-        <Card className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-gray-100">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Room Availability
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {/* Progress Bar Container */}
-            <div className="relative">
-              <div
-                className="flex h-12 md:h-12 w-full rounded-lg overflow-hidden shadow-inner bg-gray-50"
-                onMouseMove={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = e.clientX - rect.left;
-                  const percentage = (x / rect.width) * 100;
+        {/* Booking Status Card with Donut Chart */}
+        <Card className="p-6 bg-white rounded-lg">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-medium">Booking</h2>
+            <div className="flex gap-3">
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    variant="outline"
+                    className="min-w-[120px] h-10 bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 flex items-center justify-between px-4"
+                  >
+                    <span className="mr-2">
+                      {selectedType === "hall" ? "Hall" : "Room"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  aria-label="Booking type selection"
+                  onAction={(key) => setSelectedType(key)}
+                  className="min-w-[120px]"
+                >
+                  <DropdownItem
+                    key="hall"
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    Hall
+                  </DropdownItem>
+                  <DropdownItem
+                    key="room"
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    Room
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
 
-                  // Find which section the mouse is over
-                  let currentSection;
-                  let currentValue;
-
-                  if (percentage <= roomPercentages.checkIn) {
-                    currentSection = "Occupied";
-                    currentValue = todayRoomStats.checkIn;
-                  } else if (
-                    percentage <=
-                    roomPercentages.checkIn + roomPercentages.booked
-                  ) {
-                    currentSection = "Booked";
-                    currentValue = todayRoomStats.booked;
-                  } else if (
-                    percentage <=
-                    roomPercentages.checkIn +
-                      roomPercentages.booked +
-                      roomPercentages.available
-                  ) {
-                    currentSection = "Available";
-                    currentValue = todayRoomStats.available;
+              <Select
+                value={donutDateRange}
+                onValueChange={(value) => {
+                  if (value === "custom") {
+                    setDonutCalendarOpen(true);
                   } else {
-                    currentSection = "Not Ready";
-                    currentValue = todayRoomStats.notReady;
-                  }
-
-                  // Show tooltip
-                  const tooltip = document.getElementById(
-                    "room-availability-tooltip"
-                  );
-                  if (tooltip) {
-                    tooltip.style.display = "block";
-                    tooltip.style.left = `${e.clientX}px`;
-                    tooltip.style.top = `${e.clientY - 40}px`;
-                    tooltip.innerHTML = `
-                      <div class="font-medium">${currentSection}</div>
-                      <div class="text-sm">${currentValue} Rooms</div>
-                    `;
-                  }
-                }}
-                onMouseLeave={() => {
-                  const tooltip = document.getElementById(
-                    "room-availability-tooltip"
-                  );
-                  if (tooltip) {
-                    tooltip.style.display = "none";
+                    setDonutDateRange(value);
                   }
                 }}
               >
-                <div
-                  className="bg-hotel-primary transition-all duration-300 ease-in-out"
-                  style={{ width: `${roomPercentages.checkIn}%` }}
-                />
-                <div
-                  className="bg-hotel-secondary-grey transition-all duration-300 ease-in-out"
-                  style={{ width: `${roomPercentages.booked}%` }}
-                />
-                <div
-                  className="bg-hotel-primary-green transition-all duration-300 ease-in-out"
-                  style={{ width: `${roomPercentages.available}%` }}
-                />
-                <div
-                  className="bg-hotel-primary-red transition-all duration-300 ease-in-out"
-                  style={{ width: `${roomPercentages.notReady}%` }}
-                />
-              </div>
+                <SelectTrigger className="w-[180px] bg-[#EFF6FF]">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <SelectValue>{getDonutDateDisplay()}</SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="this-week">This week</SelectItem>
+                  <SelectItem value="next-week">Next week</SelectItem>
+                  <SelectItem value="custom">
+                    {donutDateRange === "custom" && appliedDonutRange
+                      ? `${format(appliedDonutRange.from, "MMM dd")} - ${format(
+                          appliedDonutRange.to,
+                          "MMM dd"
+                        )}`
+                      : "Custom"}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-              {/* Add the tooltip element */}
-              <div
-                id="room-availability-tooltip"
-                className="fixed z-50 hidden bg-white px-3 py-2 rounded-md shadow-lg border border-gray-200 pointer-events-none transform -translate-x-1/2"
-                style={{
-                  transition: "all 0.2s ease-in-out",
-                }}
-              />
+          <div className="flex items-center gap-12">
+            <div className="w-[250px] h-[250px]">
+              <DonutChart data={chartData} />
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-              {/* Occupied */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                <div className="h-12 w-1.5 bg-hotel-primary rounded-full" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-500">
-                    Occupied
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-900">
-                    {todayRoomStats.checkIn}
-                  </div>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-[#FFCA28]"></div>
+                <div className="text-lg">
+                  <span className="font-semibold">{bookingData.booked}</span>{" "}
+                  <span className="text-gray-600">Booked</span>
                 </div>
               </div>
-
-              {/* Booked */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                <div className="h-12 w-1.5 bg-[#6B7280] rounded-full" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-500">
-                    Booked
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-900">
-                    {todayRoomStats.booked}
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-[#FF7A00]"></div>
+                <div className="text-lg">
+                  <span className="font-semibold">{bookingData.occupied}</span>{" "}
+                  <span className="text-gray-600">Occupied</span>
                 </div>
               </div>
-
-              {/* Available */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                <div className="h-12 w-1.5 bg-[#25D366] rounded-full" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-500">
-                    Available
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-900">
-                    {todayRoomStats.available}
-                    <span className="text-sm text-gray-500 ml-2">
-                      ({todayRoomStats.totalRooms} total)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Not Ready */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                <div className="h-12 w-1.5 bg-red-500 rounded-full" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-500">
-                    Not Ready
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-900">
-                    {todayRoomStats.notReady}
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-[#A9A9A9]"></div>
+                <div className="text-lg">
+                  <span className="font-semibold">{bookingData.available}</span>{" "}
+                  <span className="text-gray-600">Available</span>
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Bookings Card */}
@@ -744,7 +639,6 @@ export default function Charts() {
           </CardHeader>
 
           <CardContent>
-            {/* {filteredBookings.length > 0 ? ( */}
             {maxRooms > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
@@ -831,24 +725,6 @@ export default function Charts() {
                       fontSize={12}
                     />
                   </Bar>
-
-                  {/* Gray top bar (Booked) with label above */}
-                  {/*   <Bar
-                    dataKey="booked"
-                    stackId="a"
-                    fill="#6B7280"
-                    radius={[4, 4, 0, 0]}
-                    label={{ position: 'top', fill: '#6B7280', fontSize: 12 }}
-                  />
- */}
-                  {/* Green lower bar (Available) with label in center */}
-                  {/*    <Bar
-                    dataKey="available"
-                    stackId="a"
-                    fill="#25D366"
-                    radius={[4, 4, 0, 0]}
-                    label={{ position: 'center', fill: '#ffffff', fontSize: 12 }}
-                  /> */}
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -900,12 +776,6 @@ export default function Charts() {
               </div>
               <RevenueDisplay />
             </div>
-            {/*    <CardContent>
-          <div className="relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <div className="text-sm text-muted-foreground">Total Revenue</div>
-              <RevenueDisplay />
-            </div> */}
             <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={revenue}
@@ -994,6 +864,17 @@ export default function Charts() {
             setIsCalendarOpen(false);
           }}
           onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
+
+      {donutCalendarOpen && (
+        <SimpleCalendar
+          onSelect={(dateRange) => {
+            setDonutDateRange("custom");
+            setAppliedDonutRange(dateRange);
+            setDonutCalendarOpen(false);
+          }}
+          onClose={() => setDonutCalendarOpen(false)}
         />
       )}
     </div>

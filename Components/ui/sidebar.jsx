@@ -73,9 +73,10 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
         }}
         {...props}
       >
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-          {children}
-        </div>
+          <div className="flex-1 overflow-hidden">{children}</div>
+         {/* <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+           {children}
+         </div> */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
