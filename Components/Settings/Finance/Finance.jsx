@@ -694,7 +694,7 @@ export default function FinanceSettings() {
                     size="sm"
                     className="bg-hotel-primary text-white"
                     variant={year.isActive ? "solid" : "bordered"}
-                    onClick={() => toggleActiveYear(year.yearFormat)}
+                    onPress={() => toggleActiveYear(year.yearFormat)}
                     isDisabled={isLoading}
                   >
                     {year.isActive ? "Active" : "Set Active"}
@@ -813,7 +813,7 @@ export default function FinanceSettings() {
                       key={suggestion}
                       size="sm"
                       variant="flat"
-                      onClick={() =>
+                      onPress={() =>
                         setFormData((prev) => ({
                           ...prev,
                           invoiceFormat: {
@@ -872,7 +872,7 @@ export default function FinanceSettings() {
                   color="primary"
                   className="bg-hotel-primary w-[150px] "
                   radius="full"
-                  onClick={() =>
+                  onPress={() =>
                     document.getElementById("logo-upload")?.click()
                   }
                 >
@@ -903,26 +903,37 @@ export default function FinanceSettings() {
                 <label className="block text-[15px] font-medium text-[#111111] mb-2 w-1/3">
                   Category
                 </label>
-                <div className="relative w-2/3">
-                  <Input
-                    ref={categoryInputRef}
-                    placeholder="Search or create category"
-                    value={categoryInput}
-                    onChange={(e) => handleCategoryInputChange(e.target.value)}
-                    className="w-1/2"
-                    onClick={() => !isEditMode && setShowCategories(true)}
-                    endContent={
-                      <ChevronDown
-                        className={`w-4 h-4 text-[#70707B] cursor-pointer ${
-                          editingCategory ? "hidden" : ""
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isEditMode) setShowCategories(!showCategories);
-                        }}
-                      />
-                    }
-                  />
+                <div className="relative w-2/3" ref={categoryInputRef}>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search or create category"
+                      value={categoryInput}
+                      onChange={(e) =>
+                        handleCategoryInputChange(e.target.value)
+                      }
+                      className="w-1/2"
+                      onClick={() => !isEditMode && setShowCategories(true)}
+                      endContent={
+                        <ChevronDown
+                          className={`w-4 h-4 text-[#70707B] cursor-pointer ${
+                            editingCategory ? "hidden" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isEditMode) setShowCategories(!showCategories);
+                          }}
+                        />
+                      }
+                    />
+                    {(isCreatingCategory || editingCategory) && (
+                      <Button
+                        className="bg-[#0066B2] text-white"
+                        onPress={handleSaveCategory}
+                      >
+                        {editingCategory ? "Update" : "Create"}
+                      </Button>
+                    )}
+                  </div>
                   {showCategories &&
                     !editingCategory && ( // Only show dropdown when not editing
                       <div className="absolute z-50 w-1/2 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -937,7 +948,7 @@ export default function FinanceSettings() {
                                 size="sm"
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
-                                onClick={(e) => {
+                                onPress={(e) => {
                                   e.stopPropagation();
                                   handleEditMode(category, "category");
                                 }}
@@ -948,7 +959,7 @@ export default function FinanceSettings() {
                                 size="sm"
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
-                                onClick={(e) => {
+                                onPress={(e) => {
                                   e.stopPropagation();
                                   handleDeleteCategory(category.name);
                                 }}
@@ -961,43 +972,43 @@ export default function FinanceSettings() {
                       </div>
                     )}
                 </div>
-                {(isCreatingCategory || editingCategory) && (
-                  <Button
-                    className="bg-[#0066B2] text-white"
-                    onClick={handleSaveCategory}
-                  >
-                    {editingCategory ? "Update" : "Create"}
-                  </Button>
-                )}
               </div>
             </div>
-
             {/* Expenses Column */}
             <div className="space-y-4">
               <div className="flex items-center">
                 <label className="block text-[15px] font-medium text-[#111111] mb-2 w-1/3">
                   Expense
                 </label>
-                <div className="relative w-2/3">
-                  <Input
-                    ref={expenseInputRef}
-                    placeholder="Search or create expense"
-                    value={expenseInput}
-                    onChange={(e) => handleExpenseInputChange(e.target.value)}
-                    className="w-1/2"
-                    onClick={() => !isEditMode && setShowExpenses(true)}
-                    endContent={
-                      <ChevronDown
-                        className={`w-4 h-4 text-[#70707B] cursor-pointer ${
-                          editingExpense ? "hidden" : ""
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isEditMode) setShowExpenses(!showExpenses);
-                        }}
-                      />
-                    }
-                  />
+                <div className="relative w-2/3" ref={expenseInputRef}>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search or create expense"
+                      value={expenseInput}
+                      onChange={(e) => handleExpenseInputChange(e.target.value)}
+                      className="w-1/2"
+                      onClick={() => !isEditMode && setShowExpenses(true)}
+                      endContent={
+                        <ChevronDown
+                          className={`w-4 h-4 text-[#70707B] cursor-pointer ${
+                            editingExpense ? "hidden" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isEditMode) setShowExpenses(!showExpenses);
+                          }}
+                        />
+                      }
+                    />
+                    {(isCreatingExpense || editingExpense) && (
+                      <Button
+                        className="ml-2 bg-[#0066B2] text-white"
+                        onPress={handleSaveExpense}
+                      >
+                        {editingExpense ? "Update" : "Create"}
+                      </Button>
+                    )}
+                  </div>
                   {showExpenses &&
                     !editingExpense && ( // Only show dropdown when not editing
                       <div className="absolute z-50 w-1/2 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -1012,7 +1023,7 @@ export default function FinanceSettings() {
                                 size="sm"
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
-                                onClick={(e) => {
+                                onPress={(e) => {
                                   e.stopPropagation();
                                   handleEditMode(expense, "expense");
                                 }}
@@ -1023,7 +1034,7 @@ export default function FinanceSettings() {
                                 size="sm"
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
-                                onClick={(e) => {
+                                onPress={(e) => {
                                   e.stopPropagation();
                                   handleDeleteExpense(expense.name);
                                 }}
@@ -1036,14 +1047,6 @@ export default function FinanceSettings() {
                       </div>
                     )}
                 </div>
-                {(isCreatingExpense || editingExpense) && (
-                  <Button
-                    className="ml-2 bg-[#0066B2] text-white"
-                    onClick={handleSaveExpense}
-                  >
-                    {editingExpense ? "Update" : "Create"}
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -1102,7 +1105,7 @@ export default function FinanceSettings() {
                 hasUnsavedChanges ? "animate-pulse" : ""
               }`}
               radius="full"
-              onClick={handleSave}
+              onPress={handleSave}
               isLoading={isLoading}
               disabled={!hasUnsavedChanges}
             >

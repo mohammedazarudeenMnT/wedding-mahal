@@ -51,7 +51,7 @@ export default function HotelManagementInterface() {
   const tabs = [
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
-    { key: "rooms", title: "Rooms" },
+    { key: "property-management", title: "Property Management" },
     { key: "inventory", title: "Inventory" },
     { key: "finance", title: "Finance" },
     { key: "employee", title: "Employee Management" },
@@ -99,7 +99,7 @@ export default function HotelManagementInterface() {
             <General initialHotelData={hotelData} />
           )}
           {selectedTab === "email" && <EmailConfiguration />}
-          {selectedTab === "rooms" && <RoomSettings />}
+          {selectedTab === "property-management" && <RoomSettings />}
           {selectedTab === "inventory" && <InventoryForm />}
           {selectedTab === "finance" && <FinanceSettings />}
           {selectedTab === "employee" && <EmployeeManagement />}

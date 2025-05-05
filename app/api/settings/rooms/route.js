@@ -13,12 +13,11 @@ export async function GET() {
     if (!roomSettings) {
       // Create default settings
       const defaultSettings = {
-        checkIn: "10:00",
-        checkOut: "09:00",
         weekend: ["Sun"],
         weekendPriceHike: 0,
-        housekeepingBuffer: roomSettings?.manualControl ? undefined : 2,
-        manualControl: false,
+        propertyTypes: [],
+        eventTypes: [],
+        timeSlots: [],
       };
 
       roomSettings = await RoomSettingsModel.create(defaultSettings);
@@ -51,56 +50,105 @@ export async function POST(request) {
     await getHotelDatabase();
     const RoomSettingsModel = getModel("RoomSettings", RoomSettings);
 
-    const formData = await request.formData();
-    const checkIn = formData.get("checkIn");
-    const checkOut = formData.get("checkOut");
-    const weekend = formData.getAll("weekend");
-    const weekendPriceHike = parseFloat(formData.get("weekendPriceHike"));
-    const manualControl = formData.get("manualControl");
+    const data = await request.json();
 
-    if (!checkIn || !checkOut || !weekend.length || isNaN(weekendPriceHike)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid or missing form data" },
-        { status: 400 }
-      );
-    }
-
-    let updateData = {
-      checkIn,
-      checkOut,
+    // Handle basic room settings
+    const {
       weekend,
       weekendPriceHike,
-      manualControl: !!manualControl,
+      operation,
+      type,
+      name,
+      oldName,
+      fromTime,
+      toTime,
+    } = data;
+
+    let updateQuery = {};
+
+    if (operation) {
+      // Handle CRUD operations for types
+      switch (operation) {
+        case "create":
+          if (type === "timeSlot") {
+            updateQuery = {
+              $push: {
+                [`${type}s`]: {
+                  name,
+                  fromTime,
+                  toTime,
+                },
+              },
+            };
+          } else {
+            updateQuery = {
+              $push: { [`${type}s`]: { name } },
+            };
+          }
+          break;
+        case "update":
+          if (type === "timeSlot") {
+            updateQuery = {
+              $set: {
+                [`${type}s.$[elem].name`]: name,
+                [`${type}s.$[elem].fromTime`]: fromTime,
+                [`${type}s.$[elem].toTime`]: toTime,
+              },
+            };
+          } else {
+            updateQuery = {
+              $set: { [`${type}s.$[elem].name`]: name },
+            };
+          }
+          break;
+        case "delete":
+          updateQuery = {
+            $pull: { [`${type}s`]: { name } },
+          };
+          break;
+      }
+    } else {
+      // Handle basic settings update
+      if (!weekend?.length || isNaN(weekendPriceHike)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid or missing data" },
+          { status: 400 }
+        );
+      }
+
+      updateQuery = {
+        $set: {
+          weekend,
+          weekendPriceHike,
+        },
+      };
+    }
+
+    const options = {
+      new: true,
+      upsert: true,
+      runValidators: true,
+      setDefaultsOnInsert: true,
     };
 
-    if (manualControl) {
-      updateData.housekeepingBuffer = null;
-    } else {
-      const { bufferHours } = calculateBufferHours(checkIn, checkOut);
-      updateData.housekeepingBuffer = bufferHours;
+    // Add arrayFilters for update operations
+    if (operation === "update") {
+      options.arrayFilters = [{ "elem.name": oldName }];
     }
 
     const updatedSettings = await RoomSettingsModel.findOneAndUpdate(
       {},
-      { $set: updateData },
-      {
-        new: true,
-        upsert: true,
-        runValidators: false,
-        setDefaultsOnInsert: true,
-      }
+      updateQuery,
+      options
     );
-
-    const responseSettings = updatedSettings.toObject();
-    if (responseSettings.manualControl) {
-      responseSettings.housekeepingBuffer = undefined;
-    }
 
     return NextResponse.json(
       {
         success: true,
-        settings: responseSettings,
-        message: "Room settings updated successfully",
+        settings: updatedSettings,
+        message: operation
+          ? `${type} ${operation}d successfully`
+          : "Room settings updated successfully",
       },
       { status: 200 }
     );
@@ -125,14 +173,4 @@ export async function POST(request) {
       { status: statusCode }
     );
   }
-}
-
-function calculateBufferHours(checkIn, checkOut) {
-  const [checkInHour] = checkIn.split(":").map(Number);
-  const [checkOutHour] = checkOut.split(":").map(Number);
-  const stayHours = 24 - checkInHour + checkOutHour;
-  return {
-    stayHours,
-    bufferHours: 24 - stayHours,
-  };
 }
