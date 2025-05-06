@@ -19,6 +19,8 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 import { MdOutlineSettings } from "react-icons/md";
+import { BiBookContent } from "react-icons/bi";
+
 
 import "./sidebarr.css";
 
@@ -145,6 +147,13 @@ export function SidebarDemo() {
       href: `/dashboard/crm`,
       icon: (
         <IconUsersGroup className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "Web Settings",
+      href: `/dashboard/web-settings`,
+      icon: (
+        <BiBookContent  className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
