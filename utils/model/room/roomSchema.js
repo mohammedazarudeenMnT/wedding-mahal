@@ -29,13 +29,13 @@ const bookedDateSchema = new mongoose.Schema(
 // Define the schema for each room number with status
 const roomNumberSchema = new mongoose.Schema(
   {
-    number: { type: String, required: true }, // Room number (e.g., "101")
+    number: { type: String, required: true }, // room number (e.g., "101")
     bookeddates: [bookedDateSchema],
   },
   { _id: false }
 );
 
-// Define the schema for the Room
+// Define the schema for the room
 const roomSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -44,7 +44,7 @@ const roomSchema = new mongoose.Schema(
     additionalGuestCosts: {
       type: String,
       required: function () {
-        return this.type === "Room";
+        return this.type === "room";
       },
     },
     mainImage: { type: String, required: true },
@@ -54,52 +54,52 @@ const roomSchema = new mongoose.Schema(
     capacity: {
       type: Number,
       required: function () {
-        return this.type === "Hall";
+        return this.type === "hall";
       },
     },
     bedModel: {
       type: String,
       required: function () {
-        return this.type === "Room";
+        return this.type === "room";
       },
     },
     maxGuests: {
       type: Number,
       required: function () {
-        return this.type === "Room";
+        return this.type === "room";
       },
     },
     roomNumbers: {
       type: [roomNumberSchema],
       required: function () {
-        return this.type === "Room";
+        return this.type === "room";
       },
       default: undefined, // This prevents empty array from being created
     },
     hallNumbers: {
       type: [roomNumberSchema],
       required: function () {
-        return this.type === "Hall";
+        return this.type === "hall";
       },
       default: undefined, // This prevents empty array from being created
     },
     numberOfRooms: {
       type: Number,
       required: function () {
-        return this.type === "Room";
+        return this.type === "room";
       },
     },
     numberOfHalls: {
       type: Number,
       required: function () {
-        return this.type === "Hall";
+        return this.type === "hall";
       },
     },
     type: {
       type: String,
-      enum: ["Room", "Hall"],
+      enum: ["room", "hall"],
       required: true,
-      default: "Room",
+      default: "room",
     },
     complementaryFoods: {
       type: [String],
@@ -114,11 +114,11 @@ const roomSchema = new mongoose.Schema(
 
 // Add a pre-save middleware to clean up unused fields
 roomSchema.pre("save", function (next) {
-  if (this.type === "Room") {
+  if (this.type === "room") {
     this.hallNumbers = undefined;
     this.capacity = undefined;
     this.numberOfHalls = undefined;
-  } else if (this.type === "Hall") {
+  } else if (this.type === "hall") {
     this.roomNumbers = undefined;
     this.bedModel = undefined;
     this.maxGuests = undefined;

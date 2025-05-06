@@ -2,24 +2,6 @@ import mongoose from "mongoose";
 
 const roomSettingsSchema = new mongoose.Schema(
   {
-    weekend: {
-      type: [String],
-      required: [true, "Weekend days are required"],
-      validate: {
-        validator: function (v) {
-          const validDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-          return v.every((day) => validDays.includes(day));
-        },
-        message: (props) =>
-          `${props.value} contains invalid day(s). Use Sun, Mon, Tue, Wed, Thu, Fri, Sat.`,
-      },
-    },
-    weekendPriceHike: {
-      type: Number,
-      required: [true, "Weekend price hike percentage is required"],
-      min: [0, "Weekend price hike cannot be negative"],
-      max: [100, "Weekend price hike cannot exceed 100%"],
-    },
     propertyTypes: [
       {
         name: {
@@ -66,6 +48,47 @@ const roomSettingsSchema = new mongoose.Schema(
             message: (props) =>
               `${props.value} is not a valid time format. Use HH:00 format.`,
           },
+        },
+      },
+    ],
+    specialOfferings: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        startDate: {
+          type: Date,
+          required: true,
+        },
+        endDate: {
+          type: Date,
+          required: true,
+        },
+        propertyType: {
+          type: String,
+          required: true,
+        },
+        discountPercentage: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: 100,
+        },
+      },
+    ],
+    services: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: 0,
         },
       },
     ],

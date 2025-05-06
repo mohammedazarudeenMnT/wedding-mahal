@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
+import { DateRangePicker } from "@heroui/date-picker";
+
 import { ChevronDown, PenSquare, Trash2 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -22,19 +24,7 @@ const hours = Array.from({ length: 24 }, (_, i) => ({
   label: `${i.toString().padStart(2, "0")}:00`,
 }));
 
-const days = [
-  { key: "Sun", label: "Sun" },
-  { key: "Mon", label: "Mon" },
-  { key: "Tue", label: "Tue" },
-  { key: "Wed", label: "Wed" },
-  { key: "Thu", label: "Thu" },
-  { key: "Fri", label: "Fri" },
-  { key: "Sat", label: "Sat" },
-];
-
 export default function RoomSettings() {
-  const [selectedDays, setSelectedDays] = useState([]);
-  const [priceHike, setPriceHike] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [propertyTypeInput, setPropertyTypeInput] = useState("");
   const [eventTypeInput, setEventTypeInput] = useState("");
@@ -59,6 +49,23 @@ export default function RoomSettings() {
   const eventTypeInputRef = useRef(null);
   const timeSlotInputRef = useRef(null);
 
+  const [specialOfferingData, setSpecialOfferingData] = useState({
+    name: "",
+    propertyType: "",
+    discountPercentage: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [specialOfferings, setSpecialOfferings] = useState([]);
+  const [editingOffering, setEditingOffering] = useState(null);
+
+  const [serviceData, setServiceData] = useState({
+    name: "",
+    price: "",
+  });
+  const [services, setServices] = useState([]);
+  const [editingService, setEditingService] = useState(null);
+
   useEffect(() => {
     fetchRoomSettings();
   }, []);
@@ -67,11 +74,11 @@ export default function RoomSettings() {
     try {
       const response = await axios.get(`/api/settings/rooms`);
       const data = response.data.settings;
-      setSelectedDays(data.weekend || []);
-      setPriceHike(data.weekendPriceHike.toString());
       setPropertyTypes(data.propertyTypes || []);
       setEventTypes(data.eventTypes || []);
       setTimeSlots(Array.isArray(data.timeSlots) ? data.timeSlots : []);
+      setSpecialOfferings(data.specialOfferings || []);
+      setServices(data.services || []);
     } catch (error) {
       console.error("Error fetching room settings:", error);
       toast.error("Failed to fetch room settings");
@@ -114,19 +121,10 @@ export default function RoomSettings() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isEditMode]);
 
-  const handleDayToggle = (day) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
-  };
-
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.post(`/api/settings/rooms`, {
-        weekend: selectedDays,
-        weekendPriceHike: parseFloat(priceHike),
-      });
+      const response = await axios.post(`/api/settings/rooms`, {});
 
       if (response.data.success) {
         toast.success(response.data.message);
@@ -296,6 +294,111 @@ export default function RoomSettings() {
     }
   };
 
+  const handleSaveSpecialOffering = async () => {
+    if (
+      !specialOfferingData.name ||
+      !specialOfferingData.startDate ||
+      !specialOfferingData.endDate ||
+      !specialOfferingData.propertyType ||
+      !specialOfferingData.discountPercentage
+    ) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    try {
+      const formData = {
+        operation: editingOffering ? "update" : "create",
+        type: "specialOffering",
+        ...specialOfferingData,
+        oldName: editingOffering?.name,
+      };
+
+      const response = await axios.post(`/api/settings/rooms`, formData);
+
+      if (response.data.success) {
+        toast.success(editingOffering ? "Offering updated" : "Offering added");
+        setSpecialOfferingData({
+          name: "",
+          propertyType: "",
+          discountPercentage: "",
+          startDate: "",
+          endDate: "",
+        });
+        setEditingOffering(null);
+        await refetchSettings();
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.error || "Failed to save special offering"
+      );
+    }
+  };
+
+  const handleDeleteSpecialOffering = async (name) => {
+    try {
+      const response = await axios.post(`/api/settings/rooms`, {
+        operation: "delete",
+        type: "specialOffering",
+        name,
+      });
+
+      if (response.data.success) {
+        toast.success("Special offering deleted");
+        await refetchSettings();
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.error || "Failed to delete special offering"
+      );
+    }
+  };
+
+  const handleSaveService = async () => {
+    if (!serviceData.name || !serviceData.price) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    try {
+      const formData = {
+        operation: editingService ? "update" : "create",
+        type: "service",
+        name: serviceData.name,
+        price: parseFloat(serviceData.price),
+        oldName: editingService?.name,
+      };
+
+      const response = await axios.post(`/api/settings/rooms`, formData);
+
+      if (response.data.success) {
+        toast.success(editingService ? "Service updated" : "Service added");
+        setServiceData({ name: "", price: "" });
+        setEditingService(null);
+        await refetchSettings();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to save service");
+    }
+  };
+
+  const handleDeleteService = async (name) => {
+    try {
+      const response = await axios.post(`/api/settings/rooms`, {
+        operation: "delete",
+        type: "service",
+        name,
+      });
+
+      if (response.data.success) {
+        toast.success("Service deleted");
+        await refetchSettings();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to delete service");
+    }
+  };
+
   const renderTimeSlotsTable = () => {
     // Ensure timeSlots is an array
     const timeSlotsArray = Array.isArray(timeSlots) ? timeSlots : [];
@@ -411,6 +514,215 @@ export default function RoomSettings() {
       </div>
     );
   };
+
+  const renderSpecialOfferingsSection = () => (
+    <div className="mt-6 space-y-4">
+      <h3 className="text-lg font-semibold">Festival/Special Offerings</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          placeholder="Offering Name"
+          value={specialOfferingData.name}
+          onChange={(e) =>
+            setSpecialOfferingData((prev) => ({
+              ...prev,
+              name: e.target.value,
+            }))
+          }
+        />
+        <Select
+          placeholder="Property Type"
+          value={specialOfferingData.propertyType}
+          onChange={(e) =>
+            setSpecialOfferingData((prev) => ({
+              ...prev,
+              propertyType: e.target.value,
+            }))
+          }
+        >
+          {propertyTypes.map((type) => (
+            <SelectItem key={type.name} value={type.name}>
+              {type.name}
+            </SelectItem>
+          ))}
+        </Select>
+        <DateRangePicker
+          className=""
+          label="Offering Duration"
+          onChange={(range) => {
+            if (range?.start && range?.end) {
+              const startDate = new Date(
+                range.start.year,
+                range.start.month - 1,
+                range.start.day
+              ).toISOString();
+              const endDate = new Date(
+                range.end.year,
+                range.end.month - 1,
+                range.end.day
+              ).toISOString();
+              setSpecialOfferingData((prev) => ({
+                ...prev,
+                startDate,
+                endDate,
+              }));
+            }
+          }}
+        />
+        <Input
+          type="number"
+          placeholder="Discount Percentage"
+          value={specialOfferingData.discountPercentage}
+          onChange={(e) =>
+            setSpecialOfferingData((prev) => ({
+              ...prev,
+              discountPercentage: e.target.value,
+            }))
+          }
+        />
+        <Button
+          className="bg-hotel-primary text-white text-center justify-center col-span-2 w-10"
+          onPress={handleSaveSpecialOffering}
+        >
+          {editingOffering ? "Update" : "Create"}
+        </Button>
+      </div>
+
+      <Table aria-label="Special Offerings">
+        <TableHeader>
+          <TableColumn>NAME</TableColumn>
+          <TableColumn>PROPERTY TYPE</TableColumn>
+          <TableColumn>START DATE</TableColumn>
+          <TableColumn>END DATE</TableColumn>
+          <TableColumn>DISCOUNT</TableColumn>
+          <TableColumn>ACTIONS</TableColumn>
+        </TableHeader>
+        <TableBody>
+          {specialOfferings.map((offering) => (
+            <TableRow key={offering.name}>
+              <TableCell>{offering.name}</TableCell>
+              <TableCell>{offering.propertyType}</TableCell>
+              <TableCell>
+                {new Date(offering.startDate).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {new Date(offering.endDate).toLocaleDateString()}
+              </TableCell>
+              <TableCell>{offering.discountPercentage}%</TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    isIconOnly
+                    className="bg-transparent hover:bg-gray-200"
+                    onPress={() => {
+                      setEditingOffering(offering);
+                      setSpecialOfferingData({
+                        name: offering.name,
+                        propertyType: offering.propertyType,
+                        discountPercentage: offering.discountPercentage,
+                        startDate: offering.startDate,
+                        endDate: offering.endDate,
+                      });
+                    }}
+                  >
+                    <PenSquare className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    isIconOnly
+                    className="bg-transparent hover:bg-gray-200"
+                    onPress={() => handleDeleteSpecialOffering(offering.name)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  const renderServicesSection = () => (
+    <div className="mt-6 space-y-4">
+      <h3 className="text-lg font-semibold">Services</h3>
+      <div className="flex gap-4 items-end">
+        <div className="flex-1">
+          <Input
+            placeholder="Service Name"
+            value={serviceData.name}
+            onChange={(e) =>
+              setServiceData((prev) => ({ ...prev, name: e.target.value }))
+            }
+          />
+        </div>
+        <div className="flex-1">
+          <Input
+            type="number"
+            placeholder="Price"
+            value={serviceData.price}
+            onChange={(e) =>
+              setServiceData((prev) => ({ ...prev, price: e.target.value }))
+            }
+            startContent={
+              <div className="pointer-events-none flex items-center">
+                <span className="text-default-400 text-small">₹</span>
+              </div>
+            }
+          />
+        </div>
+        <Button
+          className="bg-hotel-primary text-white px-8"
+          onPress={handleSaveService}
+        >
+          {editingService ? "Update" : "Create"}
+        </Button>
+      </div>
+
+      <Table aria-label="Services">
+        <TableHeader>
+          <TableColumn>SERVICE NAME</TableColumn>
+          <TableColumn>PRICE</TableColumn>
+          <TableColumn>ACTIONS</TableColumn>
+        </TableHeader>
+        <TableBody>
+          {services.map((service) => (
+            <TableRow key={service.name}>
+              <TableCell>{service.name}</TableCell>
+              <TableCell>₹{service.price}</TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    isIconOnly
+                    className="bg-transparent hover:bg-gray-200"
+                    onPress={() => {
+                      setEditingService(service);
+                      setServiceData({
+                        name: service.name,
+                        price: service.price.toString(),
+                      });
+                    }}
+                  >
+                    <PenSquare className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    isIconOnly
+                    className="bg-transparent hover:bg-gray-200"
+                    onPress={() => handleDeleteService(service.name)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 
   return (
     <section className="mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm min-h-[811px] flex flex-col">
@@ -562,54 +874,8 @@ export default function RoomSettings() {
       </div>
 
       {renderTimeSlotsTable()}
-
-      <div className="flex gap-9 my-7">
-        <label className="items-center justify-center text-sm font-medium text-gray-700 mb-4 mt-4">
-          Weekend
-        </label>
-        <div className="flex gap-4">
-          {days.map((day) => (
-            <button
-              key={day.key}
-              onClick={() => handleDayToggle(day.key)}
-              className={`
-                w-12 h-12 rounded-full flex items-center justify-center
-                transition-colors duration-200
-                ${
-                  selectedDays.includes(day.key)
-                    ? "bg-hotel-primary text-white"
-                    : "bg-white text-gray-700 border border-gray-300"
-                }
-              `}
-            >
-              {day.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex gap-9">
-        <label className="block text-sm font-medium text-gray-700 mb-2 mt-3">
-          Weekend Price Hike
-        </label>
-        <div className="flex items-center max-w-[200px]">
-          <Input
-            value={priceHike}
-            onValueChange={setPriceHike}
-            variant="bordered"
-            radius="lg"
-            endContent={
-              <div className="pointer-events-none flex items-center">
-                <span className="text-default-400 text-small">%</span>
-              </div>
-            }
-            classNames={{
-              input: "text-right",
-            }}
-            className="w-1/2"
-          />
-        </div>
-      </div>
+      {renderSpecialOfferingsSection()}
+      {renderServicesSection()}
 
       <div className="w-full flex justify-end items-end flex-grow mt-16">
         <Button

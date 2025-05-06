@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
@@ -21,6 +21,25 @@ const ContactForm = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [dateError, setDateError] = useState("");
+  const [propertyTypes, setPropertyTypes] = useState([]);
+  const [eventTypes, setEventTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await axios.get("/api/settings/rooms");
+        if (response.data.success) {
+          const settings = response.data.settings;
+          setPropertyTypes(settings.propertyTypes || []);
+          setEventTypes(settings.eventTypes || []);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -216,18 +235,14 @@ const ContactForm = () => {
             value={formData.propertyType}
             onChange={handleChange}
           >
-            <SelectItem key="hall" value="hall">
-              Wedding Hall
-            </SelectItem>
-            <SelectItem key="banquet" value="banquet">
-              Banquet Hall
-            </SelectItem>
-            <SelectItem key="venue" value="venue">
-              Event Venue
-            </SelectItem>
-            <SelectItem key="garden" value="garden">
-              Garden
-            </SelectItem>
+            {propertyTypes.map((type) => (
+              <SelectItem
+                key={type.name.toLowerCase()}
+                value={type.name.toLowerCase()}
+              >
+                {type.name}
+              </SelectItem>
+            ))}
           </Select>
         </div>
         <div>
@@ -239,21 +254,14 @@ const ContactForm = () => {
             value={formData.eventType}
             onChange={handleChange}
           >
-            <SelectItem key="wedding" value="wedding">
-              Wedding
-            </SelectItem>
-            <SelectItem key="reception" value="reception">
-              Reception
-            </SelectItem>
-            <SelectItem key="engagement" value="engagement">
-              Engagement
-            </SelectItem>
-            <SelectItem key="birthday" value="birthday">
-              Birthday Celebration
-            </SelectItem>
-            <SelectItem key="corporate" value="corporate">
-              Corporate Event
-            </SelectItem>
+            {eventTypes.map((type) => (
+              <SelectItem
+                key={type.name.toLowerCase()}
+                value={type.name.toLowerCase()}
+              >
+                {type.name}
+              </SelectItem>
+            ))}
           </Select>
         </div>
         <div className="md:col-span-2">

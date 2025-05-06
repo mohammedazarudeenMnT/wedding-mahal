@@ -22,7 +22,7 @@ async function updateRoomStatuses(RoomModel, GuestModel) {
 
   for (const room of rooms) {
     // Handle room numbers for Room type
-    if (room.type === "Room" && room.roomNumbers) {
+    if (room.type === "room" && room.roomNumbers) {
       for (const roomNumber of room.roomNumbers) {
         for (const bookedDate of roomNumber.bookeddates) {
           if (!bookedDate.bookingNumber) continue;
@@ -43,7 +43,7 @@ async function updateRoomStatuses(RoomModel, GuestModel) {
     }
 
     // Handle hall numbers for Hall type
-    if (room.type === "Hall" && room.hallNumbers) {
+    if (room.type === "hall" && room.hallNumbers) {
       for (const hallNumber of room.hallNumbers) {
         for (const bookedDate of hallNumber.bookeddates) {
           if (!bookedDate.bookingNumber) continue;
@@ -79,22 +79,63 @@ export async function GET() {
     // Update room statuses
     const updatedCount = await updateRoomStatuses(RoomModel, GuestModel);
 
-    // Fetch room settings
+    // Fetch room settings and special offerings
     const roomSettings = await RoomSettingsModel.findOne({});
-    const weekend = roomSettings?.weekend || [];
-    const weekendPriceHike = roomSettings?.weekendPriceHike || 0;
+    const specialOfferings = roomSettings?.specialOfferings || [];
 
     // Fetch all rooms for this hotel
     const rooms = await RoomModel.find({});
 
-    // Add weekend pricing information to each room
-    const roomsWithWeekendPricing = rooms.map((room) => {
-      const weekendPrice = room.price * (1 + weekendPriceHike / 100);
+    // Add discount information to each room
+    const roomsWithPricing = rooms.map((room) => {
+      // Find all applicable special offerings for this room type
+      const typeOfferings = specialOfferings.filter(
+        (offering) =>
+          offering.propertyType.toLowerCase() === room.type.toLowerCase()
+      );
+
+      // Get applicable offering
+      const activeOffering = typeOfferings.length > 0 ? typeOfferings[0] : null;
+
       return {
         ...room.toObject(),
-        weekendPrice,
-        weekend,
-        weekendPriceHike,
+        currentDiscount: activeOffering
+          ? {
+              name: activeOffering.name,
+              percentage: activeOffering.discountPercentage,
+              startDate: activeOffering.startDate,
+              endDate: activeOffering.endDate,
+              propertyType: activeOffering.propertyType,
+            }
+          : null,
+        pricing: {
+          basePrice: room.price,
+          discountedPrice: activeOffering
+            ? Math.round(
+                room.price * (1 - activeOffering.discountPercentage / 100)
+              )
+            : room.price,
+          propertyTypePricing: specialOfferings.reduce((acc, offering) => {
+            if (!acc[offering.propertyType]) {
+              acc[offering.propertyType] = {
+                originalPrice:
+                  room.type.toLowerCase() ===
+                  offering.propertyType.toLowerCase()
+                    ? room.price
+                    : null,
+                discountedPrice:
+                  room.type.toLowerCase() ===
+                  offering.propertyType.toLowerCase()
+                    ? Math.round(
+                        room.price * (1 - offering.discountPercentage / 100)
+                      )
+                    : null,
+                discount: offering,
+              };
+            }
+            return acc;
+          }, {}),
+        },
       };
     });
 
@@ -102,11 +143,11 @@ export async function GET() {
     return new Response(
       JSON.stringify({
         success: true,
-        rooms: roomsWithWeekendPricing,
+        rooms: roomsWithPricing,
         updatedStatusCount: updatedCount,
         roomSettings: {
-          weekend,
-          weekendPriceHike,
+          checkIn: roomSettings?.checkIn || "14:00",
+          checkOut: roomSettings?.checkOut || "12:00",
         },
       }),
       {
@@ -145,7 +186,7 @@ export async function POST(request) {
       // ...existing image handling code...
     };
 
-    if (type === "Hall") {
+    if (type === "hall") {
       // Hall-specific fields
       newRoomData.capacity = parseInt(formData.get("capacity"));
       newRoomData.hallNumbers = JSON.parse(formData.get("hallNumbers"));
