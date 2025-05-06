@@ -13,25 +13,29 @@ import { PiCurrencyInr } from "react-icons/pi";
 import { IoTrashBinOutline } from "react-icons/io5";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/Components/ui/popover";
-import { Calendar } from "@/Components/ui/calendar";
-import { CalendarIcon, Search } from "lucide-react";
-import { format, addDays, setHours, setMinutes } from "date-fns";
+import { DateRangePicker } from "@heroui/date-picker";
 import RoomListSkeleton from "./RoomSkeleton.jsx";
 import { usePagePermission } from "@/hooks/usePagePermission";
 import Image from "next/image";
 import { MdFreeBreakfast, MdLunchDining, MdDinnerDining } from "react-icons/md";
 import { GiCakeSlice } from "react-icons/gi";
+import { MdLocalOffer } from "react-icons/md";
 
+import { addDays, setHours, setMinutes } from "date-fns";
+import { Search } from "lucide-react";
 const complementaryFoodIcons = {
   Breakfast: <MdFreeBreakfast className="w-4 h-4" />,
   Lunch: <MdLunchDining className="w-4 h-4" />,
   Dinner: <MdDinnerDining className="w-4 h-4" />,
   Snacks: <GiCakeSlice className="w-4 h-4" />,
+};
+
+// Add this function before the RoomList component
+const isDateInRange = (date, startDate, endDate) => {
+  const checkDate = new Date(date);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  return checkDate >= start && checkDate <= end;
 };
 
 export default function RoomList() {
@@ -51,10 +55,8 @@ export default function RoomList() {
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [roomSettings, setRoomSettings] = useState({
-    checkIn: "14:00",
-    checkOut: "12:00",
-    weekend: [],
-    weekendPriceHike: 0,
+    checkIn: "14:00", // Default check-in time
+    checkOut: "12:00", // Default check-out time
   });
   const [isMobileDetailsOpen, setIsMobileDetailsOpen] = useState(false);
 
@@ -82,10 +84,8 @@ export default function RoomList() {
 
       const settings = settingsResponse.data.settings;
       setRoomSettings({
-        checkIn: settings.checkIn,
-        checkOut: settings.checkOut,
-        weekend: settings.weekend || [],
-        weekendPriceHike: settings.weekendPriceHike || 0,
+        checkIn: settings?.checkIn || "14:00",
+        checkOut: settings?.checkOut || "12:00",
       });
 
       setLoading(false);
@@ -123,18 +123,30 @@ export default function RoomList() {
     setSelectedCategory(e.target.value);
   };
 
-  const handleDateChange = (range) => {
-    if (range?.from) {
-      setDateRange({
-        from: range.from,
-        to: range.to || range.from, // If no 'to' date, use 'from' date (single date mode)
-      });
-    } else {
+  const handleDateRangeChange = (range) => {
+    if (!range || !range.start || !range.end) {
       setDateRange({
         from: new Date(),
         to: addDays(new Date(), 1),
       });
+      return;
     }
+
+    const startDate = new Date(
+      range.start.year,
+      range.start.month - 1,
+      range.start.day
+    );
+    const endDate = new Date(
+      range.end.year,
+      range.end.month - 1,
+      range.end.day
+    );
+
+    setDateRange({
+      from: startDate,
+      to: endDate,
+    });
   };
 
   const getRoomStatusMemoized = useCallback(
@@ -163,12 +175,11 @@ export default function RoomList() {
       }
 
       // Rest of the existing availability check logic
-      const [checkInHours, checkInMinutes] = roomSettings.checkIn
-        .split(":")
-        .map(Number);
-      const [checkOutHours, checkOutMinutes] = roomSettings.checkOut
-        .split(":")
-        .map(Number);
+      const checkIn = roomSettings?.checkIn || "14:00";
+      const checkOut = roomSettings?.checkOut || "12:00";
+
+      const [checkInHours, checkInMinutes] = checkIn.split(":").map(Number);
+      const [checkOutHours, checkOutMinutes] = checkOut.split(":").map(Number);
 
       const requestedCheckIn = setMinutes(
         setHours(new Date(dateRange.from), checkInHours),
@@ -212,18 +223,23 @@ export default function RoomList() {
     [dateRange, roomSettings]
   );
 
-  const calculateRoomPriceMemoized = useCallback(
-    (room, date) => {
-      const dayOfWeek = format(date, "EEE");
-      const isWeekendDay = roomSettings.weekend.includes(dayOfWeek);
-      if (isWeekendDay) {
-        const hikePercentage = 1 + roomSettings.weekendPriceHike / 100;
-        return room.price * hikePercentage;
-      }
-      return room.price;
-    },
-    [roomSettings]
-  );
+  const calculateRoomPriceMemoized = useCallback((room) => {
+    return room.price;
+  }, []);
+
+  const calculateDiscountedPrice = useCallback((room, selectedDate) => {
+    if (!room?.currentDiscount) return room.price;
+
+    const isDiscountValid = isDateInRange(
+      selectedDate,
+      room.currentDiscount.startDate,
+      room.currentDiscount.endDate
+    );
+
+    return isDiscountValid
+      ? Math.round(room.price * (1 - room.currentDiscount.percentage / 100))
+      : room.price;
+  }, []);
 
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
@@ -240,6 +256,58 @@ export default function RoomList() {
       return categoryMatch && searchMatch;
     });
   }, [rooms, selectedCategory, searchQuery]);
+
+  const renderPricing = (room) => {
+    const isDiscountActive =
+      room.currentDiscount &&
+      isDateInRange(
+        dateRange.from,
+        room.currentDiscount.startDate,
+        room.currentDiscount.endDate
+      );
+
+    return (
+      <div className="text-right">
+        {isDiscountActive ? (
+          <>
+            <p className="text-sm text-gray-500 line-through flex items-center justify-end">
+              <PiCurrencyInr className="w-4 h-4" />
+              {room.price.toFixed(0)}
+            </p>
+            <p className="text-xl font-semibold flex items-center text-red-500">
+              <PiCurrencyInr className="w-5 h-5" />
+              {calculateDiscountedPrice(room, dateRange.from).toFixed(0)}
+              <span className="text-sm text-gray-500 font-normal ml-1">
+                /night
+              </span>
+            </p>
+            <p className="text-xs text-gray-500">
+              {room.currentDiscount.name} offer valid{" "}
+              {new Date(room.currentDiscount.startDate).toLocaleDateString()}
+              {" - "}
+              {new Date(room.currentDiscount.endDate).toLocaleDateString()}
+            </p>
+          </>
+        ) : (
+          <p className="text-xl font-semibold flex items-center">
+            <PiCurrencyInr className="w-5 h-5" />
+            {room.price.toFixed(0)}
+            <span className="text-sm text-gray-500 font-normal ml-1">
+              /night
+            </span>
+          </p>
+        )}
+        {room.currentDiscount && !isDiscountActive && (
+          <p className="text-xs text-gray-500">
+            Offer available{" "}
+            {new Date(room.currentDiscount.startDate).toLocaleDateString()}
+            {" - "}
+            {new Date(room.currentDiscount.endDate).toLocaleDateString()}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   if (!canViewRooms) {
     return <div>You don&apos;t have permission to view rooms.</div>;
@@ -271,28 +339,13 @@ export default function RoomList() {
             </div>
             <div className="flex flex-wrap items-center gap-2 flex-1 justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex items-center">
-                  <span className="text-sm mr-2">Check Availability:</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="bg-white border rounded-md h-10 px-3 flex items-center gap-2"
-                      >
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={dateRange?.from}
-                        selected={dateRange}
-                        onSelect={handleDateChange}
-                        numberOfMonths={2}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Check Availability:</span>
+                  <DateRangePicker
+                    className="bg-white text-[#333] border-0 w-[280px]"
+                    label="Select Dates"
+                    onChange={handleDateRangeChange}
+                  />
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm mr-2">Sort by:</span>
@@ -345,6 +398,12 @@ export default function RoomList() {
                       onClick={() => handleRoomClick(room)}
                     >
                       <div className="w-full md:w-60 lg:w-48 xl:w-56 h-auto md:h-auto flex-shrink-0 relative aspect-[4/3]">
+                        {room.currentDiscount && (
+                          <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-xs flex items-center gap-1">
+                            <MdLocalOffer className="w-3 h-3" />
+                            {room.currentDiscount.percentage}% OFF
+                          </div>
+                        )}
                         <Image
                           src={room.mainImage || "/placeholder.svg"}
                           alt={room.name}
@@ -440,16 +499,7 @@ export default function RoomList() {
                                   }/${room.numberOfHalls} Halls`}
                             </span>
                           </p>
-                          <p className="text-xl font-semibold flex items-center mt-3">
-                            <PiCurrencyInr className="w-5 h-5" />
-                            {calculateRoomPriceMemoized(
-                              room,
-                              dateRange.from
-                            ).toFixed(0)}
-                            <span className="text-sm text-gray-500 font-normal ml-1">
-                              /night
-                            </span>
-                          </p>
+                          {renderPricing(room)}
                         </div>
                       </div>
                     </div>

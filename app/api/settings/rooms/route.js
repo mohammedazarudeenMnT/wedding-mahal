@@ -13,8 +13,6 @@ export async function GET() {
     if (!roomSettings) {
       // Create default settings
       const defaultSettings = {
-        weekend: ["Sun"],
-        weekendPriceHike: 0,
         propertyTypes: [],
         eventTypes: [],
         timeSlots: [],
@@ -52,16 +50,17 @@ export async function POST(request) {
 
     const data = await request.json();
 
-    // Handle basic room settings
     const {
-      weekend,
-      weekendPriceHike,
       operation,
       type,
       name,
       oldName,
       fromTime,
       toTime,
+      startDate,
+      endDate,
+      propertyType,
+      discountPercentage,
     } = data;
 
     let updateQuery = {};
@@ -107,21 +106,73 @@ export async function POST(request) {
           };
           break;
       }
-    } else {
-      // Handle basic settings update
-      if (!weekend?.length || isNaN(weekendPriceHike)) {
-        return NextResponse.json(
-          { success: false, error: "Invalid or missing data" },
-          { status: 400 }
-        );
-      }
+    }
 
-      updateQuery = {
-        $set: {
-          weekend,
-          weekendPriceHike,
-        },
-      };
+    if (type === "specialOffering") {
+      switch (operation) {
+        case "create":
+          updateQuery = {
+            $push: {
+              specialOfferings: {
+                name,
+                startDate,
+                endDate,
+                propertyType,
+                discountPercentage,
+              },
+            },
+          };
+          break;
+        case "update":
+          updateQuery = {
+            $set: {
+              "specialOfferings.$[elem]": {
+                name,
+                startDate,
+                endDate,
+                propertyType,
+                discountPercentage,
+              },
+            },
+          };
+          break;
+        case "delete":
+          updateQuery = {
+            $pull: { specialOfferings: { name } },
+          };
+          break;
+      }
+    }
+
+    if (type === "service") {
+      const { price } = data;
+      switch (operation) {
+        case "create":
+          updateQuery = {
+            $push: {
+              services: {
+                name,
+                price,
+              },
+            },
+          };
+          break;
+        case "update":
+          updateQuery = {
+            $set: {
+              "services.$[elem]": {
+                name,
+                price,
+              },
+            },
+          };
+          break;
+        case "delete":
+          updateQuery = {
+            $pull: { services: { name } },
+          };
+          break;
+      }
     }
 
     const options = {

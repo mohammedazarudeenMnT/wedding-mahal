@@ -50,7 +50,7 @@ export async function PUT(request, { params }) {
     if (formData.has("size")) updateData.size = formData.get("size");
 
     // Type-specific fields
-    if (type === "Hall") {
+    if (type === "hall") {
       if (formData.has("capacity"))
         updateData.capacity = parseInt(formData.get("capacity"));
       if (formData.has("numberOfHalls"))
@@ -246,7 +246,7 @@ export async function PUT(request, { params }) {
 
     // Handle booking updates based on room type
     if (action === "clear" && roomNumber && bookingNumber) {
-      const isHall = room.type === "Hall";
+      const isHall = room.type === "hall";
       const numbersArray = isHall ? room.hallNumbers : room.roomNumbers;
 
       const numberIndex = numbersArray.findIndex(
