@@ -19,7 +19,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Determine if we're dealing with a room or hall
-    const isHall = room.type === "Hall";
+    const isHall = room.type === "hall";
     const numbersArray = isHall ? room.hallNumbers : room.roomNumbers;
 
     // Check if the number exists and has any bookings

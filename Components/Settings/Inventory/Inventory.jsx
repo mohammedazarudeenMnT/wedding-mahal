@@ -655,7 +655,7 @@ export default function Inventory() {
                     size="sm"
                     isIconOnly
                     className="bg-transparent hover:bg-gray-200"
-                    onClick={() => handleEditSupplier(supplier)}
+                    onPress={() => handleEditSupplier(supplier)}
                   >
                     <PenSquare className="w-4 h-4" />
                   </Button>
@@ -663,7 +663,7 @@ export default function Inventory() {
                     size="sm"
                     isIconOnly
                     className="bg-transparent hover:bg-gray-200"
-                    onClick={() => handleDeleteSupplier(supplier._id)}
+                    onPress={() => handleDeleteSupplier(supplier._id)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -676,7 +676,7 @@ export default function Inventory() {
       {isCreatingSupplier && (
         <Button
           className="mt-2 bg-[#00529C] text-white"
-          onClick={handleSaveSupplier}
+          onPress={handleSaveSupplier}
         >
           Create Supplier
         </Button>
@@ -685,9 +685,9 @@ export default function Inventory() {
   );
 
   const renderCategorySection = () => (
-    <div>
+    <div ref={categoryInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Category Name</label>
-      <div className="relative" ref={categoryInputRef}>
+      <div className="relative">
         <Input
           placeholder="Search or select category"
           value={categoryInput}
@@ -729,7 +729,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={(e) => {
+                      onPress={(e) => {
                         e.stopPropagation();
                         handleEditCategory(category);
                       }}
@@ -740,7 +740,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={(e) => {
+                      onPress={(e) => {
                         e.stopPropagation();
                         handleDeleteCategory(category._id);
                       }}
@@ -756,7 +756,7 @@ export default function Inventory() {
       {isCreatingCategory && (
         <Button
           className="mt-2 bg-[#00529C] text-white"
-          onClick={handleSaveCategory}
+          onPress={handleSaveCategory}
         >
           Create Category
         </Button>
@@ -813,7 +813,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={() => {
+                      onPress={() => {
                         setEditingSubCategory(subCategory);
                         setSubCategoryInput(subCategory.name);
                       }}
@@ -824,7 +824,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={() => handleDeleteSubCategory(subCategory._id)}
+                      onPress={() => handleDeleteSubCategory(subCategory._id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -837,7 +837,7 @@ export default function Inventory() {
       {isCreatingSubCategory && selectedCategory && (
         <Button
           className="mt-2 bg-[#00529C] text-white"
-          onClick={handleSaveSubCategory}
+          onPress={handleSaveSubCategory}
         >
           Create Subcategory
         </Button>
@@ -889,7 +889,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={() => {
+                      onPress={() => {
                         setEditingBrand(brand);
                         setBrandInput(brand.name);
                       }}
@@ -900,7 +900,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onClick={() => handleDeleteBrand(brand._id)}
+                      onPress={() => handleDeleteBrand(brand._id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -913,7 +913,7 @@ export default function Inventory() {
       {isCreatingBrand && selectedSubCategories.length > 0 && (
         <Button
           className="mt-2 bg-[#00529C] text-white"
-          onClick={handleSaveBrand}
+          onPress={handleSaveBrand}
         >
           Create Brand
         </Button>
@@ -1185,7 +1185,7 @@ export default function Inventory() {
                 color="primary"
                 className="bg-hotel-primary px-12 h-11 font-medium"
                 radius="full"
-                onClick={handleSaveSupplierDetails}
+                onPress={handleSaveSupplierDetails}
               >
                 Save
               </Button>

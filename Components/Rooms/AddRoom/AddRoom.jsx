@@ -103,11 +103,6 @@ const facilities = [
   name: item.name,
 }));
 
-const typeOptions = [
-  { label: "Room", value: "Room" },
-  { label: "Hall", value: "Hall" },
-];
-
 const complementaryFoodOptions = [
   {
     label: "Breakfast",
@@ -172,6 +167,28 @@ export default function AddRoomForm({ params = {} }) {
     type: "Room",
     complementaryFoods: [],
   };
+
+  const [propertyTypes, setPropertyTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchRoomSettings = async () => {
+      try {
+        const response = await axios.get("/api/settings/rooms");
+        if (response.data.success) {
+          const types = response.data.settings.propertyTypes.map((type) => ({
+            label: type.name,
+            value: type.name.toLowerCase(),
+          }));
+          setPropertyTypes(types);
+        }
+      } catch (error) {
+        console.error("Error fetching property types:", error);
+        toast.error("Failed to load property types");
+      }
+    };
+
+    fetchRoomSettings();
+  }, []);
 
   useEffect(() => {
     if (isEditMode) {
@@ -498,19 +515,24 @@ export default function AddRoomForm({ params = {} }) {
             Type
           </label>
           <Select
-            items={typeOptions}
+            items={propertyTypes}
             variant="bordered"
             placeholder="Select type"
-            selectedKeys={[formData.type]}
+            selectedKeys={[formData.type.toLowerCase()]}
             onSelectionChange={(keys) => {
               if (!isEditMode) {
                 const selectedType = Array.from(keys)[0];
-                setFormData((prev) => ({ ...prev, type: selectedType }));
+                setFormData((prev) => ({
+                  ...prev,
+                  type:
+                    selectedType.charAt(0).toUpperCase() +
+                    selectedType.slice(1),
+                }));
               }
             }}
             className="max-w-full w-[50%]"
             aria-labelledby="type-label"
-            isDisabled={isEditMode}
+            isDisabled={isEditMode || propertyTypes.length === 0}
           >
             {(item) => (
               <SelectItem key={item.value} value={item.value}>
