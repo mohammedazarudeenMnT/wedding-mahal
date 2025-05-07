@@ -52,7 +52,7 @@ export default function Testimonials() {
     <>
       {/* Testimonials Section */}
       <motion.section
-        className="py-12 sm:py-16 md:py-20 bg-[#1C1C1C] text-white overflow-hidden"
+        className="py-12 sm:py-16 md:py-20 bg-[#FFE9E9] overflow-hidden"
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -61,25 +61,24 @@ export default function Testimonials() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center mb-12">
             <div>
-              <p className="text-hotel-primary mb-4 uppercase tracking-wider">
-                LUXURY HOTEL AND RESORT
+              <p className="text-gray-600 mb-4 uppercase tracking-wider">
+                Your trust, our commitment{" "}
               </p>
-              <h2 className="text-4xl font-serif">
-                CLIENT FEEDBACK
-                <br />
-                ABOUT SERVICES
+              <h2 className="text-4xl font-serif text-gray-800">
+                Voices of 
+                Happy Clients
               </h2>
             </div>
             <div className="flex gap-4 mt-8 md:mt-0">
               <button
                 onClick={prevTestimonial}
-                className="w-12 h-12 border border-gray-600 flex items-center justify-center hover:bg-hotel-primary hover:border-hotel-primary transition-all duration-300"
+                className="w-12 h-12 border border-gray-400 text-gray-600 flex items-center justify-center hover:bg-white hover:border-gray-600 hover:text-gray-800 transition-all duration-300"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={nextTestimonial}
-                className="w-12 h-12 border border-gray-600 flex items-center justify-center hover:bg-hotel-primary hover:border-hotel-primary transition-all duration-300"
+                className="w-12 h-12 border border-gray-400 text-gray-600 flex items-center justify-center hover:bg-white hover:border-gray-600 hover:text-gray-800 transition-all duration-300"
               >
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -97,14 +96,12 @@ export default function Testimonials() {
                 transition={{ duration: 0.4, ease: "easeInOut" }}
               >
                 <motion.div
-                  className="bg-[#252525] p-8 transform transition-all duration-300 hover:scale-[1.02]"
+                  className="bg-white shadow-lg p-8 transform transition-all duration-300 hover:scale-[1.02]"
                   whileHover={{ y: -5 }}
                 >
                   <div className="mb-8">
-                    <div className="text-hotel-primary text-4xl mb-4">
-                      &ldquo;
-                    </div>
-                    <p className="text-gray-400 leading-relaxed text-lg">
+                    <div className="text-[#ff9999] text-4xl mb-4">&ldquo;</div>
+                    <p className="text-gray-600 leading-relaxed text-lg">
                       {testimonials[currentTestimonial].comment}
                     </p>
                   </div>
@@ -122,16 +119,14 @@ export default function Testimonials() {
                       className="rounded-full object-cover"
                     />
                     <div>
-                      <h4 className="font-medium text-lg">
+                      <h4 className="font-medium text-lg text-gray-800">
                         {testimonials[currentTestimonial].name}
                       </h4>
-                      <p className="text-gray-400">
+                      <p className="text-gray-600">
                         {testimonials[currentTestimonial].role}
                       </p>
                     </div>
-                    <div className="ml-auto text-hotel-primary text-lg">
-                      ★★★★★
-                    </div>
+                    <div className="ml-auto text-[#ff9999] text-lg">★★★★★</div>
                   </motion.div>
                 </motion.div>
               </motion.div>
@@ -145,8 +140,8 @@ export default function Testimonials() {
                 onClick={() => setCurrentTestimonial(index)}
                 className={`h-3 transition-all duration-300 ${
                   currentTestimonial === index
-                    ? "w-8 bg-hotel-primary"
-                    : "w-3 bg-white/50 hover:bg-white/70"
+                    ? "w-8 bg-[#ff9999]"
+                    : "w-3 bg-gray-300 hover:bg-gray-400"
                 }`}
               />
             ))}

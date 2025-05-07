@@ -10,7 +10,7 @@ export default function ContactPage() {
         className="h-[300px] relative flex items-center justify-center"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=2070")',
+            'linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("/banner/4.jpg")',
           backgroundPosition: "center",
           backgroundSize: "cover",
         }}
@@ -24,12 +24,15 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ContactInfo />
-          <ContactForm />
+      <section className=" my-5">
+        <div className="container mx-auto bg-[#FFE9E9] rounded-md shadow-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 p-8">
+            <ContactInfo />
+            <ContactForm />
+          </div>
         </div>
-      </div>
+      </section>
+      {/* Map Section */}
       <Map />
     </div>
   );

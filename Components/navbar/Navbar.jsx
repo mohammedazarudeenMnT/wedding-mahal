@@ -114,13 +114,13 @@ export default function Navbar({ logoUrl }) {
                     onMouseLeave={() => setRoomsDropdown(false)}
                   >
                     <Link
-                      href="/rooms/luxury"
+                      href="/hall"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
                       Hall
                     </Link>
                     <Link
-                      href="/rooms/deluxe"
+                      href="/rooms"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
                       Rooms
@@ -128,6 +128,10 @@ export default function Navbar({ logoUrl }) {
                   </div>
                 )}
               </div>
+
+              <Link href="/gallery" className={getLinkStyles("/galley")}>
+                GALLERY
+              </Link>
 
               <Link href="/contact" className={getLinkStyles("/contact")}>
                 CONTACT
@@ -166,15 +170,24 @@ export default function Navbar({ logoUrl }) {
                 </button>
                 {roomsDropdown && (
                   <div className="pl-4 space-y-2">
-                    <Link href="/rooms/luxury" className="block py-2 hover:text-hotel-primary">
+                   <Link
+                      href="/hall"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                    >
                       Hall
                     </Link>
-                    <Link href="/rooms/deluxe" className="block py-2 hover:text-hotel-primary">
+                    <Link
+                      href="/rooms"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                    >
                       Rooms
                     </Link>
                   </div>
                 )}
               </div>
+              <Link href="/gallery" className={getLinkStyles("/galley")}>
+                GALLERY
+              </Link>
 
               <Link href="/contact" className="hover:text-hotel-primary">
                 CONTACT

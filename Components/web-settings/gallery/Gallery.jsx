@@ -43,7 +43,7 @@ const Gallery = () => {
   const handleFiles = (files) => {
     const validFiles = Array.from(files).filter((file) => {
       const isValid =
-        file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024;
+        file.type.startsWith("image/") && file.size <= 100 * 1024 * 1024;
       return isValid;
     });
 
@@ -170,7 +170,7 @@ const Gallery = () => {
               Drop your images here or click to browse
             </p>
             <p className="text-sm text-gray-500">
-              Supports: JPEG, PNG, GIF (Max 5MB each)
+              Supports: JPEG, PNG, GIF 
             </p>
           </div>
         </Form.Label>

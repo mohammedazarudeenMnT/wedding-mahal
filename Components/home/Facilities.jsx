@@ -1,108 +1,81 @@
-"use client";
-import { Crown, BedDouble } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { motion } from "framer-motion";
+import Image from "next/image"
+import { Check } from "lucide-react"
 
-const rooms = [
-  {
-    id: 1,
-    title: "Delux Family Rooms",
-    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&q=80&w=1200",
-    price: "$560",
-    type: "LUXURY ROOM",
-    size: "1500 SQ.FT/Rooms",
-    beds: "2 King Bed",
-  },
-  {
-    id: 2,
-    title: "Doubble Suite Rooms",
-    image: "https://images.unsplash.com/photo-1631049552057-403cdb8f0658?auto=format&fit=crop&q=80&w=1200",
-    price: "$560",
-    type: "LUXURY ROOM",
-    size: "1500 SQ.FT/Rooms",
-    beds: "2 King Bed",
-  },
-  {
-    id: 3,
-    title: "Suprior Bed Rooms",
-    image: "https://images.unsplash.com/photo-1631049035182-249067d7618e?auto=format&fit=crop&q=80&w=1200",
-    price: "$560",
-    type: "LUXURY ROOM",
-    size: "1500 SQ.FT/Rooms",
-    beds: "2 King Bed",
-  },
-];
-
-export default function Facilities() {
+export default function Home() {
   return (
-<motion.section
-        id="facilities"
-        className="py-12 sm:py-16 md:py-20 bg-[#F8F6F3]"
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <div className="flex justify-center mb-4">
-              <Crown className="h-12 w-12 text-hotel-primary" />
+    <main className="flex flex-col bg-[#FFE9E9]  mx-auto ">
+      {/* Venue Overview Section */}
+      <section className="flex flex-col md:flex-row gap-6 sm:gap-8 md:gap-0"> 
+        <div className="w-full md:w-1/2 h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]">
+          <Image
+            src="home/1.jpg"
+            alt="Luxury wedding venue with elegant sofa and floral decorations"
+            width={800}
+            height={600}
+            className="w-full h-full object-cover rounded-lg md:rounded-none"
+            priority
+          />
+        </div>
+        <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16 flex flex-col justify-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium text-[#444] mb-4 sm:mb-6">Venue Overview</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-[#555] mb-4 sm:mb-6">
+            Our centrally air-conditioned event hall is a masterpiece of space and style. With a capacity to accommodate
+            up to 1000 guests, it features luxurious décor, customizable stage arrangements, modern lighting, and
+            premium audio-visual support. Whether it&apos;s a traditional wedding or a modern gathering, the ambiance fits
+            all themes.
+          </p>
+          <div className="space-y-2 sm:space-y-3 md:space-y-4">
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">Modern infrastructure</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-serif mb-6">
-              ROYELLA&apos;S ROOMS & SUITES
-            </h1>
-            <p className="text-gray-600 max-w-3xl mx-auto">
-              Proactively morph optimal infomediaries rather than accurate
-              expertise. Intrinsicly progressive resources rather than
-              resource-leveling
-            </p>
-          </div>
-
-          {/* Room Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {rooms.map((room) => (
-              <div key={room.id} className="bg-white overflow-hidden shadow-lg">
-                {/* Room Image */}
-                <div className="relative">
-                  <Image
-                    src={room.image}
-                    alt={room.title}
-                    width={400}
-                    height={256}
-                    className="w-full h-64 object-cover"
-                  />
-                  <div className="absolute top-4 right-4 bg-hotel-primary text-white px-4 py-1 ">
-                    {room.price} | NIGHT
-                  </div>
-                </div>
-
-                {/* Room Details */}
-                <div className="p-6">
-                  <div className="text-hotel-primary text-sm mb-2">
-                    {room.type}
-                  </div>
-                  <h3 className="text-2xl font-serif mb-4">{room.title}</h3>
-                  <p className="text-gray-600 mb-4">{room.size}</p>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <BedDouble className="h-5 w-5 text-gray-500" />
-                      <span className="text-gray-600">{room.beds}</span>
-                    </div>
-                    <Link href="/rooms">
-                      {" "}
-                      <button className="bg-hotel-primary text-white px-6 py-2  hover:bg-hotel-primary transition-colors">
-                        Book Now
-                      </button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">Elegant stage & decor</span>
+            </div>
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">Individual rooms available for Groom, Bride, Family & Guests</span>
+            </div>
           </div>
         </div>
-      </motion.section>
-  );
+      </section>
+
+      {/* Room Overview Section */}
+      <section className="flex flex-col md:flex-row-reverse gap-6 sm:gap-8 md:gap-0">
+        <div className="w-full md:w-1/2 h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]">
+          <Image
+            src="home/2.jpg"
+            alt="Luxury hotel room with bed and seating area"
+            width={800}
+            height={600}
+            className="w-full h-full object-cover rounded-lg md:rounded-none"
+            priority
+          />
+        </div>
+        <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16 flex flex-col justify-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium text-[#444] mb-4 sm:mb-6">Room Overview</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-[#555] mb-4 sm:mb-6">
+            Our well-maintained rooms are available for individual travelers and tourists looking for a cozy and
+            affordable stay. Whether you&apos;re here for an event or exploring the city, our rooms are designed to give you
+            the comfort you need.
+          </p>
+          <div className="space-y-2 sm:space-y-3 md:space-y-4">
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">Air Conditioning</span>
+            </div>
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">24/7 Water Supply</span>
+            </div>
+            <div className="flex items-center">
+              <Check className="text-[#555] mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base lg:text-lg text-[#555]">Neatly Furnished Beds</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  )
 }

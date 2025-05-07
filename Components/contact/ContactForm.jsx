@@ -299,7 +299,7 @@ const ContactForm = () => {
             name="notes"
             value={formData.notes}
             onChange={handleChange}
-            className=" text-[#333] border-0 resize-none min-h-[120px]"
+            className=" text-[#333] border-0 resize-none min-h-[120px]" 
           />
         </div>
         <div className="md:col-span-2">
