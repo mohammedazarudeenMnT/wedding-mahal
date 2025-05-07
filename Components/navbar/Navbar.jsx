@@ -51,8 +51,8 @@ export default function Navbar({ logoUrl }) {
 
   return (
     <nav
-      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white text-black  shadow-lg" : "bg-transparent text-white"
+      className={`w-full md:fixed top-0 z-50 transition-all duration-300 ${
+        scrolled ? "fixed bg-white text-black shadow-lg" : "bg-transparent text-white"
       }`}
     >
       <div className="max-w-7xl mx-auto ">
@@ -82,7 +82,10 @@ export default function Navbar({ logoUrl }) {
             className="flex items-center space-x-16"
             style={{ display: "contents" }}
           >
-            <Link href={`/`} className="logo-container h-16 flex items-center px-4">
+            <Link
+              href={`/`}
+              className="logo-container h-16 flex items-center px-4"
+            >
               <div className="logo-wrapper relative w-[130px] h-16">
                 <div className="absolute inset-0 flex items-center justify-start">
                   {renderLogo()}
@@ -170,7 +173,7 @@ export default function Navbar({ logoUrl }) {
                 </button>
                 {roomsDropdown && (
                   <div className="pl-4 space-y-2">
-                   <Link
+                    <Link
                       href="/hall"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >

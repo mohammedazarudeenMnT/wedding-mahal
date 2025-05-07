@@ -99,7 +99,7 @@ export default function ExtraService() {
               focus:outline-none focus:ring-2 focus:ring-hotel-primary focus:ring-offset-2"
             >
               <span className="relative">
-                Explore Now{" "}
+                BOOK NOW{" "}
                 <span
                   className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform scale-x-0 
                 transition-transform duration-300 group-hover:scale-x-100"
