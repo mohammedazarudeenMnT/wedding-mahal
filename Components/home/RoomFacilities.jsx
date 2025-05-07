@@ -5,11 +5,13 @@ import Link from "next/link";
 import axios from "axios";
 import BookingModal from "./BookingModal";
 
-function VenueCard({ mainImage, name, pricing, amenities, size, capacity }) {
+function VenueCard({ mainImage, name, description, amenities, pricing, type, capacity, size, maxGuests }) {
   const details = [
     `${amenities?.map(a => a.name).join(' | ') || 'No amenities'}`,
     "Features",
-    `Capacity: ${capacity || 'N/A'} guests | Size: ${size || 'N/A'} sq.ft`,
+    type === 'hall' 
+      ? `Capacity: ${capacity || 'N/A'} guests | Size: ${size || 'N/A'} sq.ft` 
+      : `Max Guests: ${maxGuests || 'N/A'} | Size: ${size || 'N/A'} sq.ft`,
   ];
 
   return (
@@ -25,7 +27,7 @@ function VenueCard({ mainImage, name, pricing, amenities, size, capacity }) {
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-medium text-gray-800">{name}</h3>
           <span className="text-sm text-gray-600">
-            Price: ₹{pricing?.propertyTypePricing?.hall?.originalPrice || pricing?.basePrice}
+            Price: ₹{pricing?.propertyTypePricing?.room?.originalPrice || pricing?.basePrice}
           </span>
         </div>
         <div className="space-y-1">
@@ -42,47 +44,49 @@ function VenueCard({ mainImage, name, pricing, amenities, size, capacity }) {
 
 export default function HotelFacilities() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [halls, setHalls] = useState([]);
-  const [displayHalls, setDisplayHalls] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [displayRooms, setDisplayRooms] = useState([]);
 
   useEffect(() => {
-    const fetchHalls = async () => {
+    const fetchRooms = async () => {
       try {
         const response = await axios.get('/api/rooms');
         if (response.data.success) {
-          const allHalls = response.data.rooms.filter(room => room.type === 'hall');
-          const shuffled = [...allHalls].sort(() => 0.5 - Math.random());
+          // Filter only rooms (not halls)
+          const allRooms = response.data.rooms.filter(room => room.type === 'room');
+          const shuffled = [...allRooms].sort(() => 0.5 - Math.random());
           const selected = shuffled.slice(0, 3);
-          setHalls(allHalls);
-          setDisplayHalls(selected);
+          setRooms(allRooms);
+          setDisplayRooms(selected);
         }
       } catch (error) {
-        console.error('Error fetching halls:', error);
+        console.error('Error fetching rooms:', error);
       }
     };
-    fetchHalls();
+    fetchRooms();
   }, []);
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-bold text-center mb-3">
-            Wedding Halls & Banquets
+            Comfortable Rooms & Halls
           </h2>
           <p className="text-sm sm:text-base text-gray-600">
-            Perfect venues for your special occasions
+            Stay relaxed and refreshed for every occasion
           </p>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {displayHalls.map((hall, index) => (
-            <Link href="/hall" key={index}>
+          {displayRooms.map((room, index) => (
+            <Link href="/rooms" key={room._id}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <VenueCard {...hall} />
+                <VenueCard {...room} />
               </motion.div>
             </Link>
           ))}
@@ -100,7 +104,7 @@ export default function HotelFacilities() {
                 focus:outline-none focus:ring-2 focus:ring-hotel-primary focus:ring-offset-2"
           >
             <span className="relative">
-              BOOK NOW
+             BOOK NOW
               <span
                 className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform scale-x-0 
                   transition-transform duration-300 group-hover:scale-x-100"
@@ -109,10 +113,7 @@ export default function HotelFacilities() {
           </button>
         </div>
       </div>
-      <BookingModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      <BookingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 }
