@@ -145,8 +145,7 @@ export default function QuoteRequest() {
         />
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
-      <div className="max-w-7xl mr-auto relative z-10">
-        <div className="grid md:grid-cols-2 ">
+      <div className="max-w-7xl mx-auto relative z-10">        <div className="grid md:grid-cols-2 ">
           <div className="relative h-[300px] md:h-auto">
             <div className="absolute inset-0 bg-black/50 z-10"></div>
             <Image
@@ -263,7 +262,7 @@ export default function QuoteRequest() {
                 disabled={isQuoteSubmitting}
                 className="bg-hotel-primary text-white px-8 py-4 hover:bg-hotel-primary/90 transition uppercase tracking-wider disabled:opacity-70"
               >
-                {isQuoteSubmitting ? "Submitting..." : "Submit Message"}
+                {isQuoteSubmitting ? "Submitting..." : "Submit "}
               </button>
             </form>
           </div>
