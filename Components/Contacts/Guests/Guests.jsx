@@ -20,15 +20,18 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  Button,
-  DropdownTrigger,
+} from "@heroui/table";
+import {
   Dropdown,
+  DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Pagination,
-  Spinner,
-} from "@nextui-org/react";
+} from "@heroui/dropdown";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { Pagination } from "@heroui/pagination";
+import { Spinner } from "@heroui/spinner";
+
 import {
   ChevronDown,
   Download,

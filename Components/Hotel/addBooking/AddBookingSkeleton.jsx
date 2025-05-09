@@ -1,4 +1,4 @@
-import { Skeleton } from "@nextui-org/react";
+import { Skeleton } from "@heroui/skeleton";
 import { Card, Row, Col } from "react-bootstrap";
 
 export default function AddBookingSkeleton() {

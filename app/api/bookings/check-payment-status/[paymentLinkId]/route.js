@@ -36,9 +36,37 @@ export async function GET(request, { params }) {
 
     const paymentLink = await razorpay.paymentLink.fetch(paymentLinkId);
 
+    // Get payment details if the payment is paid
+    let paidAmount = 0;
+    if (paymentLink.status === "paid") {
+      try {
+        // Since fetchPayments is not available, use the amount from the payment link directly
+        // or try to fetch payment details using a different method
+        paidAmount = paymentLink.amount / 100;
+
+        // Optionally, if you need specific payment details, you might use a different
+        // Razorpay API endpoint to fetch payment details
+        // This is commented out as the original method wasn't available
+        /*
+        const payments = await razorpay.payments.all({
+          payment_link_id: paymentLinkId
+        });
+        
+        if (payments.items && payments.items.length > 0) {
+          paidAmount = payments.items[0].amount / 100;
+        }
+        */
+      } catch (paymentError) {
+        console.error("Error fetching payment details:", paymentError);
+        // Fall back to the amount in the payment link
+        paidAmount = paymentLink.amount / 100;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       status: paymentLink.status,
+      amount: paidAmount,
     });
   } catch (error) {
     console.error("Error checking payment status:", error);

@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import { MdOutlineSettings } from "react-icons/md";
 import { BiBookContent } from "react-icons/bi";
 
-
 import "./sidebarr.css";
 
 import { motion } from "framer-motion";
@@ -153,7 +152,7 @@ export function SidebarDemo() {
       label: "Web Settings",
       href: `/dashboard/web-settings`,
       icon: (
-        <BiBookContent  className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <BiBookContent className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
