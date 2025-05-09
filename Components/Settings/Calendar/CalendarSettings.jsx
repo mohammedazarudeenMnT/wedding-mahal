@@ -245,7 +245,7 @@ const handleDelete = async () => {
     <div className="mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm min-h-[811px]">
       <div>
         <h1 className="text-2xl font-medium text-gray-700">
-          {isEditing ? "Edit Occasion" : "Add Mugartham / special occasions"}
+          {isEditing ? "Edit Occasion" : "Manage Occasions"}
         </h1>
 
         <div className="mt-8 space-y-6 mb-12 border-b pb-8">
@@ -305,7 +305,7 @@ const handleDelete = async () => {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => setIsAddingNewOccasion(true)}
+                    onPress={() => setIsAddingNewOccasion(true)}
                     className="bg-hotel-primary text-white px-4 hover:opacity-90"
                   >
                     Add New
@@ -328,13 +328,13 @@ const handleDelete = async () => {
                     }}
                   />
                   <Button
-                    onClick={handleAddNewOccasion}
+                    onPress={handleAddNewOccasion}
                     className="bg-hotel-primary text-white px-4 hover:opacity-90"
                   >
                     Add
                   </Button>
                   <Button
-                    onClick={() => {
+                    onPress={() => {
                       setIsAddingNewOccasion(false)
                       setNewOccasionName("")
                     }}
@@ -382,16 +382,16 @@ const handleDelete = async () => {
             <label htmlFor="select-color" className="block text-sm font-medium text-gray-700 mb-2">
               Select Color
             </label>
-            <div className="flex w-full max-w-md">
+            <div className="flex w-full max-w-md items-center">
               <Input
                 id="select-color"
                 value={selectedColor}
-                className={`border border-gray-300 rounded-l-md ${isEditing ? 'bg-gray-100' : ''}`}
+                className={`h-10 border border-gray-300 rounded-l-md ${isEditing ? 'bg-gray-100' : ''}`}
                 readOnly
                 disabled={isEditing}
               />
               <div 
-                className={`w-24 h-10 rounded-r-md ${isEditing ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`w-24 h-10 rounded-r-md ${isEditing ? 'cursor-not-allowed' : 'cursor-pointer'} border border-l-0 border-gray-300`}
                 style={{ backgroundColor: selectedColor }}
                 onClick={() => !isEditing && triggerColorPicker()}
               />
@@ -414,14 +414,14 @@ const handleDelete = async () => {
           <div className="flex justify-center space-x-4 pt-6">
             <Button 
               className="bg-hotel-primary text-white px-8 min-w-[120px] h-10 hover:opacity-90"
-              onClick={handleSave}
+              onPress={handleSave}
             >
               {isEditing ? "Update" : "Save"}
             </Button>
             <Button 
               variant="bordered" 
               className="bg-[#404040] hover:opacity-90 text-white px-8 min-w-[120px] h-10"
-              onClick={handleCancel}
+              onPress={handleCancel}
             >
               Cancel
             </Button>

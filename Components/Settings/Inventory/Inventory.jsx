@@ -85,6 +85,13 @@ export default function Inventory() {
     country: "",
   });
 
+  const [electricityTypeInput, setElectricityTypeInput] = useState("");
+  const [electricityTypes, setElectricityTypes] = useState([]);
+  const [showElectricityTypes, setShowElectricityTypes] = useState(false);
+  const [isCreatingElectricityType, setIsCreatingElectricityType] = useState(false);
+  const [editingElectricityType, setEditingElectricityType] = useState(null);
+  const electricityTypeInputRef = useRef(null);
+
   useEffect(() => {
     fetchInventorySettings();
   }, []);
@@ -134,6 +141,7 @@ export default function Inventory() {
         setCategories(settings.categories || []);
         setSubCategories(settings.subCategories || []);
         setBrands(settings.brands || []);
+        setElectricityTypes(settings.electricityTypes || []);
       }
     } catch (error) {
       toast.error("Failed to fetch inventory settings");
@@ -620,6 +628,53 @@ export default function Inventory() {
     }
   };
 
+  const handleSaveElectricityType = async () => {
+    if (!electricityTypeInput.trim()) return;
+    try {
+      if (editingElectricityType) {
+        // Edit
+        await axios.put(`/api/settings/inventory`, {
+          type: "electricityType",
+          id: editingElectricityType._id,
+          data: { name: electricityTypeInput },
+        });
+        toast.success("Type updated successfully");
+      } else {
+        // Create
+        await axios.post(`/api/settings/inventory`, {
+          type: "electricityType",
+          data: { name: electricityTypeInput },
+        });
+        toast.success("Type added successfully");
+      }
+      setElectricityTypeInput("");
+      setEditingElectricityType(null);
+      setIsCreatingElectricityType(false);
+      fetchInventorySettings();
+    } catch (error) {
+      toast.error("Failed to save type");
+    }
+  };
+
+  const handleEditElectricityType = (type) => {
+    setEditingElectricityType(type);
+    setElectricityTypeInput(type.name);
+    setIsCreatingElectricityType(false);
+    setShowElectricityTypes(false);
+  };
+
+  const handleDeleteElectricityType = async (id) => {
+    try {
+      await axios.delete(`/api/settings/inventory`, {
+        data: { type: "electricityType", id },
+      });
+      toast.success("Type deleted successfully");
+      fetchInventorySettings();
+    } catch (error) {
+      toast.error("Failed to delete type");
+    }
+  };
+
   const renderSupplierSection = () => (
     <div>
       <label className="block text-sm text-[#4B5563] mb-2">Supplier Name</label>
@@ -936,6 +991,83 @@ export default function Inventory() {
     </div>
   );
 
+  const renderElectricityTypeSection = () => (
+    <div ref={electricityTypeInputRef}>
+      <label className="block text-sm text-[#4B5563] mb-2">Electricity / Generator Type</label>
+      <div className="relative">
+        <Input
+          placeholder="Create Type"
+          value={electricityTypeInput}
+          onChange={e => {
+            setElectricityTypeInput(e.target.value);
+            setIsCreatingElectricityType(
+              !electricityTypes.some(type => type.name.toLowerCase() === e.target.value.toLowerCase()) && !editingElectricityType
+            );
+            if (!editingElectricityType) setShowElectricityTypes(true);
+          }}
+          onClick={() => {
+            if (!editingElectricityType) setShowElectricityTypes(true);
+          }}
+          endContent={<ChevronDown />}
+        />
+        {showElectricityTypes && !editingElectricityType && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            {electricityTypes
+              .filter(type => type.name.toLowerCase().includes(electricityTypeInput.toLowerCase()))
+              .map((type) => (
+                <div
+                  key={type._id}
+                  className="flex justify-between items-center p-2 hover:bg-gray-100 cursor-pointer"
+                >
+                  <span className="flex-1 px-2" onClick={() => {
+                    setElectricityTypeInput(type.name);
+                    setShowElectricityTypes(false);
+                  }}>{type.name}</span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      isIconOnly
+                      className="bg-transparent hover:bg-gray-200"
+                      onPress={() => handleEditElectricityType(type)}
+                    >
+                      <PenSquare className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      isIconOnly
+                      className="bg-transparent hover:bg-gray-200"
+                      onPress={() => handleDeleteElectricityType(type._id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+      {(isCreatingElectricityType || editingElectricityType) && (
+        <Button
+          className="mt-2 bg-[#00529C] text-white"
+          onPress={handleSaveElectricityType}
+        >
+          {editingElectricityType ? "Update Type" : "Create Type"}
+        </Button>
+      )}
+      {editingElectricityType && (
+        <Button
+          className="mt-2 ml-2 bg-gray-300 text-gray-800"
+          onPress={() => {
+            setEditingElectricityType(null);
+            setElectricityTypeInput("");
+          }}
+        >
+          Cancel
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className=" mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm">
       <div className="flex mb-8 border rounded-lg overflow-hidden w-[400px] mx-auto bg-white shadow-sm">
@@ -1206,6 +1338,7 @@ export default function Inventory() {
               <div>{renderCategorySection()}</div>
               <div>{renderSubCategorySection()}</div>
               <div>{renderBrandSection()}</div>
+              <div>{renderElectricityTypeSection()}</div>
             </div>
 
             {/* <div className="flex justify-center pt-4">

@@ -36,11 +36,16 @@ const categorySchema = new mongoose.Schema({
   subCategories: [subCategorySchema]
 }, { timestamps: true });
 
+const electricityTypeSchema = new mongoose.Schema({
+  name: { type: String, required: true }
+}, { timestamps: true });
+
 const inventorySettingsSchema = new mongoose.Schema({
   suppliers: [supplierSchema],
   categories: [categorySchema],
   subCategories: [subCategorySchema],
-  brands: [brandSchema]
+  brands: [brandSchema],
+   electricityTypes: { type: [electricityTypeSchema], default: [] }
 }, { timestamps: true });
 
 export default inventorySettingsSchema;

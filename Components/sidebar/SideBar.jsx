@@ -5,13 +5,14 @@ import {
   IconLayoutDashboard, // Dashboard
   IconClipboardCheck, // Reservation
   IconHome, // Rooms
-  IconSpray, // Housekeeping
+/*   IconSpray, // Housekeeping */
   IconPackage, // Inventory
   IconCash, // Financials
   IconUserCircle, // Concierge
   IconUsersGroup,
   IconUser,
   IconCalendar, // Add this import
+  IconNotebook, // Add this import
 } from "@tabler/icons-react";
 
 import Link from "next/link";
@@ -74,6 +75,13 @@ export function SidebarDemo() {
         <IconHome className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
+    {
+      label: "Log Book",
+      href: `/dashboard/logBook`,
+      icon: (
+        <IconNotebook className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),  
+    },
     // {
     //   label: "Messages",
     //   href: "#",
@@ -81,13 +89,13 @@ export function SidebarDemo() {
     //     <IconMessage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
     //   ),
     // },
-    {
+   /*  {
       label: "Housekeeping",
       href: `/dashboard/house-keeping`,
       icon: (
         <IconSpray className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-    },
+    }, */
     {
       label: "Inventory",
       href: `/dashboard/inventory`,
