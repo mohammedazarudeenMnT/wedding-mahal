@@ -27,9 +27,12 @@ import ConfirmationDialog from "../ui/ConfirmationDialog"
 import { PlusIcon } from "@/Components/ui/Table/PlusIcon"
 import { cn } from "@/lib/utils"
 import "./logbook.css"
-import { Chip } from "@heroui/chip";
-import { Tooltip } from "@heroui/tooltip" // Add
+import { Chip } from "@heroui/chip"
+import { Tooltip } from "@heroui/tooltip"
 import Link from "next/link"
+import axios from "axios"
+import { toast } from "react-toastify"
+
 const INITIAL_VISIBLE_COLUMNS = [
   "customerName",
   "propertyType",
@@ -43,8 +46,6 @@ const INITIAL_VISIBLE_COLUMNS = [
 const statusColorMap = {
   Verified: "success",
   Issued: "warning",
-/*   Pending: "default",
-  Cancelled: "danger", */
 };
 
 export default function LogBook() {
@@ -59,6 +60,32 @@ export default function LogBook() {
   })
   const [columns, setColumns] = useState([])
   const [visibleColumns, setVisibleColumns] = useState(new Set(INITIAL_VISIBLE_COLUMNS))
+  const [logEntries, setLogEntries] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+
+  // Fetch log entries
+  const fetchLogEntries = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get(`/api/logBook?page=${page}&limit=${rowsPerPage}`)
+      if (response.data.success) {
+        setLogEntries(response.data.data)
+        setTotalItems(response.data.pagination.total)
+        setTotalPages(response.data.pagination.pages)
+      }
+    } catch (error) {
+      console.error('Error fetching log entries:', error)
+      toast.error('Failed to fetch log entries')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogEntries()
+  }, [page, rowsPerPage])
 
   const handleDeleteClick = (item) => {
     setItemToDelete(item)
@@ -66,9 +93,21 @@ export default function LogBook() {
   }
 
   const handleDelete = async () => {
-    // Implement delete logic here
-    setIsDeleteDialogOpen(false)
-    setItemToDelete(null)
+    try {
+      if (!itemToDelete) return
+
+      const response = await axios.delete(`/api/logBook?id=${itemToDelete._id}`)
+      if (response.data.success) {
+        toast.success('Log entry deleted successfully')
+        fetchLogEntries() // Refresh the list
+      }
+    } catch (error) {
+      console.error('Error deleting log entry:', error)
+      toast.error('Failed to delete log entry')
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setItemToDelete(null)
+    }
   }
 
   const onRowsPerPageChange = useCallback((e) => {
@@ -90,43 +129,38 @@ export default function LogBook() {
     setPage(1)
   }, [])
 
-  const filteredData = inventoryData.filter(item => 
-    item.customerName.toLowerCase().includes(filterValue.toLowerCase()) ||
-    item.bookingId.toLowerCase().includes(filterValue.toLowerCase())
-  )
+  const filteredData = logEntries.filter(item => {
+    const searchTerm = filterValue.toLowerCase();
+    const itemFromDate = new Date(item.dateRange?.from);
+    const itemToDate = new Date(item.dateRange?.to);
+    const filterFromDate = new Date(dateRange.from);
+    const filterToDate = new Date(dateRange.to);
 
-  const pages = Math.ceil(filteredData.length / rowsPerPage)
-  const items = useMemo(() => {
-    const start = (page - 1) * rowsPerPage
-    const end = start + rowsPerPage
-    return filteredData.slice(start, end)
-  }, [page, filteredData, rowsPerPage])
+    // Reset time part for date comparison
+    filterFromDate.setHours(0, 0, 0, 0);
+    filterToDate.setHours(23, 59, 59, 999);
+    itemFromDate.setHours(0, 0, 0, 0);
+    itemToDate.setHours(23, 59, 59, 999);
 
-  const bottomContent = useMemo(() => {
-    const start = (page - 1) * rowsPerPage + 1
-    const end = Math.min(page * rowsPerPage, filteredData.length)
+    // Check if the item's date range overlaps with the filter date range
+    const isDateInRange = (
+      (itemFromDate >= filterFromDate && itemFromDate <= filterToDate) ||
+      (itemToDate >= filterFromDate && itemToDate <= filterToDate) ||
+      (itemFromDate <= filterFromDate && itemToDate >= filterToDate)
+    );
 
-    return (
-      <div className="py-2 px-2 flex justify-between items-center">
-        <span className="w-[30%] text-small text-default-400">
-          {`Showing ${start}-${end} of ${filteredData.length}`}
-        </span>
-        <div className="hidden sm:flex w-[30%] justify-end gap-2">
-          <div className="custom-pagination">
-            <Pagination
-              isCompact
-              showControls
-              showShadow
-              page={page}
-              total={pages}
-              onChange={setPage}
-              className="custom-pagination"
-            />
-          </div>
-        </div>
-      </div>
-    )
-  }, [page, pages, rowsPerPage, filteredData.length])
+    // Text search conditions
+    const matchesSearch = (
+      item.customerName?.toLowerCase().includes(searchTerm) ||
+      item.bookingId?.toLowerCase().includes(searchTerm) ||
+      item.mobileNo?.toLowerCase().includes(searchTerm) ||
+      item.propertyType?.toLowerCase().includes(searchTerm) ||
+      item.eventType?.toLowerCase().includes(searchTerm) ||
+      item.status?.toLowerCase().includes(searchTerm)
+    );
+
+    return matchesSearch && isDateInRange;
+  });
 
   const generateColumns = useCallback(() => {
     const newColumns = [
@@ -145,19 +179,19 @@ export default function LogBook() {
       {
         key: "event",
         name: "Event Type",
-        uid: "event",
+        uid: "eventType",
         sortable: true,
       },
       {
         key: "date",
         name: "Date",
-        uid: "date",
+        uid: "dateRange",
         sortable: true,
       },
       {
         key: "issuedItems",
         name: "Issued Items",
-        uid: "issuedItems",
+        uid: "itemsIssued",
         sortable: true,
       },
       {
@@ -165,11 +199,6 @@ export default function LogBook() {
         name: "Status",
         uid: "status",
         sortable: true,
-      },
-      {
-        key: "actions",
-        name: "Actions",
-        uid: "actions",
       },
       {
         key: "mobileNo",
@@ -192,8 +221,13 @@ export default function LogBook() {
       {
         key: "electricity",
         name: "Electricity/Generator",
-        uid: "electricity",
+        uid: "electricityReadings",
         sortable: true,
+      },
+      {
+        key: "actions",
+        name: "Actions",
+        uid: "actions",
       }
     ]
     setColumns(newColumns)
@@ -216,26 +250,48 @@ export default function LogBook() {
             <p className="text-bold text-small capitalize">{item.propertyType}</p>
           </div>
         )
-      case "issuedItems":
+      case "itemsIssued":
         return (
           <Chip
             className="capitalize"
             size="sm"
             variant="flat"
-            color={Number(item.issuedItems) > 5 ? "warning" : "success"}
+            color={item.itemsIssued.length > 5 ? "warning" : "success"}
           >
-            {item.issuedItems} items
+            {item.itemsIssued.length} items
           </Chip>
         )
       case "status":
         return (
           <Chip
             className="capitalize"
-            color={statusColorMap[item.paymentStatus]}
+            color={statusColorMap[item.status]}
             size="sm"
             variant="flat"
           >
-            {item.paymentStatus}
+            {item.status}
+          </Chip>
+        )
+      case "dateRange":
+        return (
+          <div className="flex flex-col">
+            <p className="text-bold text-small">
+              {format(new Date(item.dateRange.from), 'dd/MM/yyyy')}
+            </p>
+            <p className="text-bold text-tiny text-default-500">
+              to {format(new Date(item.dateRange.to), 'dd/MM/yyyy')}
+            </p>
+          </div>
+        )
+      case "electricityReadings":
+        return (
+          <Chip
+            className="capitalize"
+            size="sm"
+            variant="flat"
+            color={item.electricityReadings.length > 0 ? "success" : "default"}
+          >
+            {item.electricityReadings.length > 0 ? "Yes" : "No"}
           </Chip>
         )
       case "actions":
@@ -279,11 +335,26 @@ export default function LogBook() {
     )
   }, [visibleColumns, columns])
 
-   
+  // Calculate metrics
+  const calculateMetrics = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const todayEntries = logEntries.filter(entry => 
+      new Date(entry.dateRange.from).toISOString().split('T')[0] === today
+    )
+
+    return {
+      totalItemsIssued: todayEntries.reduce((sum, entry) => sum + entry.itemsIssued.length, 0),
+      totalCharges: todayEntries.reduce((sum, entry) => sum + (entry.totalAmount || 0), 0),
+      pendingItems: logEntries.filter(entry => entry.status === 'Issued').length,
+      damagedItems: logEntries.filter(entry => 
+        entry.itemsIssued.some(item => item.condition === 'Poor')
+      ).length
+    }
+  }, [logEntries])
 
   return (
     <div className="container mx-auto p-4 bg-white">
-      {/* Metrics Cards - Updated to match CheckIn.jsx style */}
+      {/* Metrics Cards */}
       <section>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 databoxmain">
           <div className="p-4 rounded-lg shadow bg-white">
@@ -294,7 +365,7 @@ export default function LogBook() {
               </div>
             </div>
             <div className="py-2">
-              <div className="text-2xl font-bold">18</div>
+              <div className="text-2xl font-bold">{calculateMetrics.totalItemsIssued}</div>
             </div>
           </div>
 
@@ -306,7 +377,7 @@ export default function LogBook() {
               </div>
             </div>
             <div className="py-2">
-              <div className="text-2xl font-bold">₹21,000</div>
+              <div className="text-2xl font-bold">₹{calculateMetrics.totalCharges.toLocaleString()}</div>
             </div>
           </div>
 
@@ -318,7 +389,7 @@ export default function LogBook() {
               </div>
             </div>
             <div className="py-2">
-              <div className="text-2xl font-bold">10</div>
+              <div className="text-2xl font-bold">{calculateMetrics.pendingItems}</div>
             </div>
           </div>
 
@@ -330,7 +401,7 @@ export default function LogBook() {
               </div>
             </div>
             <div className="py-2">
-              <div className="text-2xl font-bold">2</div>
+              <div className="text-2xl font-bold">{calculateMetrics.damagedItems}</div>
             </div>
           </div>
         </div>
@@ -356,7 +427,6 @@ export default function LogBook() {
               onValueChange={onSearchChange}
             />
 
-            {/* Replace Popover calendar with DateRangePicker */}
             <div className="flex items-center gap-2">
               <DateRangePicker
                 className="bg-white text-[#333] border-0 w-[280px]"
@@ -387,12 +457,12 @@ export default function LogBook() {
                   });
                 }}
                 classNames={{
-                  base: "bg-hotel-secondary rounded-lg h-[40px]", // Added fixed height
-                  trigger: "bg-hotel-secondary rounded-lg h-[40px]", // Updated height
-                  value: "text-hotel-primary-text text-sm", // Added text size
-                  content: "h-[40px]", // Added content height
+                  base: "bg-hotel-secondary rounded-lg h-[40px]",
+                  trigger: "bg-hotel-secondary rounded-lg h-[40px]",
+                  value: "text-hotel-primary-text text-sm",
+                  content: "h-[40px]",
                   popover: "rounded-lg mt-1",
-                  input: "h-[40px]", // Added input height
+                  input: "h-[40px]",
                 }}
               />
             </div>
@@ -431,27 +501,27 @@ export default function LogBook() {
             </Dropdown>
 
             <Link href="/dashboard/logBook/add-log">
-            <Button
-              className="min-w-44 bg-hotel-primary text-hotel-primary-text"
-              endContent={<PlusIcon />}
-            >
-              Add Item
-            </Button>
-          </Link>
+              <Button
+                className="min-w-44 bg-hotel-primary text-hotel-primary-text"
+                endContent={<PlusIcon />}
+              >
+                Add Item
+              </Button>
+            </Link>
           </div>
         </div>
 
         <div className="flex justify-between items-center mb-4">
           <span className="text-default-400 text-small">
-            Total {filteredData.length} items
+            Total {totalItems} items
           </span>
           <label className="flex items-center text-default-400 text-small">
             Rows per page:
             <select
               className="bg-transparent outline-none text-default-400 text-small"
               onChange={onRowsPerPageChange}
+              value={rowsPerPage}
             >
-              <option value={rowsPerPage}>{rowsPerPage}</option>
               <option value="5">5</option>
               <option value="10">10</option>
               <option value="15">15</option>
@@ -461,7 +531,26 @@ export default function LogBook() {
 
         <Table
           aria-label="Inventory logs table"
-          bottomContent={bottomContent}
+          bottomContent={
+            <div className="py-2 px-2 flex justify-between items-center">
+              <span className="w-[30%] text-small text-default-400">
+                {`Showing ${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+              </span>
+              <div className="hidden sm:flex w-[30%] justify-end gap-2">
+                <div className="custom-pagination">
+                  <Pagination
+                    isCompact
+                    showControls
+                    showShadow
+                    page={page}
+                    total={totalPages}
+                    onChange={setPage}
+                    className="custom-pagination"
+                  />
+                </div>
+              </div>
+            </div>
+          }
           bottomContentPlacement="inside"
           classNames={{
             wrapper: "min-h-[400px]",
@@ -478,9 +567,13 @@ export default function LogBook() {
               </TableColumn>
             ))}
           </TableHeader>
-          <TableBody items={items}>
+          <TableBody 
+            items={filteredData}
+            loadingContent={<div>Loading...</div>}
+            loadingState={isLoading ? "loading" : "idle"}
+          >
             {(item) => (
-              <TableRow key={item.bookingId}>
+              <TableRow key={item._id}>
                 {headerColumns.map((column) => (
                   <TableCell key={column.uid}>
                     {renderCell(item, column)}
@@ -496,130 +589,10 @@ export default function LogBook() {
           onClose={() => setIsDeleteDialogOpen(false)}
           onConfirm={handleDelete}
           title="Delete Item"
-          description={`Are you sure you want to delete this item?`}
+          description={`Are you sure you want to delete this log entry?`}
           confirmText="Delete"
         />
       </div>
     </div>
   )
 }
-
-const inventoryData = [
-  {
-    customerName: "Madhan R",
-    mobileNo: "9876543210",
-    propertyType: "Hall A",
-    event: "Wedding",
-    date: "07/04/2025",
-    checkInTime: "09:00 AM",
-    notes: "Notes something note..",
-    issuedItems: "7",
-    electricity: "Yes",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Arjun V",
-    mobileNo: "9876543211",
-    propertyType: "Hall B",
-    event: "Conference",
-    date: "28/03/2025",
-    checkInTime: "10:00 AM",
-    notes: "Notes something note..",
-    issuedItems: "8",
-    electricity: "No",
-    paymentStatus: "Issued",
-    bookingId: "BO-1357",
-  },
-  {
-    customerName: "Gokul N",
-    mobileNo: "9876543212",
-    propertyType: "Hall C",
-    event: "Birthday",
-    date: "18/03/2025",
-    checkInTime: "11:00 AM",
-    notes: "Notes something note..",
-    issuedItems: "12",
-    electricity: "Yes",
-    paymentStatus: "Issued",
-    bookingId: "BO-7443",
-  },
-  {
-    customerName: "Varadhan U",
-    mobileNo: "9876543213",
-    propertyType: "Hall D",
-    event: "Wedding",
-    date: "07/04/2025",
-    checkInTime: "12:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "7",
-    electricity: "Yes",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Tamilarasan R",
-    mobileNo: "9876543214",
-    propertyType: "Hall E",
-    event: "Meeting",
-    date: "07/04/2025",
-    checkInTime: "01:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "5",
-    electricity: "No",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Madhu M",
-    mobileNo: "9876543215",
-    propertyType: "Hall F",
-    event: "Seminar",
-    date: "07/04/2025",
-    checkInTime: "02:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "6",
-    electricity: "Yes",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Vinayak I",
-    mobileNo: "9876543216",
-    propertyType: "Hall G",
-    event: "Workshop",
-    date: "07/04/2025",
-    checkInTime: "03:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "7",
-    electricity: "Yes",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Rudhran A",
-    mobileNo: "9876543217",
-    propertyType: "Hall H",
-    event: "Exhibition",
-    date: "07/04/2025",
-    checkInTime: "04:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "9",
-    electricity: "No",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-  {
-    customerName: "Abi T",
-    mobileNo: "9876543218",
-    propertyType: "Hall I",
-    event: "Party",
-    date: "07/04/2025",
-    checkInTime: "05:00 PM",
-    notes: "Notes something note..",
-    issuedItems: "3",
-    electricity: "Yes",
-    paymentStatus: "Verified",
-    bookingId: "BO-0982",
-  },
-]

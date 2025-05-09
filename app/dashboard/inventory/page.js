@@ -8,17 +8,17 @@ import Inventory from '../../../Components/inventory/Inventory'
 import TableSkeleton from '../../../Components/ui/TableSkeleton.jsx';
 
 const InventoryPage = () => {
-    const hasPermission = usePagePermission("Inventory", "view");
-    const router = useRouter();
+    // const hasPermission = usePagePermission("Inventory", "view");
+    // const router = useRouter();
 
-    if (hasPermission === null) {
-        return <TableSkeleton />;
-    }
+    // if (hasPermission === null) {
+    //     return <TableSkeleton />;
+    // }
 
-    if (hasPermission === false) {
-        router.push("/dashboard/unauthorized");
-        return null;
-    }
+    // if (hasPermission === false) {
+    //     router.push("/dashboard/unauthorized");
+    //     return null;
+    // }
 
     return (
         <>

@@ -126,11 +126,20 @@ export default function Inventory() {
         setShowBrands(false);
         setIsCreatingBrand(false);
       }
+      if (
+        electricityTypeInputRef.current &&
+        !electricityTypeInputRef.current.contains(event.target)
+      ) {
+        setShowElectricityTypes(false);
+        if (!electricityTypeInput.trim()) {
+          setIsCreatingElectricityType(false);
+        }
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [electricityTypeInput]);
 
   const fetchInventorySettings = async () => {
     try {
@@ -784,8 +793,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onPress={(e) => {
-                        e.stopPropagation();
+                      onPress={() => {
                         handleEditCategory(category);
                       }}
                     >
@@ -795,8 +803,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-                      onPress={(e) => {
-                        e.stopPropagation();
+                      onPress={() => {
                         handleDeleteCategory(category._id);
                       }}
                     >
@@ -820,11 +827,11 @@ export default function Inventory() {
   );
 
   const renderSubCategorySection = () => (
-    <div>
+    <div ref={subCategoryInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">
         Sub category Name
       </label>
-      <div className="relative" ref={subCategoryInputRef}>
+      <div className="relative" >
         <Input
           placeholder="Search or select subcategory"
           value={subCategoryInput}
@@ -901,9 +908,9 @@ export default function Inventory() {
   );
 
   const renderBrandSection = () => (
-    <div>
+    <div ref={brandInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Brand Name</label>
-      <div className="relative" ref={brandInputRef}>
+      <div className="relative" >
         <Input
           placeholder="Search or create brand"
           value={brandInput}
@@ -1001,14 +1008,40 @@ export default function Inventory() {
           onChange={e => {
             setElectricityTypeInput(e.target.value);
             setIsCreatingElectricityType(
-              !electricityTypes.some(type => type.name.toLowerCase() === e.target.value.toLowerCase()) && !editingElectricityType
+              e.target.value.trim() !== "" && 
+              !electricityTypes.some(type => type.name.toLowerCase() === e.target.value.toLowerCase()) && 
+              !editingElectricityType
             );
-            if (!editingElectricityType) setShowElectricityTypes(true);
+            if (e.target.value.trim() !== "") {
+              setShowElectricityTypes(true);
+            } else {
+              setShowElectricityTypes(false);
+              setIsCreatingElectricityType(false);
+            }
           }}
           onClick={() => {
-            if (!editingElectricityType) setShowElectricityTypes(true);
+            if (electricityTypeInput.trim() !== "" || electricityTypes.length > 0) {
+              setShowElectricityTypes(true);
+            }
           }}
-          endContent={<ChevronDown />}
+          onBlur={() => {
+            if (electricityTypeInput.trim() === "") {
+              setIsCreatingElectricityType(false);
+            }
+          }}
+          endContent={
+            <ChevronDown 
+              className="w-4 h-4 text-[#70707B] cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (electricityTypes.length > 0) {
+                  setShowElectricityTypes(!showElectricityTypes);
+                } else if (electricityTypeInput.trim() !== "") {
+                  setShowElectricityTypes(true);
+                }
+              }}
+            />
+          }
         />
         {showElectricityTypes && !editingElectricityType && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -1043,10 +1076,15 @@ export default function Inventory() {
                   </div>
                 </div>
               ))}
+            {electricityTypes.filter(type => type.name.toLowerCase().includes(electricityTypeInput.toLowerCase())).length === 0 && electricityTypeInput.trim() !== "" && (
+              <div className="p-2 text-gray-500">
+                No matching types found
+              </div>
+            )}
           </div>
         )}
       </div>
-      {(isCreatingElectricityType || editingElectricityType) && (
+      {(isCreatingElectricityType || editingElectricityType) && electricityTypeInput.trim() !== "" && (
         <Button
           className="mt-2 bg-[#00529C] text-white"
           onPress={handleSaveElectricityType}
