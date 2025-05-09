@@ -57,6 +57,18 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    // Round all monetary values in totalAmount
+    totalAmount.roomCharge = Math.round(totalAmount.roomCharge || 0);
+    totalAmount.taxes = Math.round(totalAmount.taxes || 0);
+    totalAmount.additionalGuestCharge = Math.round(
+      totalAmount.additionalGuestCharge || 0
+    );
+    totalAmount.servicesCharge = Math.round(totalAmount.servicesCharge || 0);
+    totalAmount.discount = Math.round(totalAmount.discount || 0);
+    totalAmount.discountAmount = Math.round(totalAmount.discountAmount || 0);
+    totalAmount.total = Math.round(totalAmount.total || 0);
+
     // Generate booking number
     const bookingNumber = await generateBookingNumber(GuestModel);
 
@@ -95,6 +107,7 @@ export async function POST(request) {
       statusTimestamps: {
         booked: new Date(),
       },
+      propertyType: formData.get("propertyType") || "room",
       firstName: formData.get("firstName"),
       lastName: formData.get("lastName"),
       email: formData.get("email"),
@@ -115,8 +128,62 @@ export async function POST(request) {
       verificationId: formData.get("verificationId"),
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
-      totalAmount: JSON.parse(formData.get("totalAmount")), // Add the complete totalAmount object
+      totalAmount: {
+        roomCharge: totalAmount.roomCharge || 0,
+        taxes: totalAmount.taxes || 0,
+        additionalGuestCharge: totalAmount.additionalGuestCharge || 0,
+        servicesCharge: totalAmount.servicesCharge || 0,
+        discount: totalAmount.discount || 0,
+        discountAmount: totalAmount.discountAmount || 0,
+        total: totalAmount.total || 0,
+      },
     };
+
+    // Add hall-specific fields if property type is hall
+    if (formData.get("propertyType") === "hall") {
+      // Groom details
+      if (formData.get("groomName")) {
+        guestData.groomDetails = {
+          name: formData.get("groomName"),
+          mobileNo: formData.get("groomMobileNo"),
+          email: formData.get("groomEmail"),
+          address: formData.get("groomAddress"),
+          dob: formData.get("groomDob"),
+          gender: formData.get("groomGender"),
+          verificationId: formData.get("groomVerificationId"),
+        };
+      }
+
+      // Bride details
+      if (formData.get("brideName")) {
+        guestData.brideDetails = {
+          name: formData.get("brideName"),
+          mobileNo: formData.get("brideMobileNo"),
+          email: formData.get("brideEmail"),
+          address: formData.get("brideAddress"),
+          dob: formData.get("brideDob"),
+          gender: formData.get("brideGender"),
+          verificationId: formData.get("brideVerificationId"),
+        };
+      }
+
+      // Event details
+      guestData.eventType = formData.get("eventType");
+
+      // Time slot details
+      if (formData.get("timeSlotName")) {
+        guestData.timeSlot = {
+          name: formData.get("timeSlotName"),
+          fromTime: formData.get("timeSlotFromTime"),
+          toTime: formData.get("timeSlotToTime"),
+        };
+      }
+
+      // Services details
+      if (formData.get("services")) {
+        guestData.selectedServices = JSON.parse(formData.get("services"));
+      }
+    }
 
     if (guestData.paymentMethod === "online") {
       guestData.razorpayOrderId = formData.get("razorpayOrderId");
@@ -178,10 +245,12 @@ export async function POST(request) {
     guestData.rooms = roomsData.map((room) => ({
       type: room.type,
       number: room.number,
-      price: parseFloat(room.price),
-      igst: parseFloat(room.igst),
-      additionalGuestCharge: parseFloat(room.additionalGuestCharge) || 0,
-      totalAmount: parseFloat(room.totalAmount),
+      price: Math.round(parseFloat(room.price)),
+      igst: Math.round(parseFloat(room.igst)),
+      additionalGuestCharge: Math.round(
+        parseFloat(room.additionalGuestCharge) || 0
+      ),
+      totalAmount: Math.round(parseFloat(room.totalAmount)),
       mainImage: room.mainImage,
       _id: room._id,
     }));
@@ -298,15 +367,44 @@ export async function POST(request) {
     const newGuest = new GuestModel(guestData);
     await newGuest.save();
 
+    // Log the created guest object to check hall-specific fields
+    if (guestData.propertyType === "hall") {
+      console.log("Created hall booking with fields:", {
+        propertyType: newGuest.propertyType,
+        eventType: newGuest.eventType,
+        timeSlot: newGuest.timeSlot,
+        groomDetails: newGuest.groomDetails,
+        brideDetails: newGuest.brideDetails,
+        selectedServices: newGuest.selectedServices,
+      });
+    }
+
     // Update room availability and bookeddates
     for (const room of guestData.rooms) {
       const roomDoc = await RoomModel.findById(room._id);
       if (roomDoc) {
-        const roomNumberIndex = roomDoc.roomNumbers.findIndex(
+        // Check if we're dealing with a room or a hall
+        const propertyNumbers =
+          guestData.propertyType === "hall"
+            ? roomDoc.hallNumbers
+            : roomDoc.roomNumbers;
+
+        // Check if the property numbers array exists
+        if (!propertyNumbers) {
+          console.warn(
+            `No ${
+              guestData.propertyType === "hall" ? "hallNumbers" : "roomNumbers"
+            } found for room type ${room.type}`
+          );
+          continue;
+        }
+
+        const propertyNumberIndex = propertyNumbers.findIndex(
           (r) => r.number === room.number
         );
-        if (roomNumberIndex !== -1) {
-          roomDoc.roomNumbers[roomNumberIndex].bookeddates.push({
+
+        if (propertyNumberIndex !== -1) {
+          propertyNumbers[propertyNumberIndex].bookeddates.push({
             bookingNumber: guestData.bookingNumber,
             checkIn: guestData.checkInDate,
             checkOut: guestData.checkOutDate,
@@ -314,7 +412,13 @@ export async function POST(request) {
             guests: guestData.guests,
           });
           await roomDoc.save();
+        } else {
+          console.warn(
+            `Room or hall number ${room.number} not found in the database`
+          );
         }
+      } else {
+        console.warn(`Room with ID ${room._id} not found in the database`);
       }
     }
     try {
@@ -354,12 +458,11 @@ export async function POST(request) {
           roomTypes: guestData.rooms.map((room) => room.type).join(", "),
           roomNumbers: guestData.rooms.map((room) => room.number).join(", "),
           hotelName: hotelName,
-          hotelDisplayName: hotelName, // Add this line
+          hotelDisplayName: hotelName,
           totalAmount: totalAmount.total,
-          /*  // Use hotel object instead of existingHotel
-          hotelAddress: `${hotel.doorNo}, ${hotel.streetName}, ${hotel.district}`, */
-          // Use safe fallbacks for all hotel details
-          ...hotelDetails, // Spread the hotel details with fallback values''
+          discountPercentage: totalAmount.discount,
+          discountAmount: totalAmount.discountAmount,
+          ...hotelDetails,
         },
       });
     } catch (emailError) {

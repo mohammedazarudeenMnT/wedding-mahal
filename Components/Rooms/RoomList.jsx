@@ -223,24 +223,6 @@ export default function RoomList() {
     [dateRange, roomSettings]
   );
 
-  const calculateRoomPriceMemoized = useCallback((room) => {
-    return room.price;
-  }, []);
-
-  const calculateDiscountedPrice = useCallback((room, selectedDate) => {
-    if (!room?.currentDiscount) return room.price;
-
-    const isDiscountValid = isDateInRange(
-      selectedDate,
-      room.currentDiscount.startDate,
-      room.currentDiscount.endDate
-    );
-
-    return isDiscountValid
-      ? Math.round(room.price * (1 - room.currentDiscount.percentage / 100))
-      : room.price;
-  }, []);
-
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
       const categoryMatch =
@@ -258,34 +240,35 @@ export default function RoomList() {
   }, [rooms, selectedCategory, searchQuery]);
 
   const renderPricing = (room) => {
-    const isDiscountActive =
-      room.currentDiscount &&
+    const discounts = room?.pricing?.propertyTypePricing?.[room.type] || [];
+    const validDiscount = discounts.find((pricing) =>
       isDateInRange(
         dateRange.from,
-        room.currentDiscount.startDate,
-        room.currentDiscount.endDate
-      );
+        pricing.discount.startDate,
+        pricing.discount.endDate
+      )
+    );
 
     return (
       <div className="text-right">
-        {isDiscountActive ? (
+        {validDiscount ? (
           <>
             <p className="text-sm text-gray-500 line-through flex items-center justify-end">
               <PiCurrencyInr className="w-4 h-4" />
-              {room.price.toFixed(0)}
+              {validDiscount.originalPrice.toFixed(0)}
             </p>
             <p className="text-xl font-semibold flex items-center text-red-500">
               <PiCurrencyInr className="w-5 h-5" />
-              {calculateDiscountedPrice(room, dateRange.from).toFixed(0)}
+              {validDiscount.discountedPrice.toFixed(0)}
               <span className="text-sm text-gray-500 font-normal ml-1">
                 /night
               </span>
             </p>
             <p className="text-xs text-gray-500">
-              {room.currentDiscount.name} offer valid{" "}
-              {new Date(room.currentDiscount.startDate).toLocaleDateString()}
+              {validDiscount.discount.name} offer valid{" "}
+              {new Date(validDiscount.discount.startDate).toLocaleDateString()}
               {" - "}
-              {new Date(room.currentDiscount.endDate).toLocaleDateString()}
+              {new Date(validDiscount.discount.endDate).toLocaleDateString()}
             </p>
           </>
         ) : (
@@ -297,12 +280,17 @@ export default function RoomList() {
             </span>
           </p>
         )}
-        {room.currentDiscount && !isDiscountActive && (
+        {discounts.length > 0 && !validDiscount && (
           <p className="text-xs text-gray-500">
-            Offer available{" "}
-            {new Date(room.currentDiscount.startDate).toLocaleDateString()}
-            {" - "}
-            {new Date(room.currentDiscount.endDate).toLocaleDateString()}
+            {discounts.map((pricing, index) => (
+              <span key={index}>
+                {pricing.discount.name} offer available{" "}
+                {new Date(pricing.discount.startDate).toLocaleDateString()}
+                {" - "}
+                {new Date(pricing.discount.endDate).toLocaleDateString()}
+                {index < discounts.length - 1 ? ", " : ""}
+              </span>
+            ))}
           </p>
         )}
       </div>
@@ -398,10 +386,59 @@ export default function RoomList() {
                       onClick={() => handleRoomClick(room)}
                     >
                       <div className="w-full md:w-60 lg:w-48 xl:w-56 h-auto md:h-auto flex-shrink-0 relative aspect-[4/3]">
-                        {room.currentDiscount && (
-                          <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-xs flex items-center gap-1">
+                        {/* Discount Badge */}
+                        {room?.pricing?.propertyTypePricing?.[room.type]?.some(
+                          (pricing) => {
+                            if (
+                              !pricing.discount ||
+                              !pricing.discount.startDate ||
+                              !pricing.discount.endDate
+                            ) {
+                              return false;
+                            }
+
+                            const startDate = new Date(
+                              pricing.discount.startDate
+                            );
+                            const endDate = new Date(pricing.discount.endDate);
+                            // Add a day to end date to account for time cutoff
+                            endDate.setDate(endDate.getDate() + 1);
+
+                            const currentDate = dateRange.from || new Date();
+                            return (
+                              currentDate >= startDate && currentDate <= endDate
+                            );
+                          }
+                        ) && (
+                          <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-xs flex items-center gap-1 z-10">
                             <MdLocalOffer className="w-3 h-3" />
-                            {room.currentDiscount.percentage}% OFF
+                            {Math.max(
+                              ...room.pricing.propertyTypePricing[room.type]
+                                .filter((p) => {
+                                  if (
+                                    !p.discount ||
+                                    !p.discount.startDate ||
+                                    !p.discount.endDate
+                                  ) {
+                                    return false;
+                                  }
+
+                                  const startDate = new Date(
+                                    p.discount.startDate
+                                  );
+                                  const endDate = new Date(p.discount.endDate);
+                                  endDate.setDate(endDate.getDate() + 1);
+
+                                  const currentDate =
+                                    dateRange.from || new Date();
+                                  return (
+                                    currentDate >= startDate &&
+                                    currentDate <= endDate
+                                  );
+                                })
+                                .map((p) => p.discount.percentage || 0)
+                            )}
+                            % OFF
                           </div>
                         )}
                         <Image
@@ -433,7 +470,7 @@ export default function RoomList() {
                               <Button
                                 size="sm"
                                 className="bg-red-500 text-white h-8 w-8 min-w-0 p-0 rounded-md"
-                                onClick={(e) => {
+                                onPress={(e) => {
                                   e.stopPropagation();
                                   handleDelete(room._id);
                                 }}
@@ -447,7 +484,7 @@ export default function RoomList() {
                           <span className="flex items-center">
                             <span className="mr-1">{room.size} m²</span>
                           </span>
-                          {room.type === "Room" ? (
+                          {room.type === "room" ? (
                             <>
                               <span className="flex items-center">
                                 <FaBed className="w-3 h-3 mr-1" />
@@ -486,7 +523,7 @@ export default function RoomList() {
                           <p className="text-sm">
                             Availability:{" "}
                             <span className="font-medium">
-                              {room.type === "Room"
+                              {room.type === "room"
                                 ? `${
                                     room.roomNumbers.filter((roomNum) =>
                                       getRoomStatusMemoized(roomNum, dateRange)

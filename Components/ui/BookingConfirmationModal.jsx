@@ -5,14 +5,17 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button,
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+import {
   Table,
   TableHeader,
   TableColumn,
   TableBody,
   TableRow,
   TableCell,
-} from "@nextui-org/react";
+} from "@heroui/table";
+
 import { format, parseISO, isValid, parse, differenceInDays } from "date-fns";
 
 const ConfirmationModal = ({
@@ -125,7 +128,7 @@ const ConfirmationModal = ({
             </TableHeader>
             <TableBody>
               {priceBreakdown
-                .filter((day) => !day.isCheckout)
+                .filter((day) => !day.isCheckout && day.roomType !== "Discount")
                 .map((day, index) => (
                   <TableRow key={index}>
                     <TableCell>
@@ -151,6 +154,25 @@ const ConfirmationModal = ({
                     </TableCell>
                   </TableRow>
                 ))}
+              {/* Display discount row if it exists */}
+              {priceBreakdown.find((day) => day.roomType === "Discount") && (
+                <TableRow className="text-green-600">
+                  <TableCell>Discount</TableCell>
+                  <TableCell>{`${
+                    priceBreakdown.find((day) => day.roomType === "Discount")
+                      .discountPercentage
+                  }% Off`}</TableCell>
+                  <TableCell className="text-right">-</TableCell>
+                  <TableCell className="text-right">-</TableCell>
+                  <TableCell className="text-right">-</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(
+                      priceBreakdown.find((day) => day.roomType === "Discount")
+                        .total
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell>
                   {format(new Date(dateRange[0].endDate), "dd MMM yyyy")}{" "}
@@ -179,6 +201,24 @@ const ConfirmationModal = ({
               <div className="flex justify-between">
                 <span>Total Additional Guest Charges</span>
                 <span>{formatCurrency(totalAmount.additionalGuestCharge)}</span>
+              </div>
+            )}
+            {totalAmount.servicesCharge > 0 && (
+              <div className="flex justify-between">
+                <span>Services Charges</span>
+                <span>{formatCurrency(totalAmount.servicesCharge)}</span>
+              </div>
+            )}
+            {totalAmount.discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>Discount ({totalAmount.discount}%)</span>
+                <span>
+                  -{" "}
+                  {formatCurrency(
+                    totalAmount.discountAmount ||
+                      (totalAmount.roomCharge * totalAmount.discount) / 100
+                  )}
+                </span>
               </div>
             )}
             <div className="flex justify-between font-bold text-lg border-t pt-2">
