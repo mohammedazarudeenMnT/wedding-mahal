@@ -176,8 +176,8 @@ export default function AddRoomForm({ params = {} }) {
         const response = await axios.get("/api/settings/rooms");
         if (response.data.success) {
           const types = response.data.settings.propertyTypes.map((type) => ({
-            label: type.name,
-            value: type.name.toLowerCase(),
+            label: type.name.charAt(0).toUpperCase() + type.name.slice(1),
+            value: type.name,
           }));
           setPropertyTypes(types);
         }
@@ -518,15 +518,13 @@ export default function AddRoomForm({ params = {} }) {
             items={propertyTypes}
             variant="bordered"
             placeholder="Select type"
-            selectedKeys={[formData.type.toLowerCase()]}
+            selectedKeys={[formData.type]}
             onSelectionChange={(keys) => {
               if (!isEditMode) {
                 const selectedType = Array.from(keys)[0];
                 setFormData((prev) => ({
                   ...prev,
-                  type:
-                    selectedType.charAt(0).toUpperCase() +
-                    selectedType.slice(1),
+                  type: selectedType,
                 }));
               }
             }}
@@ -544,7 +542,7 @@ export default function AddRoomForm({ params = {} }) {
       </>
     );
 
-    if (formData.type === "hall") {
+    if (formData.type.toLowerCase() === "hall") {
       return (
         <>
           {commonFields}
@@ -867,7 +865,9 @@ export default function AddRoomForm({ params = {} }) {
           <div className="w-full">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold">
-                {formData.type === "hall" ? "Hall Detail" : "Room Detail"}
+                {formData.type.toLowerCase() === "hall"
+                  ? "Hall Detail"
+                  : "Room Detail"}
               </h1>
               <button
                 className="bg-hotel-primary text-white px-4 py-2 rounded"
