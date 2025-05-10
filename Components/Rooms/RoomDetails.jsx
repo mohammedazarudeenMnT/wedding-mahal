@@ -126,7 +126,7 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
   };
 
   const getAvailableRoomCount = () => {
-    if (room.type === "Room") {
+    if (room.type === "room") {
       if (!room?.roomNumbers) return 0;
       return room.roomNumbers.filter(
         (roomNum) => getRoomStatus(roomNum, dateRange) === "available"
@@ -160,7 +160,7 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
           <p className="text-gray-600">
             Occupied:{" "}
             <span className="font-medium">
-              {room.type === "Room"
+              {room.type === "room"
                 ? `${room.numberOfRooms - getAvailableRoomCount()}/${
                     room.numberOfRooms
                   } Rooms`
@@ -174,7 +174,7 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
 
       {/* Room Numbers Grid */}
       <div className="grid grid-cols-6 gap-2 mb-6">
-        {room.type === "Room"
+        {room.type === "room"
           ? room.roomNumbers.map((roomNumber) => {
               const status = getRoomStatus(roomNumber, dateRange);
               const activeBooking = roomNumber.bookeddates?.find((booking) => {
@@ -285,7 +285,7 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
         <div className="flex items-center gap-2">
           <span className="text-base">{room.size} m²</span>
         </div>
-        {room.type === "Room" ? (
+        {room.type === "room" ? (
           <>
             <div className="flex items-center gap-2">
               <FaBed className="w-4 h-4" />

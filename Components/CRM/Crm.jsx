@@ -156,8 +156,8 @@ export default function CrmList() {
   const handleMoveToBooking = useCallback(
     (contact) => {
       const queryParams = new URLSearchParams({
-        firstName: contact.name.split(" ")[0] || "",
-        lastName: contact.name.split(" ").slice(1).join(" ") || "",
+        firstName: contact.firstName || "",
+        lastName: contact.lastName || "",
         email: contact.email || "",
         mobileNo: contact.mobileno || "",
         notes: contact.notes || "",

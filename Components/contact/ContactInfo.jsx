@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin } from "lucide-react";
 
 const ContactInfo = () => {
   return (
-    <div className="bg-[#FFFBF0] p-6 md:p-8">
+    <div className="bg-[#FFE9E9] p-6 md:p-8">
       <h2 className="text-3xl font-semibold mb-6 text-brand-dark">
         Contact With Us
       </h2>

@@ -7,6 +7,12 @@ const GuestSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    propertyType: {
+      type: String,
+      enum: ["room", "hall"],
+      required: true,
+      default: "room",
+    },
     firstName: {
       type: String,
       required: true,
@@ -77,18 +83,26 @@ const GuestSchema = new mongoose.Schema(
         price: {
           type: Number,
           required: true,
+          get: (v) => Math.round(v),
+          set: (v) => Math.round(v),
         },
         igst: {
           type: Number,
           required: true,
+          get: (v) => Math.round(v),
+          set: (v) => Math.round(v),
         },
         additionalGuestCharge: {
           type: Number,
           default: 0,
+          get: (v) => Math.round(v),
+          set: (v) => Math.round(v),
         },
         totalAmount: {
           type: Number,
           required: true,
+          get: (v) => Math.round(v),
+          set: (v) => Math.round(v),
         },
         mainImage: {
           type: String,
@@ -96,22 +110,81 @@ const GuestSchema = new mongoose.Schema(
         },
       },
     ],
+    // Hall-specific fields
+    groomDetails: {
+      name: String,
+      mobileNo: String,
+      email: String,
+      address: String,
+      dob: String,
+      gender: String,
+      verificationId: String,
+    },
+    brideDetails: {
+      name: String,
+      mobileNo: String,
+      email: String,
+      address: String,
+      dob: String,
+      gender: String,
+      verificationId: String,
+    },
+    eventType: {
+      type: String,
+    },
+    timeSlot: {
+      name: String,
+      fromTime: String,
+      toTime: String,
+    },
+    selectedServices: [
+      {
+        name: String,
+        price: Number,
+      },
+    ],
     totalAmount: {
       roomCharge: {
         type: Number,
         required: true,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
       },
       taxes: {
         type: Number,
         required: true,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
       },
       additionalGuestCharge: {
         type: Number,
         required: true,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
+      },
+      servicesCharge: {
+        type: Number,
+        default: 0,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
+      },
+      discount: {
+        type: Number,
+        default: 0,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
+      },
+      discountAmount: {
+        type: Number,
+        default: 0,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
       },
       total: {
         type: Number,
         required: true,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
       },
     },
     roomNumbers: [String], // Added field for room numbers

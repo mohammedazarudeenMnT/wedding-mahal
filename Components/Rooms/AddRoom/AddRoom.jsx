@@ -150,7 +150,7 @@ export default function AddRoomForm({ params = {} }) {
     bedModel: "",
     maxGuests: "",
     amenities: [],
-    type: "Room", // Default value
+    type: "room", // Default value
     complementaryFoods: [],
   });
 
@@ -164,7 +164,7 @@ export default function AddRoomForm({ params = {} }) {
     bedModel: "",
     maxGuests: "",
     amenities: [],
-    type: "Room",
+    type: "room",
     complementaryFoods: [],
   };
 
@@ -209,17 +209,17 @@ export default function AddRoomForm({ params = {} }) {
               bedModel: roomData.bedModel,
               // Set maxGuests based on room type
               maxGuests:
-                roomData.type === "Hall"
+                roomData.type === "hall"
                   ? roomData.capacity
                   : roomData.maxGuests,
               amenities: roomData.amenities.map((a) => `${a.icon}-${a.name}`),
-              type: roomData.type || "Room",
+              type: roomData.type || "room",
               complementaryFoods: roomData.complementaryFoods || [],
             });
 
             // Set numbers based on type
             const numbers =
-              roomData.type === "Room"
+              roomData.type === "room"
                 ? roomData.roomNumbers
                 : roomData.hallNumbers;
             setNumberOfRooms(numbers.length);
@@ -372,7 +372,7 @@ export default function AddRoomForm({ params = {} }) {
     submitData.append("price", formData.price);
     submitData.append("size", formData.size);
 
-    if (formData.type === "Hall") {
+    if (formData.type === "hall") {
       // Hall-specific fields
       submitData.append("capacity", formData.maxGuests); // Use maxGuests as capacity
 
@@ -544,7 +544,7 @@ export default function AddRoomForm({ params = {} }) {
       </>
     );
 
-    if (formData.type === "Hall") {
+    if (formData.type === "hall") {
       return (
         <>
           {commonFields}
@@ -867,7 +867,7 @@ export default function AddRoomForm({ params = {} }) {
           <div className="w-full">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold">
-                {formData.type === "Hall" ? "Hall Detail" : "Room Detail"}
+                {formData.type === "hall" ? "Hall Detail" : "Room Detail"}
               </h1>
               <button
                 className="bg-hotel-primary text-white px-4 py-2 rounded"

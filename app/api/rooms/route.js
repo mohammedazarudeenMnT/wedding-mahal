@@ -86,56 +86,39 @@ export async function GET() {
     // Fetch all rooms for this hotel
     const rooms = await RoomModel.find({});
 
-    // Add discount information to each room
+    // Modify this section in the GET function where we handle special offerings
     const roomsWithPricing = rooms.map((room) => {
-      // Find all applicable special offerings for this room type
-      const typeOfferings = specialOfferings.filter(
-        (offering) =>
-          offering.propertyType.toLowerCase() === room.type.toLowerCase()
-      );
+      // Find all offerings that match this room's type
+      const matchingOfferings = specialOfferings
+        .filter(
+          (offering) =>
+            offering.propertyType.toLowerCase() === room.type.toLowerCase()
+        )
+        .map((offering) => ({
+          name: offering.name,
+          percentage: offering.discountPercentage,
+          startDate: offering.startDate,
+          endDate: offering.endDate,
+          propertyType: offering.propertyType,
+        }));
 
-      // Get applicable offering
-      const activeOffering = typeOfferings.length > 0 ? typeOfferings[0] : null;
+      // Calculate base pricing
+      const pricing = {
+        basePrice: room.price,
+        propertyTypePricing: {
+          [room.type]: matchingOfferings.map((offer) => ({
+            originalPrice: room.price,
+            discountedPrice: Math.round(
+              room.price * (1 - offer.percentage / 100)
+            ),
+            discount: offer,
+          })),
+        },
+      };
 
       return {
         ...room.toObject(),
-        currentDiscount: activeOffering
-          ? {
-              name: activeOffering.name,
-              percentage: activeOffering.discountPercentage,
-              startDate: activeOffering.startDate,
-              endDate: activeOffering.endDate,
-              propertyType: activeOffering.propertyType,
-            }
-          : null,
-        pricing: {
-          basePrice: room.price,
-          discountedPrice: activeOffering
-            ? Math.round(
-                room.price * (1 - activeOffering.discountPercentage / 100)
-              )
-            : room.price,
-          propertyTypePricing: specialOfferings.reduce((acc, offering) => {
-            if (!acc[offering.propertyType]) {
-              acc[offering.propertyType] = {
-                originalPrice:
-                  room.type.toLowerCase() ===
-                  offering.propertyType.toLowerCase()
-                    ? room.price
-                    : null,
-                discountedPrice:
-                  room.type.toLowerCase() ===
-                  offering.propertyType.toLowerCase()
-                    ? Math.round(
-                        room.price * (1 - offering.discountPercentage / 100)
-                      )
-                    : null,
-                discount: offering,
-              };
-            }
-            return acc;
-          }, {}),
-        },
+        pricing,
       };
     });
 

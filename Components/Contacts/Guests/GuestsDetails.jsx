@@ -9,23 +9,27 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Button,
-  Pagination,
-  Card,
-  CardBody,
+} from "@heroui/table";
+import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Spinner,
+} from "@heroui/dropdown";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Pagination } from "@heroui/pagination";
+import { Card, CardBody } from "@heroui/card";
+import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
-  Input,
-} from "@nextui-org/react";
+} from "@heroui/modal";
+import { Spinner } from "@heroui/spinner";
+import { useDisclosure } from "@heroui/use-disclosure";
+
 import {
   Calendar,
   Download,
