@@ -9,6 +9,7 @@ import {
   FileEdit, 
   Search, 
   Trash2,
+  X
 } from "lucide-react"
 import { 
   FaBoxOpen,  // For issued items
@@ -32,6 +33,8 @@ import { Tooltip } from "@heroui/tooltip"
 import Link from "next/link"
 import axios from "axios"
 import { toast } from "react-toastify"
+import { Modal } from "@heroui/modal"
+import ViewLogBookDetails from "@/Components/logBook/ViewLogBookDetails"
 
 const INITIAL_VISIBLE_COLUMNS = [
   "customerName",
@@ -64,6 +67,8 @@ export default function LogBook() {
   const [isLoading, setIsLoading] = useState(true)
   const [totalItems, setTotalItems] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedLog, setSelectedLog] = useState(null)
 
   // Fetch log entries
   const fetchLogEntries = async () => {
@@ -142,14 +147,30 @@ export default function LogBook() {
     itemFromDate.setHours(0, 0, 0, 0);
     itemToDate.setHours(23, 59, 59, 999);
 
-    // Check if the item's date range overlaps with the filter date range
+    // Check if dates are selected (not default dates)
+    const isDefaultDateRange = 
+      filterFromDate.getTime() === new Date().setHours(0, 0, 0, 0) &&
+      filterToDate.getTime() === addDays(new Date(), 1).setHours(23, 59, 59, 999);
+
+    // If no dates are selected (using default dates), only apply text search
+    if (isDefaultDateRange) {
+      return (
+        item.customerName?.toLowerCase().includes(searchTerm) ||
+        item.bookingId?.toLowerCase().includes(searchTerm) ||
+        item.mobileNo?.toLowerCase().includes(searchTerm) ||
+        item.propertyType?.toLowerCase().includes(searchTerm) ||
+        item.eventType?.toLowerCase().includes(searchTerm) ||
+        item.status?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // If dates are selected, check both date range and text search
     const isDateInRange = (
       (itemFromDate >= filterFromDate && itemFromDate <= filterToDate) ||
       (itemToDate >= filterFromDate && itemToDate <= filterToDate) ||
       (itemFromDate <= filterFromDate && itemToDate >= filterToDate)
     );
 
-    // Text search conditions
     const matchesSearch = (
       item.customerName?.toLowerCase().includes(searchTerm) ||
       item.bookingId?.toLowerCase().includes(searchTerm) ||
@@ -233,6 +254,13 @@ export default function LogBook() {
     setColumns(newColumns)
   }, [])
 
+  const handleViewDetails = (item) => {
+    if (item.status === 'Issued') {
+      setSelectedLog(item);
+      setDetailModalOpen(true);
+    }
+  };
+
   const renderCell = useCallback((item, column) => {
     const cellValue = item[column.uid]
 
@@ -298,7 +326,7 @@ export default function LogBook() {
         return (
           <div className="relative flex items-center justify-center gap-2">
             <Tooltip content="View Details">
-              <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50">
+              <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50" onClick={() => handleViewDetails(item)}>
                 <Eye className="h-4 w-4" />
               </Button>
             </Tooltip>
@@ -593,6 +621,8 @@ export default function LogBook() {
           confirmText="Delete"
         />
       </div>
+
+      <ViewLogBookDetails isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} logData={selectedLog} />
     </div>
   )
 }
