@@ -12,7 +12,8 @@ import { addDays } from "date-fns"
 import axios from "axios"
 import { toast } from "react-toastify"
 
-export default function AddLogForm() {
+export default function AddLogForm({ logId }) {
+  const isEditMode = !!logId;
   const [itemsIssued, setItemsIssued] = useState([{}])
   const [electricityReadings, setElectricityReadings] = useState([{}])
   const [totalAmount, setTotalAmount] = useState("")
@@ -28,6 +29,8 @@ export default function AddLogForm() {
   const [electricityTypes, setElectricityTypes] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [allBookings, setAllBookings] = useState([])
+  const [filteredBookings, setFilteredBookings] = useState([])
   const [formData, setFormData] = useState({
     bookingId: "",
     customerName: "",
@@ -39,9 +42,89 @@ export default function AddLogForm() {
   })
 
   useEffect(() => {
-    fetchInventory()
-    fetchElectricityTypes()
-  }, [])
+    fetchInventory();
+    fetchElectricityTypes();
+    if (!isEditMode) {
+      fetchBookings();
+    }
+  }, []);
+
+  // Add effect to load log data when in edit mode
+  useEffect(() => {
+    const loadLogData = async () => {
+      if (isEditMode && logId) {
+        try {
+          setIsLoading(true);
+          const response = await axios.get(`/api/logBook/${logId}`);
+          
+          if (response.data.success) {
+            const logData = response.data.data;
+            console.log("Setting form data with:", logData); // Debug log
+
+            // Set base form data
+            setFormData({
+              bookingId: logData.bookingId || "",
+              customerName: logData.customerName || "",
+              mobileNo: logData.mobileNo || "",
+              propertyType: logData.propertyType || "",
+              eventType: logData.eventType || "",
+              checkInTime: logData.checkInTime || "",
+              notes: logData.notes || ""
+            });
+
+            // Set date range
+            if (logData.dateRange && logData.dateRange.from && logData.dateRange.to) {
+              setDateRange({
+                from: new Date(logData.dateRange.from),
+                to: new Date(logData.dateRange.to)
+              });
+            }
+
+            // Set items issued
+            if (Array.isArray(logData.itemsIssued) && logData.itemsIssued.length > 0) {
+              setItemsIssued(logData.itemsIssued);
+            }
+
+            // Set electricity readings
+            if (Array.isArray(logData.electricityReadings) && logData.electricityReadings.length > 0) {
+              setElectricityReadings(logData.electricityReadings);
+            }
+
+            // Set total amount
+            setTotalAmount(logData.totalAmount?.toString() || "0");
+
+            // Add the booking to filteredBookings for dropdowns
+            const currentBooking = {
+              bookingNumber: logData.bookingId,
+              firstName: logData.customerName.split(' ')[0],
+              lastName: logData.customerName.split(' ')[1] || '',
+              mobileNo: logData.mobileNo,
+              propertyType: logData.propertyType,
+              eventType: logData.eventType,
+              timeSlot: { fromTime: logData.checkInTime },
+              checkInDate: logData.dateRange?.from,
+              checkOutDate: logData.dateRange?.to
+            };
+
+            setFilteredBookings([currentBooking]);
+            setAllBookings([currentBooking]);
+          }
+        } catch (error) {
+          console.error('Error loading log data:', error);
+          toast.error('Failed to load log data');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadLogData();
+  }, [logId, isEditMode]);
+
+  // Effect to filter bookings when date range changes
+  useEffect(() => {
+    filterBookingsByDate()
+  }, [dateRange, allBookings])
 
   const fetchInventory = async () => {
     try {
@@ -79,6 +162,89 @@ export default function AddLogForm() {
       }
     } catch (error) {
       console.error('Failed to fetch electricity types:', error)
+    }
+  }
+
+  const fetchBookings = async () => {
+    if (isEditMode) return; // Skip fetching bookings in edit mode
+    
+    try {
+      setIsLoading(true);
+      const response = await axios.get('/api/bookings?source=logbook');
+      if (response.data.success) {
+        const activeBookings = response.data.bookings.filter(booking => 
+          booking.status === "booked" && 
+          (booking.propertyType === "room" || booking.propertyType === "hall")
+        );
+        setAllBookings(activeBookings);
+        filterBookingsByDate(activeBookings);
+      }
+    } catch (error) {
+      console.error('Failed to fetch bookings:', error);
+      toast.error('Failed to fetch bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const filterBookingsByDate = (bookings = allBookings) => {
+    const selectedFromDate = new Date(dateRange.from)
+    const selectedToDate = new Date(dateRange.to)
+    
+    // Reset time parts for accurate date comparison
+    selectedFromDate.setHours(0, 0, 0, 0)
+    selectedToDate.setHours(23, 59, 59, 999)
+
+    const filtered = bookings.filter(booking => {
+      const bookingCheckIn = new Date(booking.checkInDate)
+      const bookingCheckOut = new Date(booking.checkOutDate)
+      
+      // Reset time parts for accurate date comparison
+      bookingCheckIn.setHours(0, 0, 0, 0)
+      bookingCheckOut.setHours(23, 59, 59, 999)
+
+      // Check if booking overlaps with selected date range
+      return (
+        (bookingCheckIn <= selectedToDate && bookingCheckOut >= selectedFromDate) ||
+        (bookingCheckIn >= selectedFromDate && bookingCheckIn <= selectedToDate) ||
+        (bookingCheckOut >= selectedFromDate && bookingCheckOut <= selectedToDate)
+      )
+    })
+
+    setFilteredBookings(filtered)
+    
+    // Clear form data if current selection is not in filtered results
+    if (!filtered.find(b => b.bookingNumber === formData.bookingId)) {
+      setFormData({
+        bookingId: "",
+        customerName: "",
+        mobileNo: "",
+        propertyType: "",
+        eventType: "",
+        checkInTime: "",
+        notes: ""
+      })
+    }
+  }
+
+  const handleBookingSelect = async (bookingId) => {
+    try {
+      const response = await axios.get(`/api/bookings/${bookingId}`)
+      if (response.data.success) {
+        const booking = response.data.booking
+        setFormData({
+          ...formData,
+          bookingId: booking.bookingNumber,
+          customerName: `${booking.firstName} ${booking.lastName}`,
+          mobileNo: booking.mobileNo,
+          propertyType: booking.propertyType,
+          eventType: booking.eventType || '',
+          checkInTime: booking.timeSlot?.fromTime || ''
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch booking details:', error)
+      toast.error('Failed to load booking details')
     }
   }
 
@@ -187,10 +353,26 @@ export default function AddLogForm() {
   }
 
   const handleFormChange = (field, value) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    })
+    // If selecting phone number or customer name, find and fill the corresponding booking data
+    if (field === "mobileNo" || field === "customerName") {
+      const selectedBooking = filteredBookings.find(booking => 
+        field === "mobileNo" ? booking.mobileNo === value : `${booking.firstName} ${booking.lastName}` === value
+      );
+      
+      if (selectedBooking) {
+        setFormData({
+          bookingId: selectedBooking.bookingNumber,
+          customerName: `${selectedBooking.firstName} ${selectedBooking.lastName}`,
+          mobileNo: selectedBooking.mobileNo,
+          propertyType: selectedBooking.propertyType,
+          eventType: selectedBooking.eventType || '',
+          checkInTime: selectedBooking.timeSlot?.fromTime || '',
+          notes: formData.notes // Preserve any existing notes
+        });
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   }
 
   const handleElectricityChange = (index, field, value) => {
@@ -302,19 +484,20 @@ export default function AddLogForm() {
         totalAmount: parseFloat(totalAmount) || 0
       };
 
-      console.log('Submitting log entry:', payload);
-      const response = await axios.post('/api/logBook', payload);
+      const endpoint = isEditMode ? `/api/logBook/${logId}` : '/api/logBook';
+      const method = isEditMode ? 'put' : 'post';
+      
+      const response = await axios[method](endpoint, payload);
 
       if (response.data.success) {
-        toast.success("Log entry added successfully");
-        // Reset the form or redirect
-        resetForm();
-      } else {
-        toast.error(response.data.error || "Failed to add log entry");
+        toast.success(`Log entry ${isEditMode ? 'updated' : 'added'} successfully`);
+        if (!isEditMode) {
+          resetForm();
+        }
       }
     } catch (error) {
-      console.error("Error submitting log entry:", error);
-      toast.error(error.response?.data?.error || "Failed to add log entry");
+      console.error(`Error ${isEditMode ? 'updating' : 'submitting'} log entry:`, error);
+      toast.error(error.response?.data?.error || `Failed to ${isEditMode ? 'update' : 'add'} log entry`);
     } finally {
       setIsSubmitting(false);
     }
@@ -345,7 +528,7 @@ export default function AddLogForm() {
         {/* Header section */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl text-hotel-primary-text font-[500]">
-            Add New Log Entry
+            {isEditMode ? 'Edit Log Entry' : 'Add New Log Entry'}
           </h2>
         </div>
 
@@ -358,30 +541,35 @@ export default function AddLogForm() {
               <DateRangePicker
                 className="bg-white text-[#333] border-0 w-full"
                 label="Select Date"
+                key={`date-range-${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
                 onChange={(range) => {
                   if (!range || !range.start || !range.end) {
-                    setDateRange({
+                    const defaultRange = {
                       from: new Date(),
                       to: addDays(new Date(), 1),
-                    });
-                    return;
+                    }
+                    setDateRange(defaultRange)
+                    filterBookingsByDate()
+                    return
                   }
 
                   const startDate = new Date(
                     range.start.year,
                     range.start.month - 1,
                     range.start.day
-                  );
+                  )
                   const endDate = new Date(
                     range.end.year,
                     range.end.month - 1,
                     range.end.day
-                  );
+                  )
 
-                  setDateRange({
+                  const newRange = {
                     from: startDate,
                     to: endDate,
-                  });
+                  }
+                  console.log("New date range selected:", newRange);
+                  setDateRange(newRange)
                 }}
                 classNames={{
                   base: "bg-hotel-secondary rounded-lg h-[40px]",
@@ -391,6 +579,15 @@ export default function AddLogForm() {
                   popover: "rounded-lg mt-1",
                   input: "h-[40px]",
                 }}
+                popoverProps={{
+                  // Add these props to prevent the error
+                  placement: "bottom",
+                  offset: 13,
+                  triggerScaleOnOpen: false,
+                  classNames: {
+                    content: "min-w-[300px]"
+                  }
+                }}
               />
             </div>
 
@@ -399,14 +596,17 @@ export default function AddLogForm() {
               <label htmlFor="bookingId" className="text-sm text-gray-600">Booking Id</label>
               <Select 
                 value={formData.bookingId}
-                onValueChange={(value) => handleFormChange("bookingId", value)}
+                onValueChange={(value) => handleBookingSelect(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Booking" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="booking1">Booking 1</SelectItem>
-                  <SelectItem value="booking2">Booking 2</SelectItem>
+                  {filteredBookings.map((booking) => (
+                    <SelectItem key={booking.bookingNumber} value={booking.bookingNumber}>
+                      {booking.bookingNumber}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -422,8 +622,11 @@ export default function AddLogForm() {
                   <SelectValue placeholder="Select Customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="customer1">Customer 1</SelectItem>
-                  <SelectItem value="customer2">Customer 2</SelectItem>
+                  {filteredBookings.map((booking) => (
+                    <SelectItem key={booking.bookingNumber} value={`${booking.firstName} ${booking.lastName}`}>
+                      {`${booking.firstName} ${booking.lastName}`}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -439,8 +642,11 @@ export default function AddLogForm() {
                   <SelectValue placeholder="Select Phone Number" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="9876543210">+91 9876543210</SelectItem>
-                  <SelectItem value="8765432109">+91 8765432109</SelectItem>
+                  {filteredBookings.map((booking) => (
+                    <SelectItem key={booking.bookingNumber} value={booking.mobileNo}>
+                      {booking.mobileNo}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -456,8 +662,11 @@ export default function AddLogForm() {
                   <SelectValue placeholder="Select Property Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Hall A">Hall A</SelectItem>
-                  <SelectItem value="Hall B">Hall B</SelectItem>
+                  {[...new Set(filteredBookings.map(booking => booking.propertyType))].map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type === 'hall' ? 'Hall' : 'Room'}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -473,8 +682,13 @@ export default function AddLogForm() {
                   <SelectValue placeholder="Select Time" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10:00 AM">10:00 AM</SelectItem>
-                  <SelectItem value="12:00 PM">12:00 PM</SelectItem>
+                  {filteredBookings
+                    .filter(booking => booking.timeSlot?.fromTime)
+                    .map((booking) => (
+                      <SelectItem key={booking.bookingNumber} value={booking.timeSlot.fromTime}>
+                        {booking.timeSlot.fromTime}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -490,9 +704,14 @@ export default function AddLogForm() {
                   <SelectValue placeholder="Select Event" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Wedding">Wedding</SelectItem>
-                  <SelectItem value="Birthday">Birthday</SelectItem>
-                  <SelectItem value="Conference">Conference</SelectItem>
+                  {[...new Set(filteredBookings
+                    .filter(booking => booking.eventType)
+                    .map(booking => booking.eventType))]
+                    .map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -533,17 +752,17 @@ export default function AddLogForm() {
                         value={item.category}
                         onValueChange={(value) => handleItemChange(index, 'category', value)}
                       >
-                        <SelectTrigger className="text-xs">
+                      <SelectTrigger className="text-xs">
                           <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                           {categories.map((category) => (
                             <SelectItem key={category} value={category}>
                               {category}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Select
@@ -551,17 +770,17 @@ export default function AddLogForm() {
                         onValueChange={(value) => handleItemChange(index, 'subCategory', value)}
                         disabled={!item.category}
                       >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="Select Sub Category" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Select Sub Category" />
+                      </SelectTrigger>
+                      <SelectContent>
                           {getFilteredSubCategories(item.category).map((subCategory) => (
                             <SelectItem key={subCategory} value={subCategory}>
                               {subCategory}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Select
@@ -569,17 +788,17 @@ export default function AddLogForm() {
                         onValueChange={(value) => handleItemChange(index, 'brand', value)}
                         disabled={!item.category || !item.subCategory}
                       >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="Select Brand" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Select Brand" />
+                      </SelectTrigger>
+                      <SelectContent>
                           {getFilteredBrands(item.category, item.subCategory).map((brand) => (
                             <SelectItem key={brand} value={brand}>
                               {brand}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Select
@@ -587,17 +806,17 @@ export default function AddLogForm() {
                         onValueChange={(value) => handleItemChange(index, 'model', value)}
                         disabled={!item.category || !item.subCategory || !item.brand}
                       >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="Select Model" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Select Model" />
+                      </SelectTrigger>
+                      <SelectContent>
                           {getFilteredModels(item.category, item.subCategory, item.brand).map((model) => (
                             <SelectItem key={model} value={model}>
                               {model}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Input
@@ -618,15 +837,15 @@ export default function AddLogForm() {
                         value={item.condition}
                         onValueChange={(value) => handleItemChange(index, 'condition', value)}
                       >
-                        <SelectTrigger className="text-xs">
+                      <SelectTrigger className="text-xs">
                           <SelectValue placeholder="Select Condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Good">Good</SelectItem>
-                          <SelectItem value="Fair">Fair</SelectItem>
-                          <SelectItem value="Poor">Poor</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Good">Good</SelectItem>
+                        <SelectItem value="Fair">Fair</SelectItem>
+                        <SelectItem value="Poor">Poor</SelectItem>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Input
@@ -638,25 +857,25 @@ export default function AddLogForm() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Buttons
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItemRow(index)}
+                    <Buttons
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItemRow(index)}
                         className="h-8 w-8"
-                      >
+                    >
                         <X className="h-4 w-4" />
-                      </Buttons>
+                    </Buttons>
                     </TableCell>
                   </TableRow>
-                ))}
+              ))}
               </TableBody>
             </Table>
 
-            {/* Add Item button and Totals */}
-            <div className="flex items-center mt-2">
-              <Buttons variant="ghost" size="sm" className="gap-1" onClick={addItemRow}>
-                <Plus className="h-4 w-4" />
-              </Buttons>
+              {/* Add Item button and Totals */}
+              <div className="flex items-center mt-2">
+                <Buttons variant="ghost" size="sm" className="gap-1" onClick={addItemRow}>
+                  <Plus className="h-4 w-4" />
+                </Buttons>
 
               <div className="ml-auto flex flex-col sm:flex-row gap-2 sm:gap-4 items-end">
                 {/* Total Items */}
@@ -705,17 +924,17 @@ export default function AddLogForm() {
                         value={reading.type}
                         onValueChange={(value) => handleElectricityChange(index, 'type', value)}
                       >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent>
                           {electricityTypes.map((type) => (
                             <SelectItem key={type._id} value={type.name}>
                               {type.name}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
+                      </SelectContent>
+                    </Select>
                     </TableCell>
                     <TableCell>
                       <Input 
@@ -742,25 +961,25 @@ export default function AddLogForm() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Buttons
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-red-500"
-                        onClick={() => removeElectricityRow(index)}
-                        disabled={electricityReadings.length === 1}
-                      >
-                        <X className="h-5 w-5" />
-                      </Buttons>
+                    <Buttons
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-red-500"
+                      onClick={() => removeElectricityRow(index)}
+                      /*   disabled={electricityReadings.length === 1} */
+                    >
+                      <X className="h-5 w-5" />
+                    </Buttons>
                     </TableCell>
                   </TableRow>
-                ))}
+              ))}
               </TableBody>
             </Table>
 
-            <div className="flex items-center mt-2">
-              <Buttons variant="ghost" size="sm" className="gap-1" onClick={addElectricityRow}>
-                <Plus className="h-4 w-4" />
-              </Buttons>
+              <div className="flex items-center mt-2">
+                <Buttons variant="ghost" size="sm" className="gap-1" onClick={addElectricityRow}>
+                  <Plus className="h-4 w-4" />
+                </Buttons>
             </div>
           </div>
 

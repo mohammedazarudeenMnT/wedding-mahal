@@ -331,9 +331,11 @@ export default function LogBook() {
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
-              <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50">
-                <FileEdit className="h-4 w-4" />
-              </Button>
+              <Link href={`/dashboard/logBook/edit-log/${item._id}`}>
+                <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50">
+                  <FileEdit className="h-4 w-4" />
+                </Button>
+              </Link>
             </Tooltip>
             <Tooltip content="Delete">
               <Button 
