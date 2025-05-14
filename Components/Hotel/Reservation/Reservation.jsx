@@ -9,7 +9,13 @@ import axios from "axios";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { format, isWithinInterval, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  FileText,
+  FileSpreadsheet,
+  FileJson,
+  Download,
+} from "lucide-react";
 import { Buttons } from "../../ui/button.tsx";
 import { Calendar } from "../../ui/calendar.tsx";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.tsx";
@@ -28,6 +34,11 @@ import { Input } from "@heroui/input";
 import { Chip } from "@heroui/chip";
 import { User } from "@heroui/user";
 import { Pagination } from "@heroui/pagination";
+import { Spinner } from "@heroui/spinner";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { Parser } from "json2csv";
 
 import { PlusIcon } from "../../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../../ui/Table/SearchIcon.jsx";
@@ -54,6 +65,28 @@ const INITIAL_VISIBLE_COLUMNS = [
   "status",
   "actions",
 ];
+
+const formatCurrency = (amount) => {
+  if (!amount || isNaN(amount)) return "₹0.00";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const getTailwindColor = (element, className) => {
+  const tempElement = document.createElement(element);
+  tempElement.className = className;
+  document.body.appendChild(tempElement);
+
+  const color = window.getComputedStyle(tempElement).backgroundColor;
+  document.body.removeChild(tempElement);
+
+  const match = color.match(/\d+/g);
+  return match ? match.map(Number) : [41, 128, 185]; // fallback color
+};
 
 export default function ReservationList({}) {
   const hasViewPermission = usePagePermission("Bookings", "view");
@@ -88,6 +121,7 @@ export default function ReservationList({}) {
     confirmText: "",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -551,166 +585,415 @@ export default function ReservationList({}) {
     setPage(1);
   }, []);
 
+  const getExportData = useCallback(() => {
+    return sortedItems.map((booking) => {
+      return {
+        "Guest Name": booking.guest || "-",
+        "Mobile No": booking.mobileNo || "-",
+        Email: booking.email || "-",
+        "Room Category": booking.room || "-",
+        Duration: booking.duration || "-",
+        "Check-In": booking.checkInDate
+          ? format(new Date(booking.checkInDate), "dd/MM/yyyy")
+          : "-",
+        "Check-Out": booking.checkOutDate
+          ? format(new Date(booking.checkOutDate), "dd/MM/yyyy")
+          : "-",
+        Amount: booking.totalAmount ? formatCurrency(booking.totalAmount) : "-",
+        Status: booking.status || "-",
+        "Client Requests": booking.clientRequests || "-",
+      };
+    });
+  }, [sortedItems]);
+
+  const handleDownloadPDF = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const doc = new jsPDF("l", "mm", "a4");
+      const exportData = getExportData();
+      const hotelPrimaryColor = getTailwindColor("div", "bg-hotel-primary");
+
+      // Add header banner
+      doc.setFillColor(
+        hotelPrimaryColor[0],
+        hotelPrimaryColor[1],
+        hotelPrimaryColor[2]
+      );
+      doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+      // Add title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Reservations", 15, 15);
+
+      // Add metadata
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()}`,
+        doc.internal.pageSize.width - 65,
+        35
+      );
+
+      // Add date range if available
+      if (date.from && date.to) {
+        doc.text(
+          `Period: ${format(new Date(date.from), "MMM dd, yyyy")} - ${format(
+            new Date(date.to),
+            "MMM dd, yyyy"
+          )}`,
+          15,
+          35
+        );
+      }
+
+      // Configure table
+      doc.autoTable({
+        head: [
+          Object.keys(
+            exportData[0] || {
+              "Guest Name": "",
+              "Mobile No": "",
+              Email: "",
+              "Room Category": "",
+              Duration: "",
+              "Check-In": "",
+              "Check-Out": "",
+              Amount: "",
+              Status: "",
+              "Client Requests": "",
+            }
+          ),
+        ],
+        body: exportData.map(Object.values),
+        startY: 45,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [80, 80, 80],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: hotelPrimaryColor,
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        columnStyles: {
+          "Guest Name": { cellWidth: 30 },
+          "Mobile No": { cellWidth: 25 },
+          Email: { cellWidth: 40 },
+          "Room Category": { cellWidth: 20 },
+          "Check-In": { cellWidth: 20 },
+          "Check-Out": { cellWidth: 20 },
+          Status: { cellWidth: 20 },
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        didDrawPage: (data) => {
+          // Restore header on each page
+          doc.setFillColor(
+            hotelPrimaryColor[0],
+            hotelPrimaryColor[1],
+            hotelPrimaryColor[2]
+          );
+          doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+          // Add footer
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(70, 70, 70);
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        },
+      });
+
+      doc.save("reservations.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData, date]);
+
+  const handleDownloadExcel = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reservations");
+      XLSX.writeFile(wb, "reservations.xlsx");
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast.error("Failed to generate Excel file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  const handleDownloadCSV = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      if (exportData.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+
+      const fields = Object.keys(exportData[0]);
+      const parser = new Parser({ fields });
+      const csv = parser.parse(exportData);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "reservations.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating CSV:", error);
+      toast.error("Failed to generate CSV file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  const handleDownloadJSON = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "reservations.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating JSON:", error);
+      toast.error("Failed to generate JSON file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  const downloadButton = useMemo(
+    () => (
+      <Dropdown>
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            variant="flat"
+            className="bg-hotel-secondary"
+            isLoading={isExporting}
+          >
+            {isExporting ? <Spinner size="sm" /> : <Download size={18} />}
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu aria-label="Download Options">
+          <DropdownItem
+            key="pdf"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadPDF}
+            isDisabled={isExporting}
+          >
+            PDF
+          </DropdownItem>
+          <DropdownItem
+            key="excel"
+            startContent={<FileSpreadsheet size={16} />}
+            onPress={handleDownloadExcel}
+          >
+            Excel
+          </DropdownItem>
+          <DropdownItem
+            key="csv"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadCSV}
+          >
+            CSV
+          </DropdownItem>
+          <DropdownItem
+            key="json"
+            startContent={<FileJson size={16} />}
+            onPress={handleDownloadJSON}
+          >
+            JSON
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+    ),
+    [
+      isExporting,
+      handleDownloadPDF,
+      handleDownloadExcel,
+      handleDownloadCSV,
+      handleDownloadJSON,
+    ]
+  );
+
   const topContent = useMemo(() => {
     return (
-      <>
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between gap-2 items-end">
-            <h2 className="text-hotel-primary-text  font-[500]">
-              Bookings List
-            </h2>
-            <div className="flex gap-3">
-              <Input
-                isClearable
-                classNames={{
-                  base: "w-full sm:max-w-[44%] date-btn",
-                  inputWrapper: "bg-hotel-secondary ",
-                  input: "text-hotel-primary-text",
-                }}
-                placeholder="Search guest, status, etc ..."
-                startContent={<SearchIcon />}
-                value={filterValue}
-                onClear={() => onClear()}
-                onValueChange={onSearchChange}
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Buttons
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal bg-hotel-secondary",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date?.from ? (
-                      date.to ? (
-                        <>
-                          {format(date.from, "LLL dd, y")} -{" "}
-                          {format(date.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(date.from, "LLL dd, y")
-                      )
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold">Reservations</h1>
+          <div className="flex gap-3">
+            {downloadButton}
+
+            <Input
+              isClearable
+              className="w-full sm:max-w-[44%] date-btn"
+              classNames={{
+                base: "w-full sm:max-w-[44%] date-btn",
+                inputWrapper: "bg-hotel-secondary",
+                input: "text-hotel-primary-text",
+              }}
+              placeholder="Search by name, mobile, email, ..."
+              startContent={<SearchIcon />}
+              value={filterValue}
+              onClear={() => onClear()}
+              onValueChange={onSearchChange}
+            />
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Buttons
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[280px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
                     ) : (
-                      <span className="text-hotel-primary-text">
-                        {" "}
-                        Pick a date
-                      </span>
-                    )}
-                  </Buttons>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={date?.from}
-                    selected={date}
-                    onSelect={setDate}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Dropdown>
-                <DropdownTrigger className="hidden sm:flex">
-                  <Button
-                    className="min-w-28 bg-hotel-secondary text-hotel-primary-text"
-                    classNames={{
-                      base: ["bg-hotel-secondary hover:bg-hotel-secondary/90"],
-                      content: "text-default-900",
-                    }}
-                    startContent={<CiFilter />}
-                    radius="sm"
-                  >
-                    All Status
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu
-                  disallowEmptySelection
-                  aria-label="Table Columns"
-                  closeOnSelect={false}
-                  selectedKeys={statusFilter}
-                  selectionMode="multiple"
-                  onSelectionChange={setStatusFilter}
-                >
-                  {statusOptions.map((status) => (
-                    <DropdownItem
-                      key={status.uid}
-                      className="capitalize text-hotel-primary-text"
-                    >
-                      {capitalize(status.name)}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </Dropdown>
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Buttons>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
 
-              <Dropdown>
-                <DropdownTrigger className="hidden sm:flex">
-                  <Button className="min-w-20 bg-hotel-secondary text-hotel-primary-text">
-                    <PiFadersHorizontal />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu
-                  disallowEmptySelection
-                  aria-label="Table Columns"
-                  closeOnSelect={false}
-                  selectedKeys={visibleColumns}
-                  selectionMode="multiple"
-                  onSelectionChange={setVisibleColumns}
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button
+                  endContent={<CiFilter />}
+                  variant="flat"
+                  className="bg-hotel-secondary text-hotel-primary-text"
                 >
-                  {columns.map((column) => (
-                    <DropdownItem key={column.uid} className="capitalize">
-                      {capitalize(column.name)}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </Dropdown>
-
-              {hasAddPermission && (
-                <Link href={`/dashboard/bookings/add-booking`}>
-                  <Button
-                    className="min-w-44 bg-hotel-primary-yellow text-hotel-primary-text"
-                    endContent={<PlusIcon />}
-                  >
-                    New Booking
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-default-400 text-small">
-              Total {bookings.length} bookings
-            </span>
-            <label className="flex items-center text-default-400 text-small">
-              Rows per page:
-              <select
-                className="bg-transparent outline-none text-default-400 text-small"
-                onChange={onRowsPerPageChange}
+                  {Array.from(statusFilter).length
+                    ? `${Array.from(statusFilter).length} Status selected`
+                    : "Status"}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Status Selection"
+                closeOnSelect={false}
+                selectedKeys={statusFilter}
+                selectionMode="multiple"
+                onSelectionChange={setStatusFilter}
               >
-                <option value={rowsPerPage}>{rowsPerPage}</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-              </select>
-            </label>
+                {statusOptions.map((status) => (
+                  <DropdownItem key={status.uid} className="capitalize">
+                    {capitalize(status.name)}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button
+                  endContent={<PiFadersHorizontal />}
+                  variant="flat"
+                  className="min-w-12 bg-hotel-secondary text-hotel-primary-text"
+                />
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Table Columns"
+                closeOnSelect={false}
+                disallowEmptySelection
+                selectionMode="multiple"
+                selectedKeys={visibleColumns}
+                onSelectionChange={setVisibleColumns}
+              >
+                {columns.map((column) => (
+                  <DropdownItem key={column.uid} className="capitalize">
+                    {capitalize(column.name)}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+
+            {hasAddPermission && (
+              <Button
+                as={Link}
+                href="/dashboard/bookings/add-booking"
+                className="min-w-44 bg-hotel-primary-yellow text-hotel-primary-text"
+                endContent={<PlusIcon />}
+              >
+                Add New Booking
+              </Button>
+            )}
           </div>
         </div>
-      </>
+        <div className="flex justify-between items-center">
+          <span className="text-default-400 text-small">
+            Total {bookings.length} bookings
+          </span>
+          <label className="flex items-center text-default-400 text-small">
+            Rows per page:
+            <select
+              className="bg-transparent outline-none text-default-400 text-small"
+              onChange={onRowsPerPageChange}
+            >
+              <option value={rowsPerPage}>{rowsPerPage}</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+        </div>
+      </div>
     );
   }, [
     filterValue,
+    onSearchChange,
+    onClear,
     statusFilter,
     visibleColumns,
-    onRowsPerPageChange,
-    bookings.length,
-    onSearchChange,
-    columns,
+    downloadButton,
     date,
-    onClear,
-    rowsPerPage,
     hasAddPermission,
+    bookings.length,
+    rowsPerPage,
+    onRowsPerPageChange,
+    columns,
   ]);
 
   const bottomContent = useMemo(() => {

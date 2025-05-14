@@ -29,12 +29,15 @@ export async function POST(request) {
     }
 
     // Additional validation based on payment method
-    if (requestData.paymentMethod === "online") {
+    if (
+      requestData.paymentMethod === "online" ||
+      requestData.paymentMethod === "bank"
+    ) {
       if (!requestData.paymentType) {
         return NextResponse.json(
           {
             success: false,
-            message: "Payment type is required for online payments",
+            message: "Payment type is required for online/bank payments",
           },
           { status: 400 }
         );
@@ -62,13 +65,15 @@ export async function POST(request) {
 
     // Ensure paymentType is a valid enum value for all payment methods
     if (
-      !["card", "upi", "netbanking", "cash", ""].includes(
+      !["card", "upi", "netbanking", "cash", "bank", ""].includes(
         requestData.paymentType
       )
     ) {
       // For any payment method, if paymentType is invalid, set it to a safe default
       if (requestData.paymentMethod === "cod") {
         requestData.paymentType = "cash"; // Default to cash for Pay at Hotel
+      } else if (requestData.paymentMethod === "online") {
+        requestData.paymentType = "bank"; // Default to bank for online
       } else {
         requestData.paymentType = ""; // Default to empty string for others
       }
@@ -82,7 +87,7 @@ export async function POST(request) {
 
     // Ensure payment method is a valid enum value
     if (
-      !["online", "cod", "qr", "paymentLink"].includes(
+      !["online", "cod", "qr", "paymentLink", "bank"].includes(
         requestData.paymentMethod
       )
     ) {
@@ -110,12 +115,19 @@ export async function POST(request) {
       status: requestData.status || "completed",
     };
 
+    // Calculate if the payment will fully satisfy the booking amount
+    const willBeFullyPaid = transaction
+      ? transaction.totalPaid + currentPayment.amount >=
+        parseFloat(transaction.payableAmount)
+      : currentPayment.amount >= parseFloat(requestData.payableAmount);
+
     if (!transaction) {
       // Create new transaction document
       transaction = new Transaction({
         bookingId: requestData.bookingId,
         bookingNumber: requestData.bookingNumber,
         customerName: requestData.customerName,
+        guestId: requestData.guestId || "", // Store guestId if provided
         payableAmount: Math.round(parseFloat(requestData.payableAmount) || 0),
         totalPaid: Math.round(currentPayment.amount),
         remainingBalance: Math.round(
@@ -147,6 +159,11 @@ export async function POST(request) {
       transaction.remainingBalance = remainingBalance;
       transaction.isFullyPaid = totalPaid >= transaction.payableAmount;
 
+      // Add guestId if it's a full payment and guestId is provided
+      if (willBeFullyPaid && requestData.guestId && !transaction.guestId) {
+        transaction.guestId = requestData.guestId;
+      }
+
       // Add new payment to the payments array
       transaction.payments.push({
         ...currentPayment,
@@ -155,6 +172,11 @@ export async function POST(request) {
     }
 
     await transaction.save();
+
+    // If the payment completes the booking, update booking status in other systems if needed
+    if (willBeFullyPaid) {
+      // Any additional logic for completed bookings can go here
+    }
 
     return NextResponse.json(
       {
@@ -193,6 +215,10 @@ export async function GET(request) {
 
     if (searchParams.has("bookingNumber")) {
       query.bookingNumber = searchParams.get("bookingNumber");
+    }
+
+    if (searchParams.has("guestId")) {
+      query.guestId = searchParams.get("guestId");
     }
 
     // For payment method or status, we need to search in the payments array
