@@ -77,9 +77,25 @@ const logBookSchema = new mongoose.Schema({
       type: Number,
       required: true,
     },
+    endReading: {
+      type: Number,
+      default: 0,
+    },
+    unitsConsumed: {
+      type: Number,
+      default: 0,
+    },
     unitType: {
       type: String,
       required: true,
+    },
+    costPerUnit: {
+      type: Number,
+      default: 0,
+    },
+    total: {
+      type: Number,
+      default: 0,
     },
     remarks: {
       type: String,
@@ -91,8 +107,48 @@ const logBookSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Verified', 'Issued'],
+    enum: ['Issued', 'Verified'],
     default: 'Issued',
+  },
+  damageLossSummary: [{
+    category: {
+      type: String,
+      required: true,
+    },
+    subCategory: {
+      type: String,
+      required: true,
+    },
+    brand: {
+      type: String,
+      required: true,
+    },
+    model: {
+      type: String,
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
+    condition: {
+      type: String,
+      required: true,
+    },
+    remarks: {
+      type: String,
+    },
+    amount: {
+      type: Number,
+    },
+  }],
+  totalRecoveryAmount: {
+    type: Number,
+    default: 0,
+  },
+   grandTotal: {
+    type: Number,
+    default: 0
   },
 }, {
   timestamps: true,

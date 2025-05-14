@@ -255,10 +255,8 @@ export default function LogBook() {
   }, [])
 
   const handleViewDetails = (item) => {
-    if (item.status === 'Issued') {
-      setSelectedLog(item);
-      setDetailModalOpen(true);
-    }
+    setSelectedLog(item);
+    setDetailModalOpen(true);
   };
 
   const renderCell = useCallback((item, column) => {

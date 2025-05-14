@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select"
 import { Input } from "@/Components/ui/input"
 import { Buttons } from "@/Components/ui/button"
@@ -11,6 +11,9 @@ import { DateRangePicker } from "@heroui/date-picker"
 import { addDays } from "date-fns"
 import axios from "axios"
 import { toast } from "react-toastify"
+import DamageLossSummary from "./DamageLossSummary"
+import GrandTotalSummary from "./GrandTotalSummary"
+import { useRouter } from 'next/navigation'
 
 export default function AddLogForm({ logId }) {
   const isEditMode = !!logId;
@@ -40,6 +43,20 @@ export default function AddLogForm({ logId }) {
     checkInTime: "",
     notes: ""
   })
+  const [damageLossSummary, setDamageLossSummary] = useState([{}])
+  const [totalRecoveryAmount, setTotalRecoveryAmount] = useState(0)
+  const router = useRouter()
+
+  // Calculate Electricity/Generator Total Amount
+  const electricityTotalAmount = electricityReadings.reduce((sum, r) => sum + (parseFloat(r.total) || 0), 0);
+
+  // Calculate Damage/Loss Summary Totals
+  const damageLossTotalItems = damageLossSummary.filter(row => row.category || row.subCategory || row.brand || row.model || row.quantity).length;
+
+  // Make Damage/Loss Total Amount editable
+  const handleDamageLossTotalAmountChange = useCallback((val) => {
+    setTotalRecoveryAmount(val);
+  }, []);
 
   useEffect(() => {
     fetchInventory();
@@ -475,13 +492,27 @@ export default function AddLogForm({ logId }) {
           condition: item.condition || 'Good',
           remarks: item.remarks || ''
         })),
-        electricityReadings: validReadings.map(reading => ({
+        electricityReadings: electricityReadings.filter(r => r.type || r.startReading || r.endReading || r.unitsConsumed || r.unitType || r.costPerUnit || r.total || r.remarks).map(reading => ({
           type: reading.type,
           startReading: parseFloat(reading.startReading) || 0,
+          endReading: parseFloat(reading.endReading) || 0,
+          unitsConsumed: parseFloat(reading.unitsConsumed) || 0,
           unitType: reading.unitType,
+          costPerUnit: parseFloat(reading.costPerUnit) || 0,
+          total: parseFloat(reading.total) || 0,
           remarks: reading.remarks || ''
         })),
-        totalAmount: parseFloat(totalAmount) || 0
+        damageLossSummary: damageLossSummary.filter(row => row.category || row.subCategory || row.brand || row.model || row.quantity || row.condition || row.remarks).map(row => ({
+          category: row.category,
+          subCategory: row.subCategory,
+          brand: row.brand,
+          model: row.model,
+          quantity: parseInt(row.quantity) || 0,
+          condition: row.condition,
+          remarks: row.remarks
+        })),
+        totalAmount: parseFloat(totalAmount) || 0,
+        totalRecoveryAmount: parseFloat(totalRecoveryAmount) || 0
       };
 
       const endpoint = isEditMode ? `/api/logBook/${logId}` : '/api/logBook';
@@ -490,10 +521,8 @@ export default function AddLogForm({ logId }) {
       const response = await axios[method](endpoint, payload);
 
       if (response.data.success) {
-        toast.success(`Log entry ${isEditMode ? 'updated' : 'added'} successfully`);
-        if (!isEditMode) {
-          resetForm();
-        }
+        toast.success('Log entry verified successfully');
+        router.push('/dashboard/logBook');
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'submitting'} log entry:`, error);
@@ -528,7 +557,7 @@ export default function AddLogForm({ logId }) {
         {/* Header section */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl text-hotel-primary-text font-[500]">
-            {isEditMode ? 'Edit Log Entry' : 'Add New Log Entry'}
+            {isEditMode ? 'Verify Issued Items' : 'Add New Log Entry'}
           </h2>
         </div>
 
@@ -729,9 +758,9 @@ export default function AddLogForm({ logId }) {
             </div>
           </div>
 
-          {/* Items Issued Section - Update styling */}
+          {/* Items Issued/Returned Section */}
           <div className="border-t border-dashed pt-6 mb-8">
-            <h2 className="text-hotel-primary-text font-semibold text-lg mb-4">Items Issued</h2>
+            <h2 className="text-hotel-primary-text font-semibold text-lg mb-4">{isEditMode ? 'Items Returned' : 'Items Issued'}</h2>
             
             <Table aria-label="Items issued table">
               <TableHeader>
@@ -904,7 +933,7 @@ export default function AddLogForm({ logId }) {
             </div>
           </div>
 
-          {/* Electricity/Generator Section - Update styling */}
+          {/* Electricity/Generator Section - always visible */}
           <div className="border-t border-dashed pt-6 mb-8">
             <h2 className="text-hotel-primary-text font-semibold text-lg mb-4">Electricity / Generator</h2>
             
@@ -912,7 +941,11 @@ export default function AddLogForm({ logId }) {
               <TableHeader>
                 <TableColumn>Type</TableColumn>
                 <TableColumn>Start Reading</TableColumn>
+                <TableColumn>End Reading</TableColumn>
                 <TableColumn>Unit Type</TableColumn>
+                <TableColumn>Units Consumed</TableColumn>
+                <TableColumn>Cost/Unit</TableColumn>
+                <TableColumn>Total</TableColumn>
                 <TableColumn>Remarks</TableColumn>
                 <TableColumn>Actions</TableColumn>
               </TableHeader>
@@ -921,7 +954,7 @@ export default function AddLogForm({ logId }) {
                   <TableRow key={index}>
                     <TableCell>
                       <Select
-                        value={reading.type}
+                        value={reading.type || ''}
                         onValueChange={(value) => handleElectricityChange(index, 'type', value)}
                       >
                       <SelectTrigger className="text-xs">
@@ -946,10 +979,50 @@ export default function AddLogForm({ logId }) {
                     </TableCell>
                     <TableCell>
                       <Input 
+                        placeholder="Enter End Reading" 
+                        className="h-9 text-xs"
+                        value={reading.endReading || ''}
+                        onChange={(e) => handleElectricityChange(index, 'endReading', e.target.value)}
+                        disabled={!isEditMode}
+                        style={!isEditMode ? { background: '#f9f9f9' } : {}}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input 
                         placeholder="Enter the unit type (Eg: kWh, Hours)" 
                         className="h-9 text-xs"
                         value={reading.unitType || ''}
                         onChange={(e) => handleElectricityChange(index, 'unitType', e.target.value)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input 
+                        placeholder="Enter Units Consumed" 
+                        className="h-9 text-xs"
+                        value={reading.unitsConsumed || ''}
+                        onChange={(e) => handleElectricityChange(index, 'unitsConsumed', e.target.value)}
+                        disabled={!isEditMode}
+                        style={!isEditMode ? { background: '#f9f9f9' } : {}}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input 
+                        placeholder="Enter Cost/Unit" 
+                        className="h-9 text-xs"
+                        value={reading.costPerUnit || ''}
+                        onChange={(e) => handleElectricityChange(index, 'costPerUnit', e.target.value)}
+                        disabled={!isEditMode}
+                        style={!isEditMode ? { background: '#f9f9f9' } : {}}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input 
+                        placeholder="Enter Total" 
+                        className="h-9 text-xs"
+                        value={reading.total || ''}
+                        onChange={(e) => handleElectricityChange(index, 'total', e.target.value)}
+                        disabled={!isEditMode}
+                        style={!isEditMode ? { background: '#f9f9f9' } : {}}
                       />
                     </TableCell>
                     <TableCell>
@@ -966,7 +1039,6 @@ export default function AddLogForm({ logId }) {
                       size="icon"
                       className="h-9 w-9 text-red-500"
                       onClick={() => removeElectricityRow(index)}
-                      /*   disabled={electricityReadings.length === 1} */
                     >
                       <X className="h-5 w-5" />
                     </Buttons>
@@ -981,16 +1053,67 @@ export default function AddLogForm({ logId }) {
                   <Plus className="h-4 w-4" />
                 </Buttons>
             </div>
+            <div className="flex justify-end mt-2">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[120px] shadow-sm">
+                <span className="text-xs text-gray-500 font-medium">Total Amount</span>
+                <span className="text-lg font-bold text-hotel-primary-text">₹{electricityTotalAmount.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons - Update styling */}
+          {/* Only show these sections in edit/verify mode */}
+          {isEditMode && <>
+            {/* Damage/Loss Summary Section */}
+            <div className="border-t border-dashed pt-6 mb-8">
+              <h2 className="text-hotel-primary-text font-semibold text-lg mb-4">Damage/ Loss Summary:</h2>
+              <DamageLossSummary
+                damageLossSummary={damageLossSummary}
+                setDamageLossSummary={setDamageLossSummary}
+                categories={categories}
+                subCategories={subCategories}
+                brands={brands}
+                models={models}
+              />
+              <div className="flex justify-end gap-8 mt-2">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[90px] shadow-sm">
+                  <span className="text-xs text-gray-500 font-medium">Total Items</span>
+                  <span className="text-lg font-bold text-hotel-primary-text">{damageLossTotalItems}</span>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[120px] shadow-sm">
+                  <span className="text-xs text-gray-500 font-medium">Total Amount</span>
+                  <input
+                    type="number"
+                    min="0"
+                    className="h-8 text-sm text-right bg-transparent border-0 focus:ring-0 focus-visible:ring-0 max-w-[100px] font-bold"
+                    placeholder="0.00"
+                    value={totalRecoveryAmount}
+                    onChange={e => handleDamageLossTotalAmountChange(e.target.value)}
+                    style={{ textAlign: "right" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Grand Total Summary Section */}
+            <div className="border-t border-dashed pt-6 mb-8">
+              <GrandTotalSummary
+                totalAmount={totalAmount}
+                currentBill={electricityTotalAmount}
+                damageLossSummary={damageLossSummary}
+                totalRecoveryAmount={totalRecoveryAmount}
+                setTotalRecoveryAmount={setTotalRecoveryAmount}
+              />
+            </div>
+          </>}
+
+          {/* Action Buttons */}
           <div className="flex justify-center gap-4 mt-8 border-t border-dashed pt-6">
             <Buttons 
               className="min-w-[120px] bg-hotel-primary text-hotel-primary-text"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isEditMode ? 'Verified' : isSubmitting ? 'Saving...' : 'Save'}
             </Buttons>
             <Buttons 
               variant="bordered" 
