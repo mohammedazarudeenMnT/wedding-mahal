@@ -381,18 +381,41 @@ export default function LogBook() {
 
   // Calculate metrics
   const calculateMetrics = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const todayEntries = logEntries.filter(entry => 
-      new Date(entry.dateRange.from).toISOString().split('T')[0] === today
-    )
-
+    // Get today's date at the start of the day (midnight)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    // Get today's date at the end of the day
+    const endOfToday = new Date()
+    endOfToday.setHours(23, 59, 59, 999)
+    
+    // Filter entries created today based on createdAt timestamp
+    const todayEntries = logEntries.filter(entry => {
+      const createdDate = new Date(entry.createdAt)
+      return createdDate >= today && createdDate <= endOfToday
+    })
+    
+    // 1. Total Items Issued Today (count of entries issued today with 'Issued' status)
+    const totalItemsIssued = todayEntries.filter(entry => entry.status === 'Issued').length
+    
+    // 2. Total Item Charges (calculate grand total from all entries)
+    const totalCharges = logEntries.reduce((sum, entry) => 
+      sum + (entry.grandTotal || entry.totalAmount || 0), 0)
+    
+    // 3. Pending Items to Return (count of entries with status 'Issued')
+    const pendingItems = logEntries.filter(entry => entry.status === 'Issued').length
+    
+    // 4. Damage Items Reported (count of entries with damage reports)
+    const damagedItems = logEntries.filter(entry => 
+      (entry.damageLossSummary && entry.damageLossSummary.length > 0) || 
+      entry.itemsIssued.some(item => item.condition === 'Poor')
+    ).length
+    
     return {
-      totalItemsIssued: todayEntries.reduce((sum, entry) => sum + entry.itemsIssued.length, 0),
-      totalCharges: todayEntries.reduce((sum, entry) => sum + (entry.totalAmount || 0), 0),
-      pendingItems: logEntries.filter(entry => entry.status === 'Issued').length,
-      damagedItems: logEntries.filter(entry => 
-        entry.itemsIssued.some(item => item.condition === 'Poor')
-      ).length
+      totalItemsIssued,
+      totalCharges,
+      pendingItems,
+      damagedItems
     }
   }, [logEntries])
 

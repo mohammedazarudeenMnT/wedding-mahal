@@ -184,6 +184,61 @@ export default function ViewLogBookDetails({ isOpen, onClose, logData }) {
           </div>
         </div>
 
+        {/* Damage/Loss Summary Section - Show for all statuses if damageLossSummary exists */}
+        {logData.damageLossSummary && logData.damageLossSummary.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-hotel-primary-text">
+              <span className="h-5 w-1 bg-hotel-primary rounded-full"></span>
+              Damage/Loss Summary
+            </h3>
+            <div className="overflow-x-auto rounded-lg border border-gray-200 mb-3">
+              <Table aria-label="Damage/Loss summary table" className="w-full">
+                <TableHeader>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Category</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Sub Category</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Brand</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Model</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Quantity</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Condition</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Remarks</TableColumn>
+                  <TableColumn className="bg-hotel-primary text-gray-600 text-sm font-medium py-2 px-3 text-left">Amount</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {logData.damageLossSummary.map((item, idx) => (
+                    <TableRow key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.category}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.subCategory}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.brand}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.model}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.quantity}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          item.condition === 'Broken' ? 'bg-red-100 text-red-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {item.condition}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">{item.remarks || '-'}</TableCell>
+                      <TableCell className="py-2 px-3 text-sm border-t border-gray-200">₹{item.amount || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-end gap-3 mt-3">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[90px] shadow-sm">
+                <span className="text-xs text-gray-500 font-medium">Total Items</span>
+                <span className="text-base font-bold text-hotel-primary-text">{logData.damageLossSummary.length}</span>
+              </div>
+              <div className="bg-hotel-primary/10 border border-hotel-primary/20 rounded-lg px-3 py-2 flex flex-col items-end min-w-[120px] shadow-sm">
+                <span className="text-xs text-hotel-primary font-medium">Recovery Amount</span>
+                <span className="text-base font-bold text-hotel-primary">₹{logData.totalRecoveryAmount || 0}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Grand Total Summary - Only show for Verified status */}
         {logData.status === 'Verified' && (
           <div className="border-t border-dashed pt-6">
