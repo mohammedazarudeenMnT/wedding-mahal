@@ -546,7 +546,7 @@ export default function AddLogForm({ logId }) {
       const response = await axios[method](endpoint, payload);
 
       if (response.data.success) {
-        toast.success('Log entry verified successfully');
+        toast.success(isEditMode ? 'Log entry verified successfully' : 'Log entry added successfully');
         router.push('/dashboard/logBook');
       }
     } catch (error) {
