@@ -2,7 +2,13 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Button, Input, Textarea, Tooltip, Spinner } from "@nextui-org/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Textarea } from "@heroui/input";
+import { Tooltip } from "@heroui/tooltip";
+import { Spinner } from "@heroui/spinner";
+import { Select, SelectItem } from "@heroui/select";
+
 import { toast } from "react-toastify";
 import axios from "axios";
 import { usePagePermission } from "../../hooks/usePagePermission";
@@ -23,11 +29,20 @@ export default function AddExpenses({ params }) {
     category: "",
     expense: "",
     description: "",
-    date: new Date().toISOString().split("T")[0], // Add default date
+    date: new Date().toISOString().split("T")[0],
     receipt: null,
+    paymentType: "",
+    bank: "",
+    reference: "",
   });
 
-  // Add this new state near other state declarations
+  // Add states for API data
+  const [categories, setCategories] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [cashAccounts, setCashAccounts] = useState([]);
+  const [bankListAccounts, setBankListAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [existingReceiptUrl, setExistingReceiptUrl] = useState(null);
 
   // Fetch expense data if editing
@@ -58,10 +73,37 @@ export default function AddExpenses({ params }) {
     }
   }, [expenseId]);
 
-  // Add states for API data
-  const [categories, setCategories] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Fetch bank accounts
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      try {
+        const response = await axios.get("/api/financials/bank");
+        if (response.data.success) {
+          const accounts = response.data.bankAccounts;
+
+          // Filter cash type accounts
+          const cashTypeAccounts = accounts.filter(
+            (account) => account.type === "cash"
+          );
+          setCashAccounts(cashTypeAccounts);
+
+          // Filter bank type accounts
+          const bankTypeAccounts = accounts.filter(
+            (account) => account.type === "bank"
+          );
+          setBankListAccounts(bankTypeAccounts);
+
+          // Set all accounts
+          setBankAccounts(accounts);
+        }
+      } catch (error) {
+        console.error("Error loading bank accounts:", error);
+        toast.error("Failed to load payment account options");
+      }
+    };
+
+    fetchBankAccounts();
+  }, []);
 
   // Fetch categories and expenses from API
   useEffect(() => {
@@ -99,6 +141,9 @@ export default function AddExpenses({ params }) {
     if (!formData.expense?.trim()) {
       newErrors.expense = "Expense type is required";
     }
+    if (!formData.paymentType) {
+      newErrors.paymentType = "Payment type is required";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,6 +171,9 @@ export default function AddExpenses({ params }) {
       description: "",
       date: new Date().toISOString().split("T")[0],
       receipt: null,
+      paymentType: "",
+      bank: "",
+      reference: "",
     });
   };
 
@@ -164,6 +212,12 @@ export default function AddExpenses({ params }) {
     }
   };
 
+  const handleReceiptClear = () => {
+    setFormData((prev) => ({ ...prev, receipt: null }));
+    setPreviewUrl(null);
+    setExistingReceiptUrl(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -173,6 +227,7 @@ export default function AddExpenses({ params }) {
 
     setIsSubmitting(true);
     try {
+      // First, create the expense entry
       const formDataToSend = new FormData();
 
       // Add basic expense data
@@ -190,8 +245,8 @@ export default function AddExpenses({ params }) {
         // No new file, but have existing receipt
         formDataToSend.append("keepExistingReceipt", "true");
       }
-      // If both are null/undefined, no receipt will be saved
 
+      // Save to expenses API
       const { data } = await axios({
         method: isEditing ? "put" : "post",
         url: `/api/expenses${isEditing ? `?id=${expenseId}` : ""}`,
@@ -202,22 +257,45 @@ export default function AddExpenses({ params }) {
       });
 
       if (data.success) {
-        toast.success(
-          isEditing
-            ? "Expense updated successfully!"
-            : "Expense added successfully!",
-          {
-            position: "top-right",
-            autoClose: 2000,
-          }
+        // Now create a bank entry for this expense
+        const bankEntryData = {
+          transactionType: "withdrawal",
+          paymentType: formData.paymentType === "cash" ? "cash" : "bank",
+          fromAccount: formData.paymentType,
+          amount: Number(formData.amount),
+          date: formData.date,
+          description:
+            formData.description ||
+            `${formData.category} - ${formData.expense}`,
+          reference: formData.reference || data.expense._id,
+        };
+
+        // Save to bank entry API
+        const bankEntryResponse = await axios.post(
+          "/api/financials/bank/entry",
+          bankEntryData
         );
 
-        if (!isEditing) {
-          resetForm(); // Only reset form for new entries, not edits
+        if (bankEntryResponse.data.success) {
+          toast.success(
+            isEditing
+              ? "Expense updated successfully!"
+              : "Expense added successfully!",
+            {
+              position: "top-right",
+              autoClose: 2000,
+            }
+          );
+
+          if (!isEditing) {
+            resetForm(); // Only reset form for new entries, not edits
+          } else {
+            setTimeout(() => {
+              router.push(`/dashboard/financials/expenses`);
+            }, 2000);
+          }
         } else {
-          setTimeout(() => {
-            router.push(`/dashboard/financials/expenses`);
-          }, 2000);
+          toast.warning("Expense saved but bank entry failed to update");
         }
       } else {
         toast.error(data.message || "Failed to save expense");
@@ -230,12 +308,6 @@ export default function AddExpenses({ params }) {
     }
   };
 
-  const handleReceiptClear = () => {
-    setFormData((prev) => ({ ...prev, receipt: null }));
-    setPreviewUrl(null);
-    setExistingReceiptUrl(null);
-  };
-
   if (!hasPermission) {
     return (
       <div className="p-4 text-center">
@@ -246,7 +318,7 @@ export default function AddExpenses({ params }) {
 
   return (
     <section className="p-4 md:p-6 bg-content1 rounded-large shadow-small w-full min-h-screen">
-      <div className="container  max-w-4xl">
+      <div className="container max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">
             {isEditing ? "Edit Expense" : "Add Expense"}
@@ -256,6 +328,20 @@ export default function AddExpenses({ params }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Reference ID Field */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Reference ID
+              </label>
+              <Input
+                type="text"
+                placeholder="Enter reference ID"
+                value={formData.reference}
+                onChange={(e) => handleInputChange("reference", e.target.value)}
+                className="w-full"
+              />
+            </div>
+
             {/* Date Field */}
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -284,7 +370,7 @@ export default function AddExpenses({ params }) {
                 className="w-full"
                 isInvalid={!!errors.amount}
                 errorMessage={errors.amount}
-                startContent={<div className="pointer-events-none">$</div>}
+                startContent={<div className="pointer-events-none">₹</div>}
                 endContent={
                   formData.amount && (
                     <Button
@@ -298,6 +384,49 @@ export default function AddExpenses({ params }) {
                   )
                 }
               />
+            </div>
+
+            {/* Payment Type Field */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Payment Type <span className="text-red-500">*</span>
+              </label>
+              <Select
+                placeholder="Select payment type"
+                value={formData.paymentType}
+                onChange={(e) =>
+                  handleInputChange("paymentType", e.target.value)
+                }
+                className="w-full"
+                isInvalid={!!errors.paymentType}
+                errorMessage={errors.paymentType}
+              >
+                <SelectItem
+                  key="paymentType-header-bank"
+                  className="text-primary font-bold"
+                  isDisabled
+                >
+                  Bank Accounts
+                </SelectItem>
+                {bankListAccounts.map((account) => (
+                  <SelectItem key={account._id} value={account._id}>
+                    {account.name || account.bankName}
+                  </SelectItem>
+                ))}
+
+                <SelectItem
+                  key="paymentType-header-cash"
+                  className="text-primary font-bold"
+                  isDisabled
+                >
+                  Cash Accounts
+                </SelectItem>
+                {cashAccounts.map((account) => (
+                  <SelectItem key={account._id} value={account._id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </Select>
             </div>
 
             {/* Category Field */}
@@ -374,11 +503,9 @@ export default function AddExpenses({ params }) {
 
             {/* Description Field */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium mb-1">Notes</label>
               <Textarea
-                placeholder="Enter description"
+                placeholder="Enter notes"
                 value={formData.description}
                 onChange={(e) =>
                   handleInputChange("description", e.target.value)

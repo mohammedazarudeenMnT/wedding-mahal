@@ -71,7 +71,44 @@ const RecordPaymentPage = () => {
   });
   const [errors, setErrors] = useState({});
 
-  const banks = ["HDFC Bank", "SBI", "ICICI Bank", "Axis Bank", "Other"];
+  // Bank accounts state
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [cashAccounts, setCashAccounts] = useState([]);
+  const [bankListAccounts, setBankListAccounts] = useState([]);
+
+  // Load bank accounts on mount
+  useEffect(() => {
+    const loadBankAccounts = async () => {
+      try {
+        const response = await axios.get("/api/financials/bank");
+        if (response.data.success) {
+          const accounts = response.data.bankAccounts;
+
+          // Filter cash type accounts
+          const cashTypeAccounts = accounts.filter(
+            (account) => account.type === "cash"
+          );
+          setCashAccounts(cashTypeAccounts);
+
+          // Filter bank type accounts
+          const bankTypeAccounts = accounts.filter(
+            (account) => account.type === "bank"
+          );
+          setBankListAccounts(bankTypeAccounts);
+
+          // Set all accounts
+          setBankAccounts(accounts);
+        }
+      } catch (error) {
+        console.error("Error loading bank accounts:", error);
+        toast.error("Failed to load payment account options");
+      }
+    };
+
+    if (hasPermission) {
+      loadBankAccounts();
+    }
+  }, [hasPermission]);
 
   // Add pagination logic - calculate paginated transactions
   const paginatedTransactions = useMemo(() => {
@@ -246,7 +283,7 @@ const RecordPaymentPage = () => {
     }
 
     // Method-specific validations
-    if (paymentMethod === "online") {
+    if (paymentMethod === "online" || paymentMethod === "paymentLink") {
       if (!formData.paymentType) {
         newErrors.paymentType = "Payment type is required";
       }
@@ -261,7 +298,6 @@ const RecordPaymentPage = () => {
         newErrors.paymentType = "Payment type is required";
       }
     }
-    // Payment links don't require paymentType, bank, or transactionId
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -287,13 +323,6 @@ const RecordPaymentPage = () => {
         amount: parseFloat(formData.amount),
         paymentMethod,
       };
-
-      // Set default valid paymentType based on payment method if not already set
-      if (paymentMethod === "paymentLink" && !paymentDetails.paymentType) {
-        paymentDetails.paymentType = "";
-      } else if (paymentMethod === "cod" && !paymentDetails.paymentType) {
-        paymentDetails.paymentType = "cash";
-      }
 
       // For existing transactions (from customer search)
       if (selectedTransaction) {
@@ -332,9 +361,43 @@ const RecordPaymentPage = () => {
             transactionData.razorpayPaymentLinkId =
               paymentLinkResponse.data.paymentLinkId;
             transactionData.status = "pending";
+            transactionData.paymentType = paymentDetails.paymentType;
+            transactionData.bank = paymentDetails.bank;
+            transactionData.transactionId = paymentDetails.transactionId || "";
 
             // Save the transaction
-            await axios.post("/api/financials/transactions", transactionData);
+            const transactionResponse = await axios.post(
+              "/api/financials/transactions",
+              transactionData
+            );
+
+            // Record in bank entry and ledger
+            if (transactionResponse.data.success) {
+              try {
+                // Find the selected account
+                const selectedAccount = bankAccounts.find(
+                  (acc) => acc._id === paymentDetails.paymentType
+                );
+
+                // Create bank entry
+                const bankEntryData = {
+                  transactionType: "deposit", // It's income for the business
+                  paymentType: "bank",
+                  fromAccount: paymentDetails.paymentType, // Account ID
+                  amount: paymentDetails.amount,
+                  date: paymentDetails.paymentDate,
+                  description: `Payment link generated for booking #${selectedTransaction.bookingNumber}`,
+                  bookingId: selectedTransaction.bookingId,
+                  bookingNumber: selectedTransaction.bookingNumber,
+                  customerName: paymentDetails.customerName,
+                };
+
+                await axios.post("/api/financials/bank/entry", bankEntryData);
+              } catch (bankEntryError) {
+                console.error("Error recording bank entry:", bankEntryError);
+                // Don't throw error, just log it - payment is already recorded in transactions
+              }
+            }
 
             // Open payment link in a new window
             window.open(paymentLinkResponse.data.paymentLink, "_blank");
@@ -348,7 +411,43 @@ const RecordPaymentPage = () => {
           }
         } else {
           // Process direct payment (cash, online)
-          await axios.post("/api/financials/transactions", transactionData);
+          const transactionResponse = await axios.post(
+            "/api/financials/transactions",
+            transactionData
+          );
+
+          // Record in bank entry and ledger
+          if (transactionResponse.data.success) {
+            try {
+              // Find the selected account
+              const selectedAccount = bankAccounts.find(
+                (acc) => acc._id === paymentDetails.paymentType
+              );
+
+              // Create bank entry
+              const bankEntryData = {
+                transactionType: "deposit", // It's income for the business
+                paymentType:
+                  paymentMethod === "cod"
+                    ? "cash"
+                    : paymentMethod === "online"
+                    ? "bank"
+                    : paymentMethod,
+                fromAccount: paymentDetails.paymentType, // Account ID
+                amount: paymentDetails.amount,
+                date: paymentDetails.paymentDate,
+                description: `Payment received for booking #${selectedTransaction.bookingNumber}`,
+                bookingId: selectedTransaction.bookingId,
+                bookingNumber: selectedTransaction.bookingNumber,
+                customerName: paymentDetails.customerName,
+              };
+
+              await axios.post("/api/financials/bank/entry", bankEntryData);
+            } catch (bankEntryError) {
+              console.error("Error recording bank entry:", bankEntryError);
+              // Don't throw error, just log it - payment is already recorded in transactions
+            }
+          }
 
           toast.success("Payment recorded successfully!");
           setTimeout(() => {
@@ -533,10 +632,45 @@ const RecordPaymentPage = () => {
                   bookingFormData.append("paymentStatus", "completed");
 
                   // Create the booking
-                  await processBooking(bookingFormData, {
-                    ...paymentDetails,
-                    razorpayPaymentLinkId: linkResponse.data.paymentLinkId,
-                  });
+                  const bookingData = await processBooking(
+                    bookingFormData,
+                    paymentDetails
+                  );
+
+                  if (bookingData.success) {
+                    try {
+                      // Create bank entry for the payment
+                      const bankEntryData = {
+                        transactionType: "deposit", // It's income for the business
+                        paymentType:
+                          paymentMethod === "cod"
+                            ? "cash"
+                            : paymentMethod === "online"
+                            ? "bank"
+                            : paymentMethod,
+                        fromAccount: paymentDetails.paymentType, // Account ID
+                        amount: paymentDetails.amount,
+                        date: paymentDetails.paymentDate,
+                        description: `Payment received for new booking #${
+                          bookingData.bookingNumber || ""
+                        }`,
+                        bookingId: bookingData.bookingId,
+                        bookingNumber: bookingData.bookingNumber || "",
+                        customerName: paymentDetails.customerName,
+                      };
+
+                      await axios.post(
+                        "/api/financials/bank/entry",
+                        bankEntryData
+                      );
+                    } catch (bankEntryError) {
+                      console.error(
+                        "Error recording bank entry:",
+                        bankEntryError
+                      );
+                      // Don't throw error, booking is already processed
+                    }
+                  }
                 } else if (
                   statusResponse.data.status === "cancelled" ||
                   statusResponse.data.status === "expired"
@@ -568,13 +702,52 @@ const RecordPaymentPage = () => {
             return;
           }
         } else {
-          // For other payment methods, process the booking directly
-          await processBooking(bookingFormData, paymentDetails);
+          try {
+            // Process the booking
+            const bookingData = await processBooking(
+              bookingFormData,
+              paymentDetails
+            );
+
+            if (bookingData.success) {
+              try {
+                // Create bank entry for the payment
+                const bankEntryData = {
+                  transactionType: "deposit", // It's income for the business
+                  paymentType:
+                    paymentMethod === "cod"
+                      ? "cash"
+                      : paymentMethod === "online"
+                      ? "bank"
+                      : paymentMethod,
+                  fromAccount: paymentDetails.paymentType, // Account ID
+                  amount: paymentDetails.amount,
+                  date: paymentDetails.paymentDate,
+                  description: `Payment received for new booking #${
+                    bookingData.bookingNumber || ""
+                  }`,
+                  bookingId: bookingData.bookingId,
+                  bookingNumber: bookingData.bookingNumber || "",
+                  customerName: paymentDetails.customerName,
+                };
+
+                await axios.post("/api/financials/bank/entry", bankEntryData);
+              } catch (bankEntryError) {
+                console.error("Error recording bank entry:", bankEntryError);
+                // Don't throw error, booking is already processed
+              }
+            }
+          } catch (error) {
+            console.error("Error processing booking:", error);
+            toast.error("Failed to process booking. Please try again.");
+            throw error; // Re-throw to be caught by outer catch
+          }
         }
       }
     } catch (error) {
-      console.error("Error processing payment:", error);
-      toast.error("An error occurred while processing the payment");
+      console.error("Error submitting payment:", error);
+      toast.error("Failed to process payment. Please try again.");
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -600,6 +773,7 @@ const RecordPaymentPage = () => {
           // Prepare transaction data
           const transactionData = {
             bookingId: bookingData._id,
+            guestId: bookingData.guestId,
             bookingNumber: bookingData.bookingNumber,
             paymentMethod: paymentDetails.paymentMethod,
             amount: paymentAmount,
@@ -625,6 +799,13 @@ const RecordPaymentPage = () => {
           setTimeout(() => {
             router.push("/dashboard/bookings");
           }, 2000);
+
+          // Return booking data for bank entry
+          return {
+            success: true,
+            bookingId: bookingData._id,
+            bookingNumber: bookingData.bookingNumber,
+          };
         } catch (transactionError) {
           console.error("Error saving transaction data:", transactionError);
           toast.warn(
@@ -635,9 +816,17 @@ const RecordPaymentPage = () => {
           setTimeout(() => {
             router.push("/dashboard/bookings");
           }, 2000);
+
+          // Return basic booking data even if transaction failed
+          return {
+            success: true,
+            bookingId: bookingData._id,
+            bookingNumber: bookingData.bookingNumber,
+          };
         }
       } else {
         toast.error(bookingResponse.data.message || "Failed to create booking");
+        return { success: false };
       }
     } catch (error) {
       console.error("Error creating booking:", error);
@@ -655,13 +844,14 @@ const RecordPaymentPage = () => {
       if (error.response?.data?.stack) {
         console.error("Error stack:", error.response.data.stack);
       }
-    } finally {
-      setIsProcessing(false);
+
+      return { success: false };
     }
   };
 
   // Show different fields based on payment method
-  const showOnlineFields = paymentMethod === "online";
+  const showOnlineFields =
+    paymentMethod === "online" || paymentMethod === "paymentLink";
   const showPaymentLinkFields = paymentMethod === "paymentLink";
   const showHotelFields = paymentMethod === "cod";
 
@@ -1213,12 +1403,23 @@ const RecordPaymentPage = () => {
                             }`}
                             size="lg"
                           >
-                            <SelectItem value="card">Card</SelectItem>
-                            <SelectItem value="upi">UPI</SelectItem>
-                            <SelectItem value="netbanking">
-                              Net Banking
-                            </SelectItem>
-                            <SelectItem value="cash">Cash</SelectItem>
+                            {showHotelFields
+                              ? cashAccounts.map((account) => (
+                                  <SelectItem
+                                    key={account._id}
+                                    value={account._id}
+                                  >
+                                    {account.name}
+                                  </SelectItem>
+                                ))
+                              : bankListAccounts.map((account) => (
+                                  <SelectItem
+                                    key={account._id}
+                                    value={account._id}
+                                  >
+                                    {account.name || account.bankName}
+                                  </SelectItem>
+                                ))}
                           </Select>
                           {errors.paymentType && (
                             <p className="text-xs text-red-500 mt-1">
@@ -1247,9 +1448,12 @@ const RecordPaymentPage = () => {
                             }`}
                             size="lg"
                           >
-                            {banks.map((bank, index) => (
-                              <SelectItem key={index} value={bank}>
-                                {bank}
+                            {bankListAccounts.map((account) => (
+                              <SelectItem
+                                key={`bank-${account._id}`}
+                                value={account.bankName || account.name}
+                              >
+                                {account.bankName || account.name}
                               </SelectItem>
                             ))}
                           </Select>

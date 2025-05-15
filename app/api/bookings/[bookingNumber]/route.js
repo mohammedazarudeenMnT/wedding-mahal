@@ -1,7 +1,6 @@
 // app/api/[hotelDb]/bookings/[bookingNumber]/route.js
 import { NextResponse } from "next/server";
 import Guest from "../../../../utils/model/booking/bookingSchema";
-import Housekeeping from "../../../../utils/model/houseKeeping/HousekeepingSchema";
 import RoomSettings from "../../../../utils/model/settings/room/roomSettingsSchema";
 import { getHotelDatabase } from "../../../../utils/config/hotelConnection";
 import { getModel } from "../../../../utils/helpers/getModel";
@@ -50,7 +49,6 @@ export async function PUT(request, { params }) {
     const formData = await request.formData();
     await getHotelDatabase();
     const GuestModel = getModel("Guest", Guest);
-    const HousekeepingModel = getModel("Housekeeping", Housekeeping);
     const RoomSettingsModel = getModel("RoomSettings", RoomSettings);
 
     // Find the existing booking
@@ -214,48 +212,48 @@ export async function PUT(request, { params }) {
       { new: true, runValidators: true }
     );
 
-    // Create housekeeping tasks if status changed to checkout
-    if (
-      formData.get("status") === "checkout" &&
-      existingBooking.status !== "checkout"
-    ) {
-      // Get housekeeping buffer from settings
-      const settings = await RoomSettingsModel.findOne({});
-      const bufferHours = settings?.housekeepingBuffer || 2; // Default 2 hours if not set
+    // // Create housekeeping tasks if status changed to checkout
+    // if (
+    //   formData.get("status") === "checkout" &&
+    //   existingBooking.status !== "checkout"
+    // ) {
+    //   // Get housekeeping buffer from settings
+    //   const settings = await RoomSettingsModel.findOne({});
+    //   const bufferHours = settings?.housekeepingBuffer || 2; // Default 2 hours if not set
 
-      for (const room of updatedBooking.rooms) {
-        // Check for existing incomplete task
-        const existingTask = await HousekeepingModel.findOne({
-          roomNumber: room.number,
-          bookingNumber: bookingNumber,
-          status: { $ne: "completed" },
-        });
+    //   for (const room of updatedBooking.rooms) {
+    //     // Check for existing incomplete task
+    //     const existingTask = await HousekeepingModel.findOne({
+    //       roomNumber: room.number,
+    //       bookingNumber: bookingNumber,
+    //       status: { $ne: "completed" },
+    //     });
 
-        if (!existingTask) {
-          const currentTime = new Date();
-          const task = new HousekeepingModel({
-            roomNumber: room.number,
-            roomType: room.type,
-            bookingNumber: bookingNumber,
-            checkOutDate: currentTime,
-            guests: updatedBooking.guests,
-            status: "pending",
-            priority: "medium",
-            reservationStatus: "checkout",
-            expectedStartTime: currentTime,
-            expectedEndTime: new Date(
-              currentTime.getTime() + bufferHours * 60 * 60 * 1000
-            ),
-            notes:
-              existingBooking.checkOutDate > currentTime
-                ? `Early checkout - Original checkout date was: ${existingBooking.checkOutDate.toLocaleDateString()}`
-                : undefined,
-          });
+    //     if (!existingTask) {
+    //       const currentTime = new Date();
+    //       const task = new HousekeepingModel({
+    //         roomNumber: room.number,
+    //         roomType: room.type,
+    //         bookingNumber: bookingNumber,
+    //         checkOutDate: currentTime,
+    //         guests: updatedBooking.guests,
+    //         status: "pending",
+    //         priority: "medium",
+    //         reservationStatus: "checkout",
+    //         expectedStartTime: currentTime,
+    //         expectedEndTime: new Date(
+    //           currentTime.getTime() + bufferHours * 60 * 60 * 1000
+    //         ),
+    //         notes:
+    //           existingBooking.checkOutDate > currentTime
+    //             ? `Early checkout - Original checkout date was: ${existingBooking.checkOutDate.toLocaleDateString()}`
+    //             : undefined,
+    //       });
 
-          await task.save();
-        }
-      }
-    }
+    //       await task.save();
+    //     }
+    //   }
+    // }
 
     return NextResponse.json(
       {

@@ -58,40 +58,28 @@ const LedgerBookPage = () => {
   const [ledger, setLedger] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
-    start: {
-      identifier: "start", // Required by Heroui
-      year: new Date().getFullYear(),
-      month: new Date().getMonth() + 1,
-      day: 1,
-    },
-    end: {
-      identifier: "end", // Required by Heroui
-      year: new Date().getFullYear(),
-      month: new Date().getMonth() + 1,
-      day: new Date(
-        new Date().getFullYear(),
-        new Date().getMonth() + 1,
-        0
-      ).getDate(),
-    },
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
   const [banks, setBanks] = useState([]);
   const [selectedBank, setSelectedBank] = useState("all");
   const [accountType, setAccountType] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [bankBalance, setBankBalance] = useState(0);
 
   // Convert date range to month/year for API
   const getMonthYearFromDateRange = useCallback(() => {
-    if (!dateRange?.start)
+    if (!dateRange?.from)
       return {
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
       };
 
     // We'll use the start date's month and year for the API
+    const from = new Date(dateRange.from);
     return {
-      month: dateRange.start.month,
-      year: dateRange.start.year,
+      month: from.getMonth() + 1,
+      year: from.getFullYear(),
     };
   }, [dateRange]);
 
@@ -122,6 +110,11 @@ const LedgerBookPage = () => {
       const response = await axios.get("/api/financials/bank?isActive=true");
       if (response.data.success) {
         setBanks(response.data.bankAccounts);
+        const totalBankBalance = response.data.bankAccounts.reduce(
+          (total, bank) => total + Number(bank.currentBalance || 0),
+          0
+        );
+        setBankBalance(totalBankBalance);
       }
     } catch (error) {
       console.error("Error fetching banks:", error);
@@ -135,35 +128,33 @@ const LedgerBookPage = () => {
   }, [fetchLedger]);
 
   // Handle date range change
-  // Update the handleDateRangeChange function:
   const handleDateRangeChange = (range) => {
     if (!range || !range.start || !range.end) {
-      // Default to current month WITH IDENTIFIERS
-      const today = new Date();
-      const startOfCurrentMonth = startOfMonth(today);
-      const endOfCurrentMonth = endOfMonth(today);
-
       setDateRange({
-        start: {
-          identifier: "start", // Add this
-          year: startOfCurrentMonth.getFullYear(),
-          month: startOfCurrentMonth.getMonth() + 1,
-          day: startOfCurrentMonth.getDate(),
-        },
-        end: {
-          identifier: "end", // Add this
-          year: endOfCurrentMonth.getFullYear(),
-          month: endOfCurrentMonth.getMonth() + 1,
-          day: endOfCurrentMonth.getDate(),
-        },
+        from: startOfMonth(new Date()),
+        to: endOfMonth(new Date()),
       });
       return;
     }
 
-    setDateRange(range);
-    setTimeout(() => {
-      fetchLedger();
-    }, 100);
+    const startDate = new Date(
+      range.start.year,
+      range.start.month - 1,
+      range.start.day
+    );
+    const endDate = new Date(
+      range.end.year,
+      range.end.month - 1,
+      range.end.day
+    );
+
+    setDateRange({
+      from: startDate,
+      to: endDate,
+    });
+
+    // Re-fetch ledger data when date range changes
+    setTimeout(() => fetchLedger(), 0);
   };
 
   // Handle bank filter change
@@ -182,15 +173,56 @@ const LedgerBookPage = () => {
     }
   };
 
-  // Filter entries by bank
+  // Filter entries by bank and date range
   const filteredEntries = useMemo(() => {
-    return (
-      ledger?.entries?.filter((entry) => {
-        if (selectedBank === "all") return true;
-        return entry.bank?._id === selectedBank;
-      }) || []
-    );
-  }, [ledger, selectedBank]);
+    if (!ledger?.entries) return [];
+
+    return ledger.entries.filter((entry) => {
+      // First check if entry matches the selected bank
+      if (selectedBank !== "all" && entry.bank?._id !== selectedBank) {
+        return false;
+      }
+
+      // Then check if entry date is within the selected date range
+      if (dateRange?.from && dateRange?.to) {
+        const entryDate = new Date(entry.date);
+        const fromDate = new Date(dateRange.from);
+        const toDate = new Date(dateRange.to);
+
+        // Set hours to 0 for date-only comparison
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+
+        return entryDate >= fromDate && entryDate <= toDate;
+      }
+
+      return true;
+    });
+  }, [ledger, selectedBank, dateRange]);
+
+  // Calculate summary values based on filtered entries
+  const summary = useMemo(() => {
+    if (!filteredEntries.length)
+      return {
+        income: 0,
+        expenses: 0,
+        netProfit: 0,
+      };
+
+    const income = filteredEntries
+      .filter((entry) => entry.type === "income")
+      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+
+    const expenses = filteredEntries
+      .filter((entry) => entry.type === "expense")
+      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+
+    return {
+      income,
+      expenses,
+      netProfit: income - expenses,
+    };
+  }, [filteredEntries]);
 
   // Generate month name
   const getMonthName = (monthNumber) => {
@@ -213,40 +245,34 @@ const LedgerBookPage = () => {
 
   // Get formatted date string for display
   const getFormattedDateRange = useMemo(() => {
-    if (!dateRange?.start || !dateRange?.end) return "";
+    if (!dateRange?.from || !dateRange?.to) return "";
 
-    const startDate = new Date(
-      dateRange.start.year,
-      dateRange.start.month - 1,
-      dateRange.start.day
-    );
-    const endDate = new Date(
-      dateRange.end.year,
-      dateRange.end.month - 1,
-      dateRange.end.day
-    );
-
-    return `${format(startDate, "MMM dd, yyyy")} - ${format(
-      endDate,
+    return `${format(new Date(dateRange.from), "MMM dd, yyyy")} - ${format(
+      new Date(dateRange.to),
       "MMM dd, yyyy"
     )}`;
   }, [dateRange]);
 
-  // Export functionality
+  // Function to get data for export
   const getExportData = useCallback(() => {
+    if (!filteredEntries || filteredEntries.length === 0) return [];
+
     return filteredEntries.map((entry) => {
       return {
-        Date: new Date(entry.date).toLocaleDateString(),
-        Type: entry.type === "income" ? "Income" : "Expenses",
-        Category: entry.category,
-        "Reference/Booking ID": entry.refId,
-        Debit: entry.debit > 0 ? formatCurrency(entry.debit) : "",
-        Credit: entry.credit > 0 ? formatCurrency(entry.credit) : "",
-        Balance: formatCurrency(entry.balance),
+        "Transaction Date": format(new Date(entry.date), "dd/MM/yyyy"),
+        "Transaction Type": entry.type,
+        Description: entry.description,
+        Account: entry.bank?.name || "N/A",
+        "Account Type": entry.bank?.type || "N/A",
+        Reference: entry.reference || "N/A",
+        Income: entry.type === "income" ? formatCurrency(entry.amount) : "",
+        Expense: entry.type === "expense" ? formatCurrency(entry.amount) : "",
+        Balance: formatCurrency(entry.runningBalance),
       };
     });
   }, [filteredEntries]);
 
+  // Download PDF function
   const handleDownloadPDF = useCallback(async () => {
     try {
       setIsExporting(true);
@@ -271,58 +297,42 @@ const LedgerBookPage = () => {
       // Add metadata
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
+      const dateStr = getFormattedDateRange;
+      doc.text(`Date Range: ${dateStr}`, 15, 35);
       doc.text(
         `Generated: ${new Date().toLocaleDateString()}`,
         doc.internal.pageSize.width - 65,
         35
       );
-      doc.text(`Period: ${getFormattedDateRange}`, 15, 35);
 
-      // Add summary
+      // Add grand total
+      const totalIncome = filteredEntries
+        .filter((entry) => entry.type === "income")
+        .reduce((sum, entry) => sum + entry.amount, 0);
+
+      const totalExpense = filteredEntries
+        .filter((entry) => entry.type === "expense")
+        .reduce((sum, entry) => sum + entry.amount, 0);
+
       doc.setFontSize(11);
       doc.setTextColor(60, 60, 60);
+      doc.text(`Total Income: ${formatCurrency(totalIncome)}`, 15, 40);
       doc.text(
-        `Total Income: ${formatCurrency(ledger?.totalIncome || 0)}`,
-        15,
+        `Total Expense: ${formatCurrency(totalExpense)}`,
+        doc.internal.pageSize.width - 80,
+        40
+      );
+      doc.text(
+        `Net: ${formatCurrency(totalIncome - totalExpense)}`,
+        doc.internal.pageSize.width - 80,
         45
-      );
-      doc.text(
-        `Total Expenses: ${formatCurrency(ledger?.totalExpenses || 0)}`,
-        15,
-        52
-      );
-      doc.text(
-        `Opening Balance: ${formatCurrency(
-          ledger?.accountTypeSummary?.openingBalance || 0
-        )}`,
-        doc.internal.pageSize.width - 100,
-        45
-      );
-      doc.text(
-        `Closing Balance: ${formatCurrency(
-          ledger?.accountTypeSummary?.closingBalance || 0
-        )}`,
-        doc.internal.pageSize.width - 100,
-        52
       );
 
       // Configure table
       doc.autoTable({
-        head: [
-          Object.keys(
-            exportData[0] || {
-              Date: "",
-              Type: "",
-              Category: "",
-              "Reference/Booking ID": "",
-              Debit: "",
-              Credit: "",
-              Balance: "",
-            }
-          ),
-        ],
+        head: [Object.keys(exportData[0] || {})],
         body: exportData.map(Object.values),
-        startY: 60,
+        startY: 50,
         theme: "grid",
         styles: {
           fontSize: 8,
@@ -337,11 +347,22 @@ const LedgerBookPage = () => {
           fontStyle: "bold",
           halign: "center",
         },
+        columnStyles: {
+          "Transaction Date": { cellWidth: 20 },
+          "Transaction Type": { cellWidth: 20 },
+          Description: { cellWidth: 40 },
+          Account: { cellWidth: 25 },
+          "Account Type": { cellWidth: 20 },
+          Reference: { cellWidth: 20 },
+          Income: { cellWidth: 20, halign: "right" },
+          Expense: { cellWidth: 20, halign: "right" },
+          Balance: { cellWidth: 20, halign: "right" },
+        },
         alternateRowStyles: {
           fillColor: [245, 245, 245],
         },
         didDrawPage: (data) => {
-          // Restore header on each page
+          // Restore header banner on each page
           doc.setFillColor(
             hotelPrimaryColor[0],
             hotelPrimaryColor[1],
@@ -359,6 +380,7 @@ const LedgerBookPage = () => {
             doc.internal.pageSize.height - 10
           );
         },
+        margin: { top: 40, right: 15, bottom: 15, left: 15 },
       });
 
       doc.save("ledger-book.pdf");
@@ -368,14 +390,15 @@ const LedgerBookPage = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [getExportData, ledger, getFormattedDateRange]);
+  }, [getExportData, filteredEntries, getFormattedDateRange]);
 
+  // Download Excel function
   const handleDownloadExcel = useCallback(() => {
     try {
       const exportData = getExportData();
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Ledger");
+      XLSX.utils.book_append_sheet(wb, ws, "Ledger Book");
       XLSX.writeFile(wb, "ledger-book.xlsx");
     } catch (error) {
       console.error("Error generating Excel:", error);
@@ -383,6 +406,7 @@ const LedgerBookPage = () => {
     }
   }, [getExportData]);
 
+  // Download CSV function
   const handleDownloadCSV = useCallback(() => {
     try {
       const exportData = getExportData();
@@ -390,7 +414,6 @@ const LedgerBookPage = () => {
         toast.error("No data to export");
         return;
       }
-
       const fields = Object.keys(exportData[0]);
       const parser = new Parser({ fields });
       const csv = parser.parse(exportData);
@@ -406,6 +429,7 @@ const LedgerBookPage = () => {
     }
   }, [getExportData]);
 
+  // Download JSON function
   const handleDownloadJSON = useCallback(() => {
     try {
       const exportData = getExportData();
@@ -422,6 +446,62 @@ const LedgerBookPage = () => {
     }
   }, [getExportData]);
 
+  // Download button component
+  const downloadButton = useMemo(
+    () => (
+      <Dropdown>
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            variant="flat"
+            className="bg-hotel-secondary"
+            isLoading={isExporting}
+          >
+            {isExporting ? <Spinner size="sm" /> : <Download size={18} />}
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu aria-label="Download Options">
+          <DropdownItem
+            key="pdf"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadPDF}
+            isDisabled={isExporting}
+          >
+            PDF
+          </DropdownItem>
+          <DropdownItem
+            key="excel"
+            startContent={<FileSpreadsheet size={16} />}
+            onPress={handleDownloadExcel}
+          >
+            Excel
+          </DropdownItem>
+          <DropdownItem
+            key="csv"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadCSV}
+          >
+            CSV
+          </DropdownItem>
+          <DropdownItem
+            key="json"
+            startContent={<FileJson size={16} />}
+            onPress={handleDownloadJSON}
+          >
+            JSON
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+    ),
+    [
+      isExporting,
+      handleDownloadPDF,
+      handleDownloadExcel,
+      handleDownloadCSV,
+      handleDownloadJSON,
+    ]
+  );
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Ledger Book</h1>
@@ -431,9 +511,7 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Total Income</p>
-              <h3 className="text-2xl font-bold">
-                ₹{ledger?.totalIncome || 0}
-              </h3>
+              <h3 className="text-2xl font-bold">₹{summary.income || 0}</h3>
               <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
             </div>
             <div className="bg-yellow-100 p-2 rounded-md">
@@ -446,9 +524,7 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Total Expenses</p>
-              <h3 className="text-2xl font-bold">
-                ₹{ledger?.totalExpenses || 0}
-              </h3>
+              <h3 className="text-2xl font-bold">₹{summary.expenses || 0}</h3>
               <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
             </div>
             <div className="bg-red-100 p-2 rounded-md">
@@ -462,7 +538,12 @@ const LedgerBookPage = () => {
             <div>
               <p className="text-gray-500 text-sm">Bank Balance</p>
               <h3 className="text-2xl font-bold">
-                ₹{ledger?.bankBalance || 0}
+                {selectedBank === "all"
+                  ? `₹${bankBalance || 0}`
+                  : `₹${
+                      banks.find((bank) => bank._id === selectedBank)
+                        ?.currentBalance || 0
+                    }`}
               </h3>
               <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
             </div>
@@ -476,7 +557,7 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Net Profit</p>
-              <h3 className="text-2xl font-bold">₹{ledger?.netProfit || 0}</h3>
+              <h3 className="text-2xl font-bold">₹{summary.netProfit || 0}</h3>
               <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
             </div>
             <div className="bg-green-100 p-2 rounded-md">
@@ -521,7 +602,6 @@ const LedgerBookPage = () => {
                 showMonthAndYearPickers
                 popoverProps={{
                   placement: "bottom-end",
-                  // Add identifier props for start/end
                   startIdentifier: "start",
                   endIdentifier: "end",
                 }}
