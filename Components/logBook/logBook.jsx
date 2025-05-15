@@ -35,6 +35,7 @@ import axios from "axios"
 import { toast } from "react-toastify"
 import { Modal } from "@heroui/modal"
 import ViewLogBookDetails from "@/Components/logBook/ViewLogBookDetails"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/Components/ui/select"
 
 const INITIAL_VISIBLE_COLUMNS = [
   "customerName",
@@ -69,6 +70,7 @@ export default function LogBook() {
   const [totalPages, setTotalPages] = useState(0)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Fetch log entries
   const fetchLogEntries = async () => {
@@ -141,20 +143,21 @@ export default function LogBook() {
     const filterFromDate = new Date(dateRange.from);
     const filterToDate = new Date(dateRange.to);
 
-    // Reset time part for date comparison
+    // Add status filter check
+    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+
+    // Rest of your existing date checks...
     filterFromDate.setHours(0, 0, 0, 0);
     filterToDate.setHours(23, 59, 59, 999);
     itemFromDate.setHours(0, 0, 0, 0);
     itemToDate.setHours(23, 59, 59, 999);
 
-    // Check if dates are selected (not default dates)
     const isDefaultDateRange = 
       filterFromDate.getTime() === new Date().setHours(0, 0, 0, 0) &&
       filterToDate.getTime() === addDays(new Date(), 1).setHours(23, 59, 59, 999);
 
-    // If no dates are selected (using default dates), only apply text search
     if (isDefaultDateRange) {
-      return (
+      return matchesStatus && (
         item.customerName?.toLowerCase().includes(searchTerm) ||
         item.bookingId?.toLowerCase().includes(searchTerm) ||
         item.mobileNo?.toLowerCase().includes(searchTerm) ||
@@ -164,7 +167,6 @@ export default function LogBook() {
       );
     }
 
-    // If dates are selected, check both date range and text search
     const isDateInRange = (
       (itemFromDate >= filterFromDate && itemFromDate <= filterToDate) ||
       (itemToDate >= filterFromDate && itemToDate <= filterToDate) ||
@@ -180,7 +182,7 @@ export default function LogBook() {
       item.status?.toLowerCase().includes(searchTerm)
     );
 
-    return matchesSearch && isDateInRange;
+    return matchesSearch && isDateInRange && matchesStatus;
   });
 
   const generateColumns = useCallback(() => {
@@ -324,23 +326,37 @@ export default function LogBook() {
         return (
           <div className="relative flex items-center justify-center gap-2">
             <Tooltip content="View Details">
-              <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50" onClick={() => handleViewDetails(item)}>
+              <Button 
+                isIconOnly 
+                variant="light" 
+                className="text-default-400 cursor-pointer active:opacity-50" 
+                onPress={() => handleViewDetails(item)}
+              >
                 <Eye className="h-4 w-4" />
               </Button>
             </Tooltip>
-            <Tooltip content="Edit">
-              <Link href={`/dashboard/logBook/edit-log/${item._id}`}>
-                <Button isIconOnly variant="light" className="text-default-400 cursor-pointer active:opacity-50">
-                  <FileEdit className="h-4 w-4" />
-                </Button>
-              </Link>
-            </Tooltip>
+            
+            {/* Only show edit button if status is not Verified */}
+            {item.status !== 'Verified' && (
+              <Tooltip content="Edit">
+                <Link href={`/dashboard/logBook/edit-log/${item._id}`}>
+                  <Button 
+                    isIconOnly 
+                    variant="light" 
+                    className="text-default-400 cursor-pointer active:opacity-50"
+                  >
+                    <FileEdit className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </Tooltip>
+            )}
+
             <Tooltip content="Delete">
               <Button 
                 isIconOnly 
                 variant="light" 
                 className="text-danger cursor-pointer active:opacity-50"
-                onClick={() => handleDeleteClick(item)}
+                onPress={() => handleDeleteClick(item)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -454,6 +470,21 @@ export default function LogBook() {
               onClear={() => onClear()}
               onValueChange={onSearchChange}
             />
+
+            {/* Add Status Filter here */}
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            >
+              <SelectTrigger className="w-[150px] bg-hotel-secondary">
+                <SelectValue placeholder="Filter Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Verified">Verified</SelectItem>
+                <SelectItem value="Issued">Issued</SelectItem>
+              </SelectContent>
+            </Select>
 
             <div className="flex items-center gap-2">
               <DateRangePicker

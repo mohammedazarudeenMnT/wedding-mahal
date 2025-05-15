@@ -5,21 +5,50 @@ import { Input } from "@/Components/ui/input";
 import { Buttons } from "@/Components/ui/button";
 import { X, Plus } from "lucide-react";
 
-export default function DamageLossSummary({ damageLossSummary, setDamageLossSummary, categories, subCategories, brands, models }) {
+export default function DamageLossSummary({ 
+  damageLossSummary, 
+  setDamageLossSummary, 
+  categories, 
+  subCategories, 
+  brands, 
+  models,
+  inventory // Add this prop
+}) {
   const handleChange = (index, field, value) => {
     const newRows = [...damageLossSummary];
     newRows[index] = { ...newRows[index], [field]: value };
     setDamageLossSummary(newRows);
   };
+
   const addRow = () => setDamageLossSummary([...damageLossSummary, {}]);
   const removeRow = (index) => {
     const newRows = [...damageLossSummary];
     newRows.splice(index, 1);
     setDamageLossSummary(newRows);
   };
-  const getFilteredSubCategories = (category) => [...new Set(subCategories.filter(sc => sc && category ? true : false))];
-  const getFilteredBrands = (category, subCategory) => [...new Set(brands.filter(b => b && category && subCategory ? true : false))];
-  const getFilteredModels = (category, subCategory, brand) => [...new Set(models.filter(m => m && category && subCategory && brand ? true : false))];
+
+  const getFilteredSubCategories = (category) => {
+    return [...new Set(inventory
+      .filter(item => item.category === category)
+      .map(item => item.subCategory))];
+  };
+
+  const getFilteredBrands = (category, subCategory) => {
+    return [...new Set(inventory
+      .filter(item => item.category === category && item.subCategory === subCategory)
+      .map(item => item.brandName))];
+  };
+
+  const getFilteredModels = (category, subCategory, brand) => {
+    return [...new Set(inventory
+      .filter(item => 
+        item.category === category && 
+        item.subCategory === subCategory && 
+        item.brandName === brand
+      )
+      .map(item => item.model))];
+  };
+
   return (
     <div>
       <Table aria-label="Damage/Loss Summary table">
@@ -91,4 +120,4 @@ export default function DamageLossSummary({ damageLossSummary, setDamageLossSumm
       </div>
     </div>
   );
-} 
+}

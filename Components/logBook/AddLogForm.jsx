@@ -190,7 +190,8 @@ export default function AddLogForm({ logId }) {
       const response = await axios.get('/api/bookings?source=logbook');
       if (response.data.success) {
         const activeBookings = response.data.bookings.filter(booking => 
-          booking.status === "booked" && 
+          // Show both booked and checkin status bookings
+          (booking.status === "booked" || booking.status === "checkin") && 
           (booking.propertyType === "room" || booking.propertyType === "hall")
         );
         setAllBookings(activeBookings);
@@ -393,13 +394,29 @@ export default function AddLogForm({ logId }) {
   }
 
   const handleElectricityChange = (index, field, value) => {
-    const newReadings = [...electricityReadings]
-    newReadings[index] = {
-      ...newReadings[index],
-      [field]: value
+    const newReadings = [...electricityReadings];
+    const reading = { ...newReadings[index] };
+
+    // Update the changed field
+    reading[field] = value;
+
+    // Calculate units consumed when start or end reading changes
+    if (field === 'startReading' || field === 'endReading') {
+      const start = parseFloat(reading.startReading) || 0;
+      const end = parseFloat(reading.endReading) || 0;
+      reading.unitsConsumed = Math.max(0, end - start).toString();
     }
-    setElectricityReadings(newReadings)
-  }
+
+    // Calculate total when units consumed or cost per unit changes
+    if (field === 'unitsConsumed' || field === 'costPerUnit' || field === 'startReading' || field === 'endReading') {
+      const units = parseFloat(reading.unitsConsumed) || 0;
+      const cost = parseFloat(reading.costPerUnit) || 0;
+      reading.total = (units * cost).toString();
+    }
+
+    newReadings[index] = reading;
+    setElectricityReadings(newReadings);
+  };
 
   const validateForm = () => {
     if (!formData.bookingId) {
@@ -461,6 +478,12 @@ export default function AddLogForm({ logId }) {
 
       setIsSubmitting(true);
 
+      const grandTotal = (
+        (parseFloat(totalAmount) || 0) +
+        (electricityReadings.reduce((sum, r) => sum + (parseFloat(r.total) || 0), 0)) +
+        (parseFloat(totalRecoveryAmount) || 0)
+      );
+
       // Filter out empty items and readings
       const validItems = itemsIssued.filter(item => 
         item.category && 
@@ -512,7 +535,9 @@ export default function AddLogForm({ logId }) {
           remarks: row.remarks
         })),
         totalAmount: parseFloat(totalAmount) || 0,
-        totalRecoveryAmount: parseFloat(totalRecoveryAmount) || 0
+        totalRecoveryAmount: parseFloat(totalRecoveryAmount) || 0,
+        grandTotal,
+        status: isEditMode ? 'Verified' : 'Issued'
       };
 
       const endpoint = isEditMode ? `/api/logBook/${logId}` : '/api/logBook';
@@ -550,6 +575,9 @@ export default function AddLogForm({ logId }) {
       notes: ""
     })
   }
+
+  // First, add a check if the selected date is today's date
+  const isDefaultDate = dateRange.from.toDateString() === new Date().toDateString();
 
   return (
     <div className="w-full px-4 py-2">
@@ -623,21 +651,27 @@ export default function AddLogForm({ logId }) {
             {/* Booking ID */}
             <div className="space-y-2">
               <label htmlFor="bookingId" className="text-sm text-gray-600">Booking Id</label>
-              <Select 
-                value={formData.bookingId}
-                onValueChange={(value) => handleBookingSelect(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Booking" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredBookings.map((booking) => (
-                    <SelectItem key={booking.bookingNumber} value={booking.bookingNumber}>
-                      {booking.bookingNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isDefaultDate ? (
+                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded-md">
+                  Please select a date to view available bookings
+                </div>
+              ) : (
+                <Select 
+                  value={formData.bookingId}
+                  onValueChange={(value) => handleBookingSelect(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Booking" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredBookings.map((booking) => (
+                      <SelectItem key={booking.bookingNumber} value={booking.bookingNumber}>
+                        {booking.bookingNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Customer Name */}
@@ -979,6 +1013,7 @@ export default function AddLogForm({ logId }) {
                     </TableCell>
                     <TableCell>
                       <Input 
+                        type="number"
                         placeholder="Enter End Reading" 
                         className="h-9 text-xs"
                         value={reading.endReading || ''}
@@ -1007,6 +1042,7 @@ export default function AddLogForm({ logId }) {
                     </TableCell>
                     <TableCell>
                       <Input 
+                        type="number"
                         placeholder="Enter Cost/Unit" 
                         className="h-9 text-xs"
                         value={reading.costPerUnit || ''}
@@ -1073,6 +1109,7 @@ export default function AddLogForm({ logId }) {
                 subCategories={subCategories}
                 brands={brands}
                 models={models}
+                inventory={inventory} // Add this prop
               />
               <div className="flex justify-end gap-8 mt-2">
                 <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[90px] shadow-sm">
