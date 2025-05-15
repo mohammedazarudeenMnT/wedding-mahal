@@ -5,8 +5,20 @@ import { FaEye } from "react-icons/fa";
 import { CiFilter } from "react-icons/ci";
 import axios from "axios";
 import { format, isWithinInterval, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  FileText,
+  FileSpreadsheet,
+  FileJson,
+  Download,
+  Printer,
+} from "lucide-react";
 import { PiFadersHorizontal } from "react-icons/pi";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { Parser } from "json2csv";
+import { Spinner } from "@heroui/spinner";
 
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -152,6 +164,8 @@ export default function Invoices() {
     direction: "ascending",
   });
 
+  const [isExporting, setIsExporting] = useState(false);
+
   const openModal = () => setIsModalOpen(true);
 
   const fetchData = useCallback(async () => {
@@ -277,6 +291,223 @@ export default function Invoices() {
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
     });
   }, [sortDescriptor, items]);
+
+  // Format currency for the exports
+  const formatCurrency = (amount) => {
+    if (!amount || isNaN(amount)) return "₹0.00";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Get tailwind color for PDF exports
+  const getTailwindColor = (element, className) => {
+    const tempElement = document.createElement(element);
+    tempElement.className = className;
+    document.body.appendChild(tempElement);
+
+    const color = window.getComputedStyle(tempElement).backgroundColor;
+    document.body.removeChild(tempElement);
+
+    const match = color.match(/\d+/g);
+    return match ? match.map(Number) : [41, 128, 185]; // fallback color
+  };
+
+  // Prepare data for exports
+  const getExportData = useCallback(() => {
+    return filteredItems.map((invoice) => {
+      return {
+        "Invoice No": invoice.invoiceNumber || "-",
+        "Booking ID": invoice.bookingNumber || "-",
+        "Customer Name": invoice.customerDetails?.name || "-",
+        "Stay Period": invoice.stayDetails
+          ? `${format(
+              new Date(invoice.stayDetails.checkIn),
+              "dd/MM/yyyy"
+            )} - ${format(
+              new Date(invoice.stayDetails.checkOut),
+              "dd/MM/yyyy"
+            )}`
+          : "-",
+        "Payment Method": invoice.paymentDetails?.method || "-",
+        "Payment Status": invoice.paymentDetails?.status || "-",
+        Amount: formatCurrency(invoice.amounts?.totalAmount) || "-",
+      };
+    });
+  }, [filteredItems]);
+
+  // PDF Export function
+  const handleDownloadPDF = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const doc = new jsPDF("l", "mm", "a4");
+      const exportData = getExportData();
+      const hotelPrimaryColor = getTailwindColor("div", "bg-hotel-primary");
+
+      // Add header banner
+      doc.setFillColor(
+        hotelPrimaryColor[0],
+        hotelPrimaryColor[1],
+        hotelPrimaryColor[2]
+      );
+      doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+      // Add title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Invoices", 15, 15);
+
+      // Add metadata
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()}`,
+        doc.internal.pageSize.width - 65,
+        35
+      );
+
+      if (date.from && date.to) {
+        doc.text(
+          `Period: ${format(date.from, "MMM dd, yyyy")} - ${format(
+            date.to,
+            "MMM dd, yyyy"
+          )}`,
+          15,
+          35
+        );
+      }
+
+      // Configure table
+      doc.autoTable({
+        head: [
+          Object.keys(
+            exportData[0] || {
+              "Invoice No": "",
+              "Booking ID": "",
+              "Customer Name": "",
+              "Stay Period": "",
+              "Payment Method": "",
+              "Payment Status": "",
+              Amount: "",
+            }
+          ),
+        ],
+        body: exportData.map(Object.values),
+        startY: 45,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [80, 80, 80],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: hotelPrimaryColor,
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        didDrawPage: (data) => {
+          // Restore header on each page
+          doc.setFillColor(
+            hotelPrimaryColor[0],
+            hotelPrimaryColor[1],
+            hotelPrimaryColor[2]
+          );
+          doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+          // Add footer
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(70, 70, 70);
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        },
+      });
+
+      doc.save("invoices.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData, date]);
+
+  // Excel Export function
+  const handleDownloadExcel = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+      XLSX.writeFile(wb, "invoices.xlsx");
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast.error("Failed to generate Excel file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // CSV Export function
+  const handleDownloadCSV = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      if (exportData.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+
+      const fields = Object.keys(exportData[0]);
+      const parser = new Parser({ fields });
+      const csv = parser.parse(exportData);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "invoices.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating CSV:", error);
+      toast.error("Failed to generate CSV file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // JSON Export function
+  const handleDownloadJSON = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "invoices.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating JSON:", error);
+      toast.error("Failed to generate JSON file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
 
   // Update the renderCell function
   const renderCell = useCallback(

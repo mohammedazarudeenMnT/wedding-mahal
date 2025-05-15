@@ -124,6 +124,14 @@ export function SidebarDemo() {
           label: "Expenses",
           href: `/dashboard/financials/expenses`,
         },
+        {
+          label: "Bank",
+          href: `/dashboard/financials/bank`,
+        },
+        {
+          label: "Ledger Book",
+          href: `/dashboard/financials/ledger-book`,
+        },
       ],
     },
     {

@@ -5,7 +5,7 @@ const PaymentSchema = new mongoose.Schema(
   {
     paymentMethod: {
       type: String,
-      enum: ["online", "cod", "qr", "paymentLink"],
+      enum: ["online", "cod", "qr", "paymentLink", "bank"],
       required: true,
     },
     amount: {
@@ -31,7 +31,7 @@ const PaymentSchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ["card", "upi", "netbanking", "cash", ""],
+      enum: ["card", "upi", "netbanking", "cash", "bank", ""],
     },
     // For payment link
     razorpayPaymentLinkId: {
@@ -66,6 +66,9 @@ const TransactionSchema = new mongoose.Schema(
     customerName: {
       type: String,
       required: true,
+    },
+    guestId: {
+      type: String,
     },
     payableAmount: {
       type: Number,
