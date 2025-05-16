@@ -3,6 +3,8 @@ import Guest from "../../../../utils/model/booking/bookingSchema";
 import Room from "../../../../utils/model/room/roomSchema";
 import ApiKeySchema from "../../../../utils/model/payementGateway/ApiKeySchema";
 import GuestInfo from "../../../../utils/model/contacts/guestInfoListSchema";
+import TransactionSchema from "../../../../utils/model/financials/transactions/transactionSchema";
+import RoomAvailabilitySchema from "../../../../utils/model/room/roomAvailabilitySchema";
 
 import { getHotelDatabase } from "../../../../utils/config/hotelConnection";
 import { getModel } from "../../../../utils/helpers/getModel";
@@ -41,12 +43,103 @@ async function generateBookingNumber(GuestModel) {
   return `B-${datePrefix}-${sequentialNumber.toString().padStart(4, "0")}`;
 }
 
+// Update room availability history directly using the model
+async function updateRoomAvailabilityHistory(room, booking) {
+  try {
+    if (!room || !booking) {
+      console.warn("Missing room or booking data for availability update");
+      return;
+    }
+
+    // Ensure room has valid ID
+    if (!room._id) {
+      console.warn("Room ID is missing for availability update");
+      return;
+    }
+
+    // Get the RoomAvailability model
+    const RoomAvailability = getModel(
+      "RoomAvailability",
+      RoomAvailabilitySchema
+    );
+
+    // Find or create a room availability record
+    let roomAvailability = await RoomAvailability.findOne({
+      roomId: room._id.toString(),
+      roomNumber: room.number || "",
+    });
+
+    if (!roomAvailability) {
+      roomAvailability = new RoomAvailability({
+        roomId: room._id.toString(),
+        roomType: room.type || "",
+        roomNumber: room.number || "",
+        bookingHistory: [],
+      });
+    }
+
+    // Create the booking record
+    const bookingRecord = {
+      bookingNumber: booking.bookingNumber,
+      checkIn: new Date(booking.checkInDate),
+      checkOut: new Date(booking.checkOutDate),
+      status: booking.status || "booked",
+      guests: booking.guests || { adults: 0, children: 0 },
+      customerName:
+        booking.firstName && booking.lastName
+          ? `${booking.firstName} ${booking.lastName}`
+          : "Guest",
+      customerEmail: booking.email || "",
+      customerPhone: booking.mobileNo || "",
+      statusTimestamps: {
+        [booking.status || "booked"]: new Date(),
+      },
+    };
+
+    // Check if this booking number already exists
+    const existingBookingIndex = roomAvailability.bookingHistory.findIndex(
+      (historyBooking) => historyBooking.bookingNumber === booking.bookingNumber
+    );
+
+    if (existingBookingIndex !== -1) {
+      // Update the existing booking
+      const existingBooking =
+        roomAvailability.bookingHistory[existingBookingIndex];
+      existingBooking.status = booking.status || "booked";
+      existingBooking.statusTimestamps[booking.status || "booked"] = new Date();
+
+      // Only update check-in/out dates if different
+      if (
+        booking.checkInDate &&
+        booking.checkInDate.toString() !== existingBooking.checkIn.toString()
+      ) {
+        existingBooking.checkIn = new Date(booking.checkInDate);
+      }
+      if (
+        booking.checkOutDate &&
+        booking.checkOutDate.toString() !== existingBooking.checkOut.toString()
+      ) {
+        existingBooking.checkOut = new Date(booking.checkOutDate);
+      }
+    } else {
+      // Add new booking record
+      roomAvailability.bookingHistory.push(bookingRecord);
+    }
+
+    await roomAvailability.save();
+    console.log("Room availability history updated successfully");
+  } catch (error) {
+    console.error("Error updating room availability history:", error.message);
+  }
+}
+
 export async function POST(request) {
   try {
     const { hotelData } = await getHotelDatabase();
     const GuestModel = getModel("Guest", Guest);
     const RoomModel = getModel("Room", Room);
     const ApiKeys = getModel("ApiKeys", ApiKeySchema);
+    const Transaction = getModel("Transaction", TransactionSchema);
     let emailSent = false;
 
     const formData = await request.formData();
@@ -363,6 +456,18 @@ export async function POST(request) {
       { upsert: true, new: true }
     );
 
+    // Find transaction (if it exists) to check payment status
+    const transaction = await Transaction.findOne({
+      bookingNumber: guestData.bookingNumber,
+    });
+
+    // Set payment status based on transaction isFullyPaid status
+    if (transaction) {
+      guestData.paymentStatus = transaction.isFullyPaid
+        ? "completed"
+        : "pending";
+    }
+
     // Create and save the new guest booking
     const newGuest = new GuestModel(guestData);
     await newGuest.save();
@@ -412,6 +517,16 @@ export async function POST(request) {
             guests: guestData.guests,
           });
           await roomDoc.save();
+
+          // Also update the room availability history with the current status
+          await updateRoomAvailabilityHistory(
+            {
+              _id: roomDoc._id,
+              type: roomDoc.type,
+              number: propertyNumbers[propertyNumberIndex].number,
+            },
+            newGuest
+          );
         } else {
           console.warn(
             `Room or hall number ${room.number} not found in the database`

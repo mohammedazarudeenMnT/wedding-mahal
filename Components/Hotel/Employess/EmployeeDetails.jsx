@@ -5,11 +5,11 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button,
-  Avatar,
-  Card,
-  CardBody,
-} from "@nextui-org/react";
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { Avatar } from "@heroui/avatar";
+import { Card, CardBody } from "@heroui/card";
+
 import { Download, FileText, Image as ImageIcon } from "lucide-react"; // Add new icons
 import Image from "next/image";
 

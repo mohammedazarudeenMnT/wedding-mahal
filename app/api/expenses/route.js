@@ -12,7 +12,7 @@ export async function POST(request) {
     const formData = await request.formData();
 
     let receiptData = null;
-    const receiptFile = formData.get('receipt');
+    const receiptFile = formData.get("receipt");
 
     if (receiptFile && receiptFile.name) {
       const uploadsDir = path.join(
@@ -33,17 +33,20 @@ export async function POST(request) {
 
       receiptData = {
         url: `/assets/receipts/${receiptFile.name}`,
-        filename: receiptFile.name
+        filename: receiptFile.name,
       };
     }
 
     const expenseData = {
-      amount: formData.get('amount'),
-      category: formData.get('category'),
-      expense: formData.get('expense'),
-      description: formData.get('description'),
-      date: new Date(formData.get('date')),
+      amount: formData.get("amount"),
+      category: formData.get("category"),
+      expense: formData.get("expense"),
+      description: formData.get("description"),
+      date: new Date(formData.get("date")),
       receipt: receiptData,
+      paymentType: formData.get("paymentType"),
+      bank: formData.get("bank"),
+      reference: formData.get("reference"),
     };
 
     const newExpense = new ExpensesModel(expenseData);
@@ -152,8 +155,8 @@ export async function PUT(request) {
     }
 
     let receiptData = null;
-    const receiptFile = formData.get('receipt');
-    const keepExistingReceipt = formData.get('keepExistingReceipt');
+    const receiptFile = formData.get("receipt");
+    const keepExistingReceipt = formData.get("keepExistingReceipt");
 
     // Handle receipt file
     if (receiptFile && receiptFile.name) {
@@ -172,7 +175,12 @@ export async function PUT(request) {
       }
 
       // Save new receipt file
-      const uploadsDir = path.join(process.cwd(), "public", "assets", "receipts");
+      const uploadsDir = path.join(
+        process.cwd(),
+        "public",
+        "assets",
+        "receipts"
+      );
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
@@ -185,9 +193,9 @@ export async function PUT(request) {
 
       receiptData = {
         url: `/assets/receipts/${receiptFile.name}`,
-        filename: receiptFile.name
+        filename: receiptFile.name,
       };
-    } else if (keepExistingReceipt === 'true') {
+    } else if (keepExistingReceipt === "true") {
       // Keep existing receipt if specified
       receiptData = existingExpense.receipt;
     } else {
@@ -207,12 +215,15 @@ export async function PUT(request) {
     }
 
     const updateData = {
-      amount: formData.get('amount'),
-      category: formData.get('category'),
-      expense: formData.get('expense'),
-      description: formData.get('description'),
-      date: new Date(formData.get('date')),
+      amount: formData.get("amount"),
+      category: formData.get("category"),
+      expense: formData.get("expense"),
+      description: formData.get("description"),
+      date: new Date(formData.get("date")),
       receipt: receiptData, // This will be null if receipt was deleted
+      paymentType: formData.get("paymentType"),
+      bank: formData.get("bank"),
+      reference: formData.get("reference"),
     };
 
     const updatedExpense = await ExpensesModel.findByIdAndUpdate(

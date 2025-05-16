@@ -5,9 +5,21 @@ import axios from "axios";
 import { FaRegEdit, FaTrash } from "react-icons/fa";
 import { CiFilter } from "react-icons/ci";
 import { format, isWithinInterval, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  FileText,
+  FileSpreadsheet,
+  FileJson,
+  Download,
+  Printer,
+} from "lucide-react";
 import { PiFadersHorizontal } from "react-icons/pi";
 import { usePagePermission } from "../../hooks/usePagePermission";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { Parser } from "json2csv";
+import { Spinner } from "@heroui/spinner";
 
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -24,15 +36,18 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Input,
-  Button,
+} from "@heroui/table";
+import {
   DropdownTrigger,
   Dropdown,
   DropdownMenu,
   DropdownItem,
-  Chip,
-  Pagination,
-} from "@nextui-org/react";
+} from "@heroui/dropdown";
+import { Pagination } from "@heroui/pagination";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { Chip } from "@heroui/chip";
+
 import { PlusIcon } from "../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../ui/Table/SearchIcon.jsx";
 import { capitalize } from "../ui/Table/utils";
@@ -570,6 +585,224 @@ export default function Expenses() {
     );
   }, [selectedKeys, filteredItems.length, page, pages, rowsPerPage]);
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Format currency for exports
+  const formatCurrency = (amount) => {
+    if (!amount || isNaN(amount)) return "₹0.00";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Get tailwind color for PDF exports
+  const getTailwindColor = (element, className) => {
+    const tempElement = document.createElement(element);
+    tempElement.className = className;
+    document.body.appendChild(tempElement);
+
+    const color = window.getComputedStyle(tempElement).backgroundColor;
+    document.body.removeChild(tempElement);
+
+    const match = color.match(/\d+/g);
+    return match ? match.map(Number) : [41, 128, 185]; // fallback color
+  };
+
+  // Get export data
+  const getExportData = useCallback(() => {
+    return filteredItems.map((expense) => {
+      return {
+        Date: expense.date ? format(new Date(expense.date), "dd/MM/yyyy") : "-",
+        Category: expense.category || "-",
+        "Expense Type": expense.expense || "-",
+        Amount: formatCurrency(expense.amount) || "-",
+        Description: expense.description || "-",
+        "Payment Method": expense.paymentMode || "-",
+      };
+    });
+  }, [filteredItems]);
+
+  // PDF Export function
+  const handleDownloadPDF = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const doc = new jsPDF("l", "mm", "a4");
+      const exportData = getExportData();
+      const hotelPrimaryColor = getTailwindColor("div", "bg-hotel-primary");
+
+      // Add header banner
+      doc.setFillColor(
+        hotelPrimaryColor[0],
+        hotelPrimaryColor[1],
+        hotelPrimaryColor[2]
+      );
+      doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+      // Add title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Expenses", 15, 15);
+
+      // Add metadata
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()}`,
+        doc.internal.pageSize.width - 65,
+        35
+      );
+
+      if (date.from && date.to) {
+        doc.text(
+          `Period: ${format(date.from, "MMM dd, yyyy")} - ${format(
+            date.to,
+            "MMM dd, yyyy"
+          )}`,
+          15,
+          35
+        );
+      }
+
+      // Add total expenses
+      const totalExpense = filteredItems.reduce(
+        (sum, item) => sum + (parseFloat(item.amount) || 0),
+        0
+      );
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Total Expenses: ${formatCurrency(totalExpense)}`, 15, 45);
+
+      // Configure table
+      doc.autoTable({
+        head: [
+          Object.keys(
+            exportData[0] || {
+              Date: "",
+              Category: "",
+              "Expense Type": "",
+              Amount: "",
+              Description: "",
+              "Payment Method": "",
+            }
+          ),
+        ],
+        body: exportData.map(Object.values),
+        startY: 55,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [80, 80, 80],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: hotelPrimaryColor,
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        didDrawPage: (data) => {
+          // Restore header on each page
+          doc.setFillColor(
+            hotelPrimaryColor[0],
+            hotelPrimaryColor[1],
+            hotelPrimaryColor[2]
+          );
+          doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+          // Add footer
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(70, 70, 70);
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        },
+      });
+
+      doc.save("expenses.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData, date, filteredItems]);
+
+  // Excel Export function
+  const handleDownloadExcel = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Expenses");
+      XLSX.writeFile(wb, "expenses.xlsx");
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast.error("Failed to generate Excel file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // CSV Export function
+  const handleDownloadCSV = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      if (exportData.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+
+      const fields = Object.keys(exportData[0]);
+      const parser = new Parser({ fields });
+      const csv = parser.parse(exportData);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "expenses.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating CSV:", error);
+      toast.error("Failed to generate CSV file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // JSON Export function
+  const handleDownloadJSON = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "expenses.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating JSON:", error);
+      toast.error("Failed to generate JSON file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
   if (!hasViewPermission) {
     return (
       <div className="p-4 text-center">
@@ -633,6 +866,78 @@ export default function Expenses() {
         description="Are you sure you want to delete this expense? This action cannot be undone."
         confirmText="Delete"
       />
+      <div className="p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <span className="text-xl font-bold">Expenses</span>
+            <div className="flex gap-2">
+              {/* Add export dropdown */}
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    isIconOnly
+                    variant="flat"
+                    className="bg-default-100"
+                    isLoading={isExporting}
+                  >
+                    {isExporting ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Download size={18} />
+                    )}
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu aria-label="Download Options">
+                  <DropdownItem
+                    key="pdf"
+                    startContent={<FileText size={16} />}
+                    onPress={handleDownloadPDF}
+                    isDisabled={isExporting}
+                  >
+                    PDF
+                  </DropdownItem>
+                  <DropdownItem
+                    key="excel"
+                    startContent={<FileSpreadsheet size={16} />}
+                    onPress={handleDownloadExcel}
+                  >
+                    Excel
+                  </DropdownItem>
+                  <DropdownItem
+                    key="csv"
+                    startContent={<FileText size={16} />}
+                    onPress={handleDownloadCSV}
+                  >
+                    CSV
+                  </DropdownItem>
+                  <DropdownItem
+                    key="json"
+                    startContent={<FileJson size={16} />}
+                    onPress={handleDownloadJSON}
+                  >
+                    JSON
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
+
+              <Button
+                size="sm"
+                color="primary"
+                isIconOnly
+                onClick={() => window.print()}
+              >
+                <Printer size={18} />
+              </Button>
+
+              {/* Keep existing buttons */}
+              {/* ... */}
+            </div>
+          </div>
+
+          {/* Rest of the component */}
+          {/* ... */}
+        </div>
+      </div>
     </>
   );
 }

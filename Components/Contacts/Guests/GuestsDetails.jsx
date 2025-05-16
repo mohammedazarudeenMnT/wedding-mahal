@@ -153,6 +153,9 @@ export default function GuestProfile({ guestId }) {
     isOpen: false,
     fileName: null,
   });
+  const [selectedTab, setSelectedTab] = useState("bookings");
+  const [transactionHistory, setTransactionHistory] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const columns = useMemo(
     () => [
@@ -499,6 +502,25 @@ export default function GuestProfile({ guestId }) {
     }
   }, [guestId]);
 
+  // Add this new function to fetch transaction history for a guest
+  const fetchTransactionHistory = useCallback(async () => {
+    if (!guestId) return;
+
+    setLoadingTransactions(true);
+    try {
+      const response = await axios.get(
+        `/api/financials/transactions?guestId=${guestId}`
+      );
+      if (response.data.success) {
+        setTransactionHistory(response.data.transactions || []);
+      }
+    } catch (error) {
+      console.error("Error fetching transaction history:", error);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, [guestId]);
+
   useEffect(() => {
     if (guestId) {
       fetchGuestData();
@@ -510,6 +532,13 @@ export default function GuestProfile({ guestId }) {
     setFilteredBookings(filtered);
     setPage(1); // Reset to first page when filter changes
   }, [date, bookings, filterBookingsByDateRange]);
+
+  // Fetch transaction history when guest tab is selected
+  useEffect(() => {
+    if (selectedTab === "transactions") {
+      fetchTransactionHistory();
+    }
+  }, [selectedTab, fetchTransactionHistory]);
 
   // Add a cleanup effect
   useEffect(() => {
@@ -1339,6 +1368,181 @@ export default function GuestProfile({ guestId }) {
         description="Are you sure you want to delete this file? This action cannot be undone."
         confirmText="Delete"
       />
+
+      {/* Tab navigation */}
+      <div className="flex border-b mb-4">
+        <button
+          className={`py-2 px-4 font-medium ${
+            selectedTab === "bookings"
+              ? "text-hotel-primary border-b-2 border-hotel-primary"
+              : "text-gray-600 hover:text-hotel-primary"
+          }`}
+          onClick={() => setSelectedTab("bookings")}
+        >
+          Booking History
+        </button>
+        <button
+          className={`py-2 px-4 font-medium ${
+            selectedTab === "transactions"
+              ? "text-hotel-primary border-b-2 border-hotel-primary"
+              : "text-gray-600 hover:text-hotel-primary"
+          }`}
+          onClick={() => setSelectedTab("transactions")}
+        >
+          Transaction History
+        </button>
+      </div>
+
+      {/* Conditional Content Based on Selected Tab */}
+      {selectedTab === "bookings" ? (
+        <div>
+          {/* Existing Booking History content */}
+          <div className="flex justify-between mb-4">
+            {/* ... existing filter controls ... */}
+          </div>
+
+          {/* ... existing table ... */}
+        </div>
+      ) : (
+        <div>
+          {/* Transaction History Tab Content */}
+          <Card className="mb-4">
+            <CardBody>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Transaction History</h2>
+                  <p className="text-sm text-gray-500">
+                    View all financial transactions for this guest
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="flat"
+                    color="primary"
+                    startContent={<FileText size={18} />}
+                    onClick={() =>
+                      handleDownloadPDF(transactionHistory, "transactions")
+                    }
+                    isDisabled={
+                      loadingTransactions || !transactionHistory.length
+                    }
+                  >
+                    PDF
+                  </Button>
+                  <Button
+                    variant="flat"
+                    color="success"
+                    startContent={<FileSpreadsheet size={18} />}
+                    onClick={() =>
+                      handleExportExcel(transactionHistory, "transactions")
+                    }
+                    isDisabled={
+                      loadingTransactions || !transactionHistory.length
+                    }
+                  >
+                    Excel
+                  </Button>
+                </div>
+              </div>
+
+              {loadingTransactions ? (
+                <div className="flex justify-center py-8">
+                  <Spinner size="lg" />
+                </div>
+              ) : transactionHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No transaction records found for this guest
+                </div>
+              ) : (
+                <Table aria-label="Transaction history">
+                  <TableHeader>
+                    <TableColumn key="bookingNumber">BOOKING ID</TableColumn>
+                    <TableColumn key="date">DATE</TableColumn>
+                    <TableColumn key="paymentMethod">
+                      PAYMENT METHOD
+                    </TableColumn>
+                    <TableColumn key="paymentType">PAYMENT TYPE</TableColumn>
+                    <TableColumn key="amount">AMOUNT</TableColumn>
+                    <TableColumn key="status">STATUS</TableColumn>
+                    <TableColumn key="transactionId">
+                      TRANSACTION ID
+                    </TableColumn>
+                  </TableHeader>
+                  <TableBody
+                    emptyContent={"No transactions found."}
+                    items={transactionHistory}
+                  >
+                    {(transaction) => (
+                      <TableRow key={transaction._id}>
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/bookings/${transaction.bookingNumber}`}
+                          >
+                            <span className="text-hotel-primary hover:underline">
+                              {transaction.bookingNumber}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {transaction.payments &&
+                          transaction.payments.length > 0
+                            ? new Date(
+                                transaction.payments[0].paymentDate
+                              ).toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <span className="capitalize">
+                            {transaction.payments &&
+                            transaction.payments.length > 0
+                              ? transaction.payments[0].paymentMethod
+                              : "N/A"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="capitalize">
+                            {transaction.payments &&
+                            transaction.payments.length > 0
+                              ? transaction.payments[0].paymentType || "N/A"
+                              : "N/A"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">
+                            {formatCurrency(transaction.totalPaid)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              transaction.isFullyPaid
+                                ? "bg-green-100 text-green-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {transaction.isFullyPaid
+                              ? "Fully Paid"
+                              : "Partial Payment"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-600">
+                            {transaction.payments &&
+                            transaction.payments.length > 0 &&
+                            transaction.payments[0].transactionId
+                              ? transaction.payments[0].transactionId
+                              : "N/A"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

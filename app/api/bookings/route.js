@@ -6,6 +6,7 @@ import Invoice from "../../../utils/model/financials/invoices/invoiceSchema";
 import { getHotelDatabase } from "../../../utils/config/hotelConnection";
 import { getModel } from "../../../utils/helpers/getModel";
 import { getUniqueGuestId } from "../../../utils/helpers/guestIdGenerator";
+import Transaction from "../../../utils/model/financials/transactions/transactionSchema";
 
 // Add export config for static rendering
 export const dynamic = "force-dynamic";
@@ -49,7 +50,12 @@ async function getNextInvoiceNumber(FinanceSettingsModel) {
   return `${settings.invoiceFormat.prefix}/${activeYear.yearFormat}/${nextSequence}`;
 }
 
-async function createInvoiceRecord(booking, hotelData, InvoiceModel) {
+async function createInvoiceRecord(
+  booking,
+  hotelData,
+  InvoiceModel,
+  transaction
+) {
   // Ensure booking has invoice number
   if (!booking.invoiceNumber) {
     throw new Error("Invoice number is required");
@@ -110,8 +116,29 @@ async function createInvoiceRecord(booking, hotelData, InvoiceModel) {
         (sum, room) => sum + room.totalAmount,
         0
       ),
+      discount: booking.discount || 0,
+      discountAmount: booking.discountAmount || 0,
+      servicesCharge: booking.servicesCharge || 0,
     },
+    // Add selected services if available
+    selectedServices: (booking.selectedServices || []).map((service) => ({
+      name: service.name,
+      price: service.price,
+      quantity: service.quantity || 1,
+      totalAmount:
+        service.totalAmount || service.price * (service.quantity || 1),
+    })),
   };
+
+  // Add transaction data if available
+  if (transaction) {
+    invoiceData.transactions = {
+      totalPaid: transaction.totalPaid,
+      payableAmount: transaction.payableAmount,
+      isFullyPaid: transaction.isFullyPaid,
+      payments: transaction.payments,
+    };
+  }
 
   try {
     // Check if invoice already exists
@@ -132,7 +159,8 @@ async function updateBookingStatuses(
   GuestModel,
   FinanceSettingsModel,
   hotelData,
-  InvoiceModel
+  InvoiceModel,
+  TransactionModel
 ) {
   const now = new Date();
   const bookingsToUpdate = await GuestModel.find({
@@ -143,26 +171,45 @@ async function updateBookingStatuses(
   const updatePromises = bookingsToUpdate.map(async (booking) => {
     if (booking.status !== "checkout") {
       try {
-        // First generate invoice number
-        const invoiceNumber = await getNextInvoiceNumber(FinanceSettingsModel);
-        if (!invoiceNumber) {
-          throw new Error("Failed to generate invoice number");
-        }
-
-        // Update booking with invoice number
+        // Update booking status to checkout
         booking.status = "checkout";
-        booking.invoiceNumber = invoiceNumber;
         await booking.save();
 
-        // Then create invoice record
-        await createInvoiceRecord(
-          {
-            ...booking.toObject(),
-            invoiceNumber, // Ensure invoiceNumber is passed
-          },
-          hotelData,
-          InvoiceModel
-        );
+        // Get transaction data to check payment status
+        const transaction = await TransactionModel.findOne({
+          bookingId: booking._id.toString(),
+        });
+
+        // Only generate invoice number if payment is completed AND isFullyPaid is true
+        if (
+          booking.paymentStatus === "completed" &&
+          !booking.invoiceNumber &&
+          transaction &&
+          transaction.isFullyPaid
+        ) {
+          // First generate invoice number
+          const invoiceNumber = await getNextInvoiceNumber(
+            FinanceSettingsModel
+          );
+          if (!invoiceNumber) {
+            throw new Error("Failed to generate invoice number");
+          }
+
+          // Update booking with invoice number
+          booking.invoiceNumber = invoiceNumber;
+          await booking.save();
+
+          // Then create invoice record
+          await createInvoiceRecord(
+            {
+              ...booking.toObject(),
+              invoiceNumber, // Ensure invoiceNumber is passed
+            },
+            hotelData,
+            InvoiceModel,
+            transaction // Pass transaction data to the invoice creation
+          );
+        }
       } catch (error) {
         console.error("Error processing checkout:", error);
         booking.status = "checkout";
@@ -182,13 +229,15 @@ export async function GET(request) {
     const GuestModel = getModel("Guest", Guest);
     const FinanceSettingsModel = getModel("FinanceSettings", FinanceSettings);
     const InvoiceModel = getModel("Invoice", Invoice);
+    const TransactionModel = getModel("Transaction", Transaction);
 
     // Update booking statuses with invoice generation
     const updatedCount = await updateBookingStatuses(
       GuestModel,
       FinanceSettingsModel,
       hotelData,
-      InvoiceModel
+      InvoiceModel,
+      TransactionModel
     );
 
     // Get search params safely
@@ -236,13 +285,25 @@ export async function GET(request) {
     // Generate invoice numbers for checkout bookings that don't have one
     const updatedBookings = await Promise.all(
       bookingsWithGuestIds.map(async (booking) => {
-        if (booking.status === "checkout" && !booking.invoiceNumber) {
+        // Get transaction data to check payment status
+        const transaction = await TransactionModel.findOne({
+          bookingId: booking._id.toString(),
+        });
+
+        if (
+          booking.status === "checkout" &&
+          booking.paymentStatus === "completed" &&
+          !booking.invoiceNumber &&
+          transaction &&
+          transaction.isFullyPaid
+        ) {
           try {
             // Lock the document while updating
             const updatedBooking = await GuestModel.findOneAndUpdate(
               {
                 _id: booking._id,
                 invoiceNumber: { $exists: false }, // Only update if no invoice number
+                paymentStatus: "completed", // Ensure payment is completed
               },
               {
                 $set: {
@@ -258,7 +319,8 @@ export async function GET(request) {
               await createInvoiceRecord(
                 updatedBooking,
                 hotelData,
-                InvoiceModel
+                InvoiceModel,
+                transaction // Pass transaction data to the invoice creation
               );
               return updatedBooking;
             }

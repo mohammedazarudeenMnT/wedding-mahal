@@ -8,6 +8,11 @@ import { toast } from "react-toastify";
 import { SearchIcon } from "../ui/Table/SearchIcon";
 import { PlusIcon } from "../ui/Table/PlusIcon";
 import TableSkeleton from "../ui/TableSkeleton";
+import { FileText, FileSpreadsheet, FileJson, Download } from "lucide-react";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { Parser } from "json2csv";
 import {
   Table,
   TableHeader,
@@ -20,6 +25,13 @@ import { User } from "@heroui/user";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Pagination } from "@heroui/pagination";
+import { Spinner } from "@heroui/spinner";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
 import { useRouter } from "next/navigation";
 import { usePagePermission } from "../../hooks/usePagePermission";
 
@@ -33,6 +45,28 @@ const INITIAL_VISIBLE_COLUMNS = [
   "notes",
   "actions",
 ];
+
+const formatCurrency = (amount) => {
+  if (!amount || isNaN(amount)) return "₹0.00";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const getTailwindColor = (element, className) => {
+  const tempElement = document.createElement(element);
+  tempElement.className = className;
+  document.body.appendChild(tempElement);
+
+  const color = window.getComputedStyle(tempElement).backgroundColor;
+  document.body.removeChild(tempElement);
+
+  const match = color.match(/\d+/g);
+  return match ? match.map(Number) : [41, 128, 185]; // fallback color
+};
 
 export default function CrmList() {
   const router = useRouter();
@@ -89,6 +123,7 @@ export default function CrmList() {
     column: "name",
     direction: "ascending",
   });
+  const [isExporting, setIsExporting] = useState(false);
 
   const hasAddPermission = usePagePermission("crm/add-contact", "add");
   const hasMovePermission = usePagePermission("bookings", "add");
@@ -254,17 +289,259 @@ export default function CrmList() {
     );
   }, [page, pages, rowsPerPage, filteredItems.length]);
 
+  // Function to get export data for PDF/Excel/CSV
+  const getExportData = useCallback(() => {
+    return sortedItems.map((contact) => {
+      const startDate = contact.eventStartDate
+        ? new Date(contact.eventStartDate).toLocaleDateString()
+        : "-";
+      const endDate = contact.eventEndDate
+        ? new Date(contact.eventEndDate).toLocaleDateString()
+        : "-";
+
+      return {
+        Name: `${contact.firstName} ${contact.lastName}` || "-",
+        Email: contact.email || "-",
+        "Mobile No": contact.mobileno || "-",
+        "Property Type": contact.propertyType || "-",
+        "Event Start Date": startDate,
+        "Event End Date": endDate,
+        "Event Type": contact.eventType || "-",
+        Notes: contact.notes || "-",
+      };
+    });
+  }, [sortedItems]);
+
+  // PDF Export function
+  const handleDownloadPDF = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const doc = new jsPDF("l", "mm", "a4");
+      const exportData = getExportData();
+      const hotelPrimaryColor = getTailwindColor("div", "bg-hotel-primary");
+
+      // Add header banner
+      doc.setFillColor(
+        hotelPrimaryColor[0],
+        hotelPrimaryColor[1],
+        hotelPrimaryColor[2]
+      );
+      doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+      // Add title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(255, 255, 255);
+      doc.text("CRM Contacts", 15, 15);
+
+      // Add metadata
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()}`,
+        doc.internal.pageSize.width - 65,
+        35
+      );
+
+      // Configure table
+      doc.autoTable({
+        head: [
+          Object.keys(
+            exportData[0] || {
+              Name: "",
+              Email: "",
+              "Mobile No": "",
+              "Property Type": "",
+              "Event Start Date": "",
+              "Event End Date": "",
+              "Event Type": "",
+              Notes: "",
+            }
+          ),
+        ],
+        body: exportData.map(Object.values),
+        startY: 45,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [80, 80, 80],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: hotelPrimaryColor,
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        didDrawPage: (data) => {
+          // Restore header on each page
+          doc.setFillColor(
+            hotelPrimaryColor[0],
+            hotelPrimaryColor[1],
+            hotelPrimaryColor[2]
+          );
+          doc.rect(0, 0, doc.internal.pageSize.width, 25, "F");
+
+          // Add footer
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(70, 70, 70);
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        },
+      });
+
+      doc.save("crm-contacts.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // Excel Export function
+  const handleDownloadExcel = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "CRM Contacts");
+      XLSX.writeFile(wb, "crm-contacts.xlsx");
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast.error("Failed to generate Excel file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // CSV Export function
+  const handleDownloadCSV = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      if (exportData.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+
+      const fields = Object.keys(exportData[0]);
+      const parser = new Parser({ fields });
+      const csv = parser.parse(exportData);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "crm-contacts.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating CSV:", error);
+      toast.error("Failed to generate CSV file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // JSON Export function
+  const handleDownloadJSON = useCallback(() => {
+    try {
+      setIsExporting(true);
+      const exportData = getExportData();
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "crm-contacts.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error generating JSON:", error);
+      toast.error("Failed to generate JSON file");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [getExportData]);
+
+  // Export button dropdown
+  const downloadButton = useMemo(
+    () => (
+      <Dropdown>
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            variant="flat"
+            className="bg-hotel-secondary"
+            isLoading={isExporting}
+          >
+            {isExporting ? <Spinner size="sm" /> : <Download size={18} />}
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu aria-label="Download Options">
+          <DropdownItem
+            key="pdf"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadPDF}
+            isDisabled={isExporting}
+          >
+            PDF
+          </DropdownItem>
+          <DropdownItem
+            key="excel"
+            startContent={<FileSpreadsheet size={16} />}
+            onPress={handleDownloadExcel}
+          >
+            Excel
+          </DropdownItem>
+          <DropdownItem
+            key="csv"
+            startContent={<FileText size={16} />}
+            onPress={handleDownloadCSV}
+          >
+            CSV
+          </DropdownItem>
+          <DropdownItem
+            key="json"
+            startContent={<FileJson size={16} />}
+            onPress={handleDownloadJSON}
+          >
+            JSON
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+    ),
+    [
+      isExporting,
+      handleDownloadPDF,
+      handleDownloadExcel,
+      handleDownloadCSV,
+      handleDownloadJSON,
+    ]
+  );
+
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between gap-2 items-end">
-          <h2 className="text-hotel-primary-text font-[500]">Contact List</h2>
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold">CRM Contacts</h1>
           <div className="flex gap-3">
+            {downloadButton}
             <Input
               isClearable
+              className="w-full sm:max-w-[44%]"
               classNames={{
                 base: "w-full sm:max-w-[44%]",
                 inputWrapper: "bg-hotel-secondary",
+                input: "text-hotel-primary-text",
               }}
               placeholder="Search by name..."
               startContent={<SearchIcon />}
@@ -273,14 +550,14 @@ export default function CrmList() {
               onValueChange={setFilterValue}
             />
             {hasAddPermission && (
-              <Link href="/dashboard/crm/add-contact">
-                <Button
-                  className="bg-hotel-primary-yellow text-hotel-primary-text"
-                  endContent={<PlusIcon />}
-                >
-                  Add Contact
-                </Button>
-              </Link>
+              <Button
+                as={Link}
+                href="/dashboard/crm/add-contact"
+                className="bg-hotel-primary-yellow text-hotel-primary-text"
+                endContent={<PlusIcon />}
+              >
+                Add Contact
+              </Button>
             )}
           </div>
         </div>
@@ -292,7 +569,7 @@ export default function CrmList() {
             Rows per page:
             <select
               className="bg-transparent outline-none text-default-400 text-small"
-              onChange={onRowsPerPageChange}
+              onChange={(e) => setRowsPerPage(Number(e.target.value))}
             >
               <option value={rowsPerPage}>{rowsPerPage}</option>
               <option value="5">5</option>
@@ -305,10 +582,10 @@ export default function CrmList() {
     );
   }, [
     filterValue,
-    rowsPerPage,
-    onRowsPerPageChange,
     contacts.length,
+    rowsPerPage,
     hasAddPermission,
+    downloadButton,
   ]);
 
   if (isLoading) {

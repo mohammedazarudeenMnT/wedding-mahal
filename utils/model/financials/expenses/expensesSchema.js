@@ -16,7 +16,7 @@ const expensesSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
+      default: "",
     },
     date: {
       type: Date,
@@ -24,7 +24,17 @@ const expensesSchema = new mongoose.Schema(
     },
     receipt: {
       url: String,
-      filename: String
+      filename: String,
+    },
+    paymentType: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Bank",
+    },
+    bank: {
+      type: String,
+    },
+    reference: {
+      type: String,
     },
   },
   { timestamps: true }
