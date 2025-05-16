@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Tooltip } from "@heroui/tooltip"
 import {
   format,
   startOfMonth,
@@ -56,31 +57,51 @@ export default function MonthlyCalendar({ currentDate, occasions = [] }) {
           const hasOccasions = dayOccasions.length > 0
 
           return (
-            <div
+            <Tooltip
               key={index}
-              className={`
-                relative h-8 w-8 flex items-center justify-center
-                ${!isCurrentMonth ? "text-gray-400" : "text-gray-700"}
-              `}
+              content={
+                hasOccasions ? (
+                  <div className="space-y-1">
+                    {dayOccasions.map((occ, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: occ.color }}
+                        />
+                        <span>{occ.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              }
+              className="bg-white px-2 py-1 rounded-md shadow-lg border border-gray-100"
+              isDisabled={!hasOccasions}
             >
-              <span className={`z-10 ${hasOccasions ? 'text-white' : ''}`}>
-                {format(day, "d")}
-              </span>
-              {hasOccasions && (
-                <div 
-                  className="absolute inset-0 rounded-full"
-                  style={{ 
-                    backgroundColor: dayOccasions[0].color,
-                    opacity: isCurrentMonth ? 1 : 0.5 
-                  }}
-                />
-              )}
-              {dayOccasions.length > 1 && (
-                <span className="absolute -bottom-1 text-[8px] text-gray-500">
-                  +{dayOccasions.length - 1}
+              <div
+                className={`
+                  relative h-8 w-8 flex items-center justify-center
+                  ${!isCurrentMonth ? "text-gray-400" : "text-gray-700"}
+                `}
+              >
+                <span className={`z-10 ${hasOccasions ? 'text-white' : ''}`}>
+                  {format(day, "d")}
                 </span>
-              )}
-            </div>
+                {hasOccasions && (
+                  <div 
+                    className="absolute inset-0 rounded-full"
+                    style={{ 
+                      backgroundColor: dayOccasions[0].color,
+                      opacity: isCurrentMonth ? 1 : 0.5 
+                    }}
+                  />
+                )}
+                {dayOccasions.length > 1 && (
+                  <span className="absolute -bottom-1 text-[8px] text-gray-500">
+                    +{dayOccasions.length - 1}
+                  </span>
+                )}
+              </div>
+            </Tooltip>
           )
         })}
       </div>

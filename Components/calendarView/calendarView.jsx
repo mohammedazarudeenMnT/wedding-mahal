@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect } from "react"
 import axios from "axios"
@@ -8,7 +8,8 @@ import MonthlyCalendar from "./monthlyCalendar"
 import WeeklySchedule from "./weeklySchedule"
 import { Button } from "@heroui/button"
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown"
-import { Calendar } from "@/Components/ui/calendar"
+// import { Calendar } from "@/Components/ui/calendar"
+import { toast } from "react-toastify"
 
 export default function CalendarView() {
   // Add state for occasions
@@ -16,9 +17,12 @@ export default function CalendarView() {
 
   // Separate states for each calendar
   const [occasionsDate, setOccasionsDate] = useState(new Date())
-  const [bookingsDate, setBookingsDate] = useState(new Date(2025, 3, 1))
+  const [bookingsDate, setBookingsDate] = useState(new Date())
   const [showCalendar, setShowCalendar] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('all')
+
+  const [bookings, setBookings] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // Separate handlers for each calendar
   const handleOccasionsPrevMonth = () => {
@@ -37,6 +41,14 @@ export default function CalendarView() {
     setBookingsDate(addMonths(bookingsDate, 1))
   }
 
+  // Add month navigation function
+  const handleMonthChange = (direction) => {
+    setBookingsDate(direction === 'next' ? 
+      addMonths(bookingsDate, 1) : 
+      subMonths(bookingsDate, 1)
+    )
+  }
+
   // Add useEffect to fetch occasions
   useEffect(() => {
     const fetchOccasions = async () => {
@@ -51,6 +63,53 @@ export default function CalendarView() {
     }
 
     fetchOccasions()
+  }, [])
+
+  // Modified fetchBookings to filter out checkout and cancelled
+  const fetchBookings = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('/api/bookings')
+      if (response.data.success) {
+        const formattedBookings = response.data.bookings
+          .filter(booking => ['booked', 'checkin'].includes(booking.status))
+          .map(booking => {
+            // Get all room/hall numbers for this booking
+            const propertyNumbers = booking.rooms
+              .map(room => room.number)
+              .sort((a, b) => a - b) // Sort numbers in ascending order
+              .join(', '); // Join with comma and space
+
+            // Create property ID with all numbers
+            const propertyId = booking.propertyType === 'hall' 
+              ? `HALL ${propertyNumbers}` 
+              : `ROOM ${propertyNumbers}`;
+
+            return {
+              id: booking.bookingNumber,
+              propertyId,
+              title: booking.status === 'checkin' ? 'Occupied' : 'Booked',
+              date: new Date(booking.checkInDate),
+              type: booking.timeSlot?.name || 'Full Day',
+              subtitle: booking.eventType || `${booking.firstName} ${booking.lastName}`,
+              color: booking.status === 'checkin' ? 
+                (booking.propertyType === 'hall' ? 'bg-yellow-200' : 'bg-blue-300') :
+                (booking.propertyType === 'hall' ? 'bg-orange-300' : 'bg-blue-200'),
+              propertyType: booking.propertyType
+            }
+          });
+        setBookings(formattedBookings)
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      toast.error('Failed to fetch bookings')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchBookings()
   }, [])
 
   // Get unique occasion names for the legend
@@ -110,31 +169,30 @@ export default function CalendarView() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Schedule</h2>
               <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setShowCalendar(!showCalendar)}
+                {/* Simple month navigation */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleMonthChange('prev')}
+                    className="h-8 w-8"
                   >
-                    <CalendarIcon className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  
-                  {showCalendar && (
-                    <div className="absolute right-0 mt-2 z-50 bg-white rounded-lg shadow-lg">
-                      <Calendar
-                        mode="single"
-                        selected={bookingsDate}
-                        onSelect={(date) => {
-                          setBookingsDate(date)
-                          setShowCalendar(false)
-                        }}
-                        initialFocus
-                      />
-                    </div>
-                  )}
+                  <span className="text-lg font-medium">
+                    {format(bookingsDate, 'MMMM yyyy')}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleMonthChange('next')}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-                
+
+                {/* Property type filter */}
                 <Dropdown>
                   <DropdownTrigger className="hidden sm:flex">
                     <Button className="min-w-28 bg-hotel-secondary text-hotel-primary-text">
@@ -151,10 +209,17 @@ export default function CalendarView() {
               </div>
             </div>
             
-            <WeeklySchedule 
-              currentDate={bookingsDate} 
-              category={selectedCategory} 
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[600px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+              </div>
+            ) : (
+              <WeeklySchedule 
+                currentDate={bookingsDate} 
+                category={selectedCategory}
+                bookings={bookings}
+              />
+            )}
           </div>
         </div>
       </div>
