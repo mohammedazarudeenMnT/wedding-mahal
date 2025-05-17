@@ -360,10 +360,14 @@ const RecordPaymentPage = () => {
           if (paymentLinkResponse.data.success) {
             transactionData.razorpayPaymentLinkId =
               paymentLinkResponse.data.paymentLinkId;
-            transactionData.status = "pending";
+            transactionData.status = "completed";
             transactionData.paymentType = paymentDetails.paymentType;
             transactionData.bank = paymentDetails.bank;
             transactionData.transactionId = paymentDetails.transactionId || "";
+
+            // Update paymentDetails with the payment link ID
+            paymentDetails.razorpayPaymentLinkId =
+              paymentLinkResponse.data.paymentLinkId;
 
             // Save the transaction
             const transactionResponse = await axios.post(
@@ -390,6 +394,7 @@ const RecordPaymentPage = () => {
                   bookingId: selectedTransaction.bookingId,
                   bookingNumber: selectedTransaction.bookingNumber,
                   customerName: paymentDetails.customerName,
+                  razorpayPaymentLinkId: paymentLinkResponse.data.paymentLinkId,
                 };
 
                 await axios.post("/api/financials/bank/entry", bankEntryData);
@@ -441,6 +446,15 @@ const RecordPaymentPage = () => {
                 bookingNumber: selectedTransaction.bookingNumber,
                 customerName: paymentDetails.customerName,
               };
+
+              // Add razorpayPaymentLinkId if available and if payment method is paymentLink
+              if (
+                paymentMethod === "paymentLink" &&
+                transactionData.razorpayPaymentLinkId
+              ) {
+                bankEntryData.razorpayPaymentLinkId =
+                  transactionData.razorpayPaymentLinkId;
+              }
 
               await axios.post("/api/financials/bank/entry", bankEntryData);
             } catch (bankEntryError) {
@@ -606,6 +620,10 @@ const RecordPaymentPage = () => {
             );
             bookingFormData.append("razorpayAmount", paymentAmount.toString());
 
+            // Update paymentDetails with the payment link ID
+            paymentDetails.razorpayPaymentLinkId =
+              linkResponse.data.paymentLinkId;
+
             // Add property to indicate partial payment if needed
             if (paymentAmount < parseFloat(formData.payableAmount)) {
               bookingFormData.append("isPartialPayment", "true");
@@ -658,6 +676,15 @@ const RecordPaymentPage = () => {
                         bookingNumber: bookingData.bookingNumber || "",
                         customerName: paymentDetails.customerName,
                       };
+
+                      // Add razorpayPaymentLinkId if this is a payment link method
+                      if (
+                        paymentMethod === "paymentLink" &&
+                        paymentDetails.razorpayPaymentLinkId
+                      ) {
+                        bankEntryData.razorpayPaymentLinkId =
+                          paymentDetails.razorpayPaymentLinkId;
+                      }
 
                       await axios.post(
                         "/api/financials/bank/entry",
@@ -730,6 +757,15 @@ const RecordPaymentPage = () => {
                   bookingNumber: bookingData.bookingNumber || "",
                   customerName: paymentDetails.customerName,
                 };
+
+                // Add razorpayPaymentLinkId if this is a payment link method
+                if (
+                  paymentMethod === "paymentLink" &&
+                  paymentDetails.razorpayPaymentLinkId
+                ) {
+                  bankEntryData.razorpayPaymentLinkId =
+                    paymentDetails.razorpayPaymentLinkId;
+                }
 
                 await axios.post("/api/financials/bank/entry", bankEntryData);
               } catch (bankEntryError) {

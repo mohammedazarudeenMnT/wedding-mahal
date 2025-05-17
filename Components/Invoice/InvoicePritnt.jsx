@@ -214,6 +214,49 @@ const InvoiceContent = React.forwardRef(({ ...props }, ref) => {
             </div>
           </div>
         </div>
+        {/* Hall Details Section - Only display if hallDetails exists */}
+        {props.hallDetails && (
+          <div className="mb-6 print:mb-2">
+            <h2 className="text-lg font-semibold mb-2 text-gray-700 print:text-base">
+              Hall Event Details
+            </h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Event Type:</span>{" "}
+                  {props.hallDetails.eventType}
+                </p>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Event Name:</span>{" "}
+                  {props.hallDetails.eventName}
+                </p>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Guest Capacity:</span>{" "}
+                  {props.hallDetails.guestCapacity} persons
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Decoration Package:</span>{" "}
+                  {props.hallDetails.decorationPackage}
+                </p>
+                {props.hallDetails.additionalServices &&
+                  props.hallDetails.additionalServices.length > 0 && (
+                    <p className="text-sm text-gray-600 print:text-xs">
+                      <span className="font-medium">Additional Services:</span>{" "}
+                      {props.hallDetails.additionalServices.join(", ")}
+                    </p>
+                  )}
+                {props.hallDetails.specialRequirements && (
+                  <p className="text-sm text-gray-600 print:text-xs">
+                    <span className="font-medium">Special Requirements:</span>{" "}
+                    {props.hallDetails.specialRequirements}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {/* Transaction History Section - Only display if transactions exist */}
         {props.transactions &&
           props.transactions.payments &&

@@ -310,27 +310,52 @@ export default function AddExpenses({ params }) {
 
   if (!hasPermission) {
     return (
-      <div className="p-4 text-center">
-        You don&apos;t have permission to {isEditing ? "edit" : "add"} expenses
+      <div className="flex flex-col items-center justify-center min-h-[80vh]">
+        <h1 className="text-2xl font-semibold text-gray-800 mb-4">
+          Permission Denied
+        </h1>
+        <p className="text-gray-600 mb-6">
+          You don&apos;t have permission to {isEditing ? "edit" : "add"}{" "}
+          expenses.
+        </p>
+        <Button
+          onClick={() => router.push("/dashboard/financials/expenses")}
+          className="bg-primary text-white"
+        >
+          Back to Expenses
+        </Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh]">
+        <Spinner size="lg" />
+        <span className="ml-2 text-gray-600">Loading...</span>
       </div>
     );
   }
 
   return (
-    <section className="p-4 md:p-6 bg-content1 rounded-large shadow-small w-full min-h-screen">
-      <div className="container max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            {isEditing ? "Edit Expense" : "Add Expense"}
+    <div className="container mx-auto py-6 px-4">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+          <h1 className="text-xl font-semibold text-gray-800">
+            {isEditing ? "Edit Expense" : "Add New Expense"}
           </h1>
-          {isLoading && <Spinner size="sm" />}
+          <p className="text-sm text-gray-500 mt-1">
+            {isEditing
+              ? "Update the expense details below"
+              : "Enter the expense details to create a new record"}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Reference ID Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Reference ID
               </label>
               <Input
@@ -339,12 +364,16 @@ export default function AddExpenses({ params }) {
                 value={formData.reference}
                 onChange={(e) => handleInputChange("reference", e.target.value)}
                 className="w-full"
+                size="md"
+                variant="bordered"
+                clearable
+                onClear={() => handleClearInput("reference")}
               />
             </div>
 
             {/* Date Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Date <span className="text-red-500">*</span>
               </label>
               <Input
@@ -352,14 +381,16 @@ export default function AddExpenses({ params }) {
                 value={formData.date}
                 onChange={(e) => handleInputChange("date", e.target.value)}
                 className="w-full"
+                size="md"
+                variant="bordered"
                 isInvalid={!!errors.date}
                 errorMessage={errors.date}
               />
             </div>
 
             {/* Amount Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Amount <span className="text-red-500">*</span>
               </label>
               <Input
@@ -368,36 +399,37 @@ export default function AddExpenses({ params }) {
                 value={formData.amount}
                 onChange={(e) => handleInputChange("amount", e.target.value)}
                 className="w-full"
+                size="md"
+                variant="bordered"
                 isInvalid={!!errors.amount}
                 errorMessage={errors.amount}
-                startContent={<div className="pointer-events-none">₹</div>}
-                endContent={
-                  formData.amount && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      isIconOnly
-                      onClick={() => handleClearInput("amount")}
-                    >
-                      ×
-                    </Button>
-                  )
+                startContent={
+                  <div className="pointer-events-none text-gray-500">₹</div>
                 }
+                clearable
+                onClear={() => handleClearInput("amount")}
               />
+              {errors.amount && (
+                <p className="text-xs text-red-500 mt-1">{errors.amount}</p>
+              )}
             </div>
 
             {/* Payment Type Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Payment Type <span className="text-red-500">*</span>
               </label>
               <Select
                 placeholder="Select payment type"
-                value={formData.paymentType}
+                selectedKeys={
+                  formData.paymentType ? [formData.paymentType] : []
+                }
                 onChange={(e) =>
                   handleInputChange("paymentType", e.target.value)
                 }
                 className="w-full"
+                size="md"
+                variant="bordered"
                 isInvalid={!!errors.paymentType}
                 errorMessage={errors.paymentType}
               >
@@ -427,11 +459,16 @@ export default function AddExpenses({ params }) {
                   </SelectItem>
                 ))}
               </Select>
+              {errors.paymentType && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.paymentType}
+                </p>
+              )}
             </div>
 
             {/* Category Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Category <span className="text-red-500">*</span>
               </label>
               <Tooltip content="Select existing or type new category">
@@ -443,32 +480,27 @@ export default function AddExpenses({ params }) {
                   }
                   list="categoryOptions"
                   className="w-full"
+                  size="md"
+                  variant="bordered"
                   isInvalid={!!errors.category}
                   errorMessage={errors.category}
-                  endContent={
-                    formData.category && (
-                      <Button
-                        size="sm"
-                        variant="light"
-                        isIconOnly
-                        onClick={() => handleClearInput("category")}
-                      >
-                        ×
-                      </Button>
-                    )
-                  }
+                  clearable
+                  onClear={() => handleClearInput("category")}
                 />
               </Tooltip>
               <datalist id="categoryOptions">
                 {categories.map((cat) => (
-                  <option key={cat.name} value={cat.name} />
+                  <option key={cat.name || cat} value={cat.name || cat} />
                 ))}
               </datalist>
+              {errors.category && (
+                <p className="text-xs text-red-500 mt-1">{errors.category}</p>
+              )}
             </div>
 
             {/* Expense Type Field */}
-            <div>
-              <label className="block text-sm font-medium mb-1">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Expense Type <span className="text-red-500">*</span>
               </label>
               <Tooltip content="Select existing or type new expense type">
@@ -478,32 +510,29 @@ export default function AddExpenses({ params }) {
                   onChange={(e) => handleInputChange("expense", e.target.value)}
                   list="expenseOptions"
                   className="w-full"
+                  size="md"
+                  variant="bordered"
                   isInvalid={!!errors.expense}
                   errorMessage={errors.expense}
-                  endContent={
-                    formData.expense && (
-                      <Button
-                        size="sm"
-                        variant="light"
-                        isIconOnly
-                        onClick={() => handleClearInput("expense")}
-                      >
-                        ×
-                      </Button>
-                    )
-                  }
+                  clearable
+                  onClear={() => handleClearInput("expense")}
                 />
               </Tooltip>
               <datalist id="expenseOptions">
                 {expenses.map((exp) => (
-                  <option key={exp.name} value={exp.name} />
+                  <option key={exp.name || exp} value={exp.name || exp} />
                 ))}
               </datalist>
+              {errors.expense && (
+                <p className="text-xs text-red-500 mt-1">{errors.expense}</p>
+              )}
             </div>
 
             {/* Description Field */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Notes</label>
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Notes
+              </label>
               <Textarea
                 placeholder="Enter notes"
                 value={formData.description}
@@ -511,21 +540,23 @@ export default function AddExpenses({ params }) {
                   handleInputChange("description", e.target.value)
                 }
                 className="w-full"
+                size="md"
+                variant="bordered"
                 minRows={4}
               />
             </div>
 
             {/* Receipt Upload Field */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
+            <div className="md:col-span-2 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
                 Upload Receipt
               </label>
               <div
-                className={`border-2 border-dashed rounded-lg p-4 ${
+                className={`border-2 border-dashed rounded-xl p-6 transition-all ${
                   isDragging
-                    ? "border-hotel-primary bg-blue-50"
-                    : "border-gray-300"
-                } transition-colors duration-200`}
+                    ? "border-primary bg-primary-50"
+                    : "border-gray-200 hover:border-primary/60 hover:bg-gray-50"
+                } cursor-pointer`}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setIsDragging(true);
@@ -535,7 +566,7 @@ export default function AddExpenses({ params }) {
               >
                 <div className="flex flex-col items-center justify-center gap-2">
                   <svg
-                    className="w-8 h-8 text-gray-500 mb-2"
+                    className="w-10 h-10 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -543,7 +574,7 @@ export default function AddExpenses({ params }) {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth="2"
+                      strokeWidth="1.5"
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
@@ -556,35 +587,37 @@ export default function AddExpenses({ params }) {
                   />
                   <label
                     htmlFor="receipt-upload"
-                    className="cursor-pointer text-sm text-blue-600 hover:text-blue-800"
+                    className="cursor-pointer text-sm font-medium text-primary hover:text-primary-600 transition"
                   >
                     Click to upload
                   </label>
                   <p className="text-xs text-gray-500">or drag and drop</p>
-                  <p className="text-xs text-gray-500">
-                    Supports images and PDF files
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supports images (JPG, PNG) and PDF files
                   </p>
                 </div>
               </div>
 
               {(formData.receipt || existingReceiptUrl) && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
+                <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-green-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-sm text-gray-700">
+                      <div className="text-green-500 rounded-full bg-green-50 p-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
                         {formData.receipt instanceof File
                           ? formData.receipt.name
                           : existingReceiptUrl
@@ -597,30 +630,44 @@ export default function AddExpenses({ params }) {
                       variant="light"
                       isIconOnly
                       onClick={handleReceiptClear}
-                      className="text-gray-500 hover:text-red-500"
+                      className="text-gray-500 hover:text-red-500 rounded-full"
                     >
-                      ×
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
                     </Button>
                   </div>
                   {(previewUrl || existingReceiptUrl) && (
-                    <Image
-                      src={previewUrl || existingReceiptUrl}
-                      alt="Receipt preview"
-                      width={200}
-                      height={160}
-                      className="max-h-40 rounded-lg object-contain mx-auto"
-                      unoptimized={!!previewUrl} // Skip optimization for local preview URLs
-                    />
+                    <div className="relative h-40 bg-gray-100 rounded-lg overflow-hidden">
+                      <Image
+                        src={previewUrl || existingReceiptUrl}
+                        alt="Receipt preview"
+                        fill
+                        className="object-contain"
+                        unoptimized={!!previewUrl}
+                      />
+                    </div>
                   )}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex gap-3 justify-center mt-8">
+          <div className="flex gap-3 justify-end mt-8">
             <Button
               size="lg"
-              className="bg-hotel-primary-red text-white"
+              variant="flat"
+              className="bg-gray-100 text-gray-700 hover:bg-gray-200"
               onClick={() => router.back()}
               disabled={isSubmitting}
             >
@@ -630,10 +677,13 @@ export default function AddExpenses({ params }) {
               size="lg"
               type="submit"
               disabled={isSubmitting}
-              className="bg-hotel-primary text-white"
+              className="bg-primary text-white"
             >
               {isSubmitting ? (
-                <Spinner size="sm" color="white" />
+                <div className="flex items-center">
+                  <Spinner size="sm" color="white" className="mr-2" />
+                  <span>{isEditing ? "Updating..." : "Saving..."}</span>
+                </div>
               ) : (
                 `${isEditing ? "Update" : "Save"} Expense`
               )}
@@ -641,6 +691,6 @@ export default function AddExpenses({ params }) {
           </div>
         </form>
       </div>
-    </section>
+    </div>
   );
 }

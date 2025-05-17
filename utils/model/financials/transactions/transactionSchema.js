@@ -31,7 +31,7 @@ const PaymentSchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ["card", "upi", "netbanking", "cash", "bank", ""],
+      enum: ["card", "upi", "netbanking", "cash", "bank", "paymentLink"],
     },
     // For payment link
     razorpayPaymentLinkId: {

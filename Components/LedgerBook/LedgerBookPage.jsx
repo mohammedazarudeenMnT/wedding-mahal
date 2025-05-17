@@ -9,13 +9,18 @@ import {
   TableCell,
 } from "@heroui/table";
 import { Select, SelectItem } from "@heroui/select";
-import { Input } from "@heroui/input";
 import {
   IconPrinter,
   IconDownload,
   IconCalendarEvent,
 } from "@tabler/icons-react";
-import { FileText, FileSpreadsheet, FileJson, Download } from "lucide-react";
+import {
+  FileText,
+  FileSpreadsheet,
+  FileJson,
+  Download,
+  Eye,
+} from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { DateRangePicker } from "@heroui/date-picker";
@@ -25,12 +30,20 @@ import {
   DropdownMenu,
   DropdownItem,
 } from "@heroui/dropdown";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Spinner } from "@heroui/spinner";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { Parser } from "json2csv";
-import { addDays, format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { CalendarDate } from "@internationalized/date";
 
 const formatCurrency = (amount) => {
   if (!amount || isNaN(amount)) return "₹0.00";
@@ -57,29 +70,44 @@ const getTailwindColor = (element, className) => {
 const LedgerBookPage = () => {
   const [ledger, setLedger] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Create date range using proper CalendarDate objects
+  const startOfCurrentMonth = startOfMonth(new Date());
+  const endOfCurrentMonth = endOfMonth(new Date());
+
   const [dateRange, setDateRange] = useState({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
+    start: new CalendarDate(
+      startOfCurrentMonth.getFullYear(),
+      startOfCurrentMonth.getMonth() + 1,
+      startOfCurrentMonth.getDate()
+    ),
+    end: new CalendarDate(
+      endOfCurrentMonth.getFullYear(),
+      endOfCurrentMonth.getMonth() + 1,
+      endOfCurrentMonth.getDate()
+    ),
   });
+
   const [banks, setBanks] = useState([]);
   const [selectedBank, setSelectedBank] = useState("all");
   const [accountType, setAccountType] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
   const [bankBalance, setBankBalance] = useState(0);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
 
   // Convert date range to month/year for API
   const getMonthYearFromDateRange = useCallback(() => {
-    if (!dateRange?.from)
+    if (!dateRange?.start)
       return {
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
       };
 
     // We'll use the start date's month and year for the API
-    const from = new Date(dateRange.from);
     return {
-      month: from.getMonth() + 1,
-      year: from.getFullYear(),
+      month: dateRange.start.month,
+      year: dateRange.start.year,
     };
   }, [dateRange]);
 
@@ -130,31 +158,38 @@ const LedgerBookPage = () => {
   // Handle date range change
   const handleDateRangeChange = (range) => {
     if (!range || !range.start || !range.end) {
+      // If no range is selected, default to current month
+      const currentMonth = startOfMonth(new Date());
+      const endOfCurrentMonth = endOfMonth(new Date());
+
       setDateRange({
-        from: startOfMonth(new Date()),
-        to: endOfMonth(new Date()),
+        start: new CalendarDate(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() + 1,
+          currentMonth.getDate()
+        ),
+        end: new CalendarDate(
+          endOfCurrentMonth.getFullYear(),
+          endOfCurrentMonth.getMonth() + 1,
+          endOfCurrentMonth.getDate()
+        ),
       });
       return;
     }
 
-    const startDate = new Date(
-      range.start.year,
-      range.start.month - 1,
-      range.start.day
-    );
-    const endDate = new Date(
-      range.end.year,
-      range.end.month - 1,
-      range.end.day
-    );
-
-    setDateRange({
-      from: startDate,
-      to: endDate,
-    });
+    setDateRange(range);
 
     // Re-fetch ledger data when date range changes
-    setTimeout(() => fetchLedger(), 0);
+    // Only need to fetch new data if the month/year changed
+    const newMonth = range.start.month;
+    const newYear = range.start.year;
+
+    const oldMonth = dateRange.start?.month;
+    const oldYear = dateRange.start?.year;
+
+    if (newMonth !== oldMonth || newYear !== oldYear) {
+      setTimeout(() => fetchLedger(), 0);
+    }
   };
 
   // Handle bank filter change
@@ -177,28 +212,73 @@ const LedgerBookPage = () => {
   const filteredEntries = useMemo(() => {
     if (!ledger?.entries) return [];
 
-    return ledger.entries.filter((entry) => {
-      // First check if entry matches the selected bank
-      if (selectedBank !== "all" && entry.bank?._id !== selectedBank) {
-        return false;
-      }
-
-      // Then check if entry date is within the selected date range
-      if (dateRange?.from && dateRange?.to) {
+    // First filter by date range
+    const dateFiltered = ledger.entries.filter((entry) => {
+      // Check if entry date is within the selected date range
+      if (dateRange?.start && dateRange?.end) {
         const entryDate = new Date(entry.date);
-        const fromDate = new Date(dateRange.from);
-        const toDate = new Date(dateRange.to);
+
+        const fromDate = new Date(
+          dateRange.start.year,
+          dateRange.start.month - 1,
+          dateRange.start.day
+        );
+
+        const toDate = new Date(
+          dateRange.end.year,
+          dateRange.end.month - 1,
+          dateRange.end.day
+        );
 
         // Set hours to 0 for date-only comparison
         fromDate.setHours(0, 0, 0, 0);
         toDate.setHours(23, 59, 59, 999);
 
-        return entryDate >= fromDate && entryDate <= toDate;
+        return isWithinInterval(entryDate, { start: fromDate, end: toDate });
       }
 
       return true;
     });
-  }, [ledger, selectedBank, dateRange]);
+
+    // Then filter by bank if a specific bank is selected
+    const bankFiltered =
+      selectedBank === "all"
+        ? dateFiltered
+        : dateFiltered.filter((entry) => entry.bank?._id === selectedBank);
+
+    // If we're filtering by bank, recalculate running balances
+    if (selectedBank !== "all") {
+      // Get the opening balance for this account type
+      const openingBalance =
+        banks.find((bank) => bank._id === selectedBank)?.openingBalance || 0;
+
+      // Sort entries by date
+      const sortedEntries = [...bankFiltered].sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+      );
+
+      // Recalculate running balance starting from the account's opening balance
+      let runningBalance = Number(openingBalance);
+
+      return sortedEntries.map((entry) => {
+        // Update running balance based on transaction type
+        if (entry.type === "income") {
+          runningBalance += Number(entry.credit || 0);
+        } else if (entry.type === "expenses") {
+          runningBalance -= Number(entry.debit || 0);
+        }
+
+        // Return entry with corrected balance
+        return {
+          ...entry,
+          balance: runningBalance,
+        };
+      });
+    }
+
+    // If "all" is selected, return entries with original balance
+    return bankFiltered;
+  }, [ledger, selectedBank, dateRange, banks]);
 
   // Calculate summary values based on filtered entries
   const summary = useMemo(() => {
@@ -211,11 +291,11 @@ const LedgerBookPage = () => {
 
     const income = filteredEntries
       .filter((entry) => entry.type === "income")
-      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+      .reduce((sum, entry) => sum + (Number(entry.credit) || 0), 0);
 
     const expenses = filteredEntries
-      .filter((entry) => entry.type === "expense")
-      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+      .filter((entry) => entry.type === "expenses")
+      .reduce((sum, entry) => sum + (Number(entry.debit) || 0), 0);
 
     return {
       income,
@@ -225,33 +305,29 @@ const LedgerBookPage = () => {
   }, [filteredEntries]);
 
   // Generate month name
-  const getMonthName = (monthNumber) => {
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    return monthNames[monthNumber - 1];
-  };
 
-  // Get formatted date string for display
-  const getFormattedDateRange = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to) return "";
+  // Update getFormattedDateRange to regular function instead of useMemo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const getFormattedDateRange = useCallback(() => {
+    if (!dateRange?.start || !dateRange?.end) return "";
 
-    return `${format(new Date(dateRange.from), "MMM dd, yyyy")} - ${format(
-      new Date(dateRange.to),
+    const fromDate = new Date(
+      dateRange.start.year,
+      dateRange.start.month - 1,
+      dateRange.start.day
+    );
+
+    const toDate = new Date(
+      dateRange.end.year,
+      dateRange.end.month - 1,
+      dateRange.end.day
+    );
+
+    return `${format(fromDate, "MMM dd, yyyy")} - ${format(
+      toDate,
       "MMM dd, yyyy"
     )}`;
-  }, [dateRange]);
+  });
 
   // Function to get data for export
   const getExportData = useCallback(() => {
@@ -265,14 +341,14 @@ const LedgerBookPage = () => {
         Account: entry.bank?.name || "N/A",
         "Account Type": entry.bank?.type || "N/A",
         Reference: entry.reference || "N/A",
-        Income: entry.type === "income" ? formatCurrency(entry.amount) : "",
-        Expense: entry.type === "expense" ? formatCurrency(entry.amount) : "",
-        Balance: formatCurrency(entry.runningBalance),
+        Income: entry.type === "income" ? formatCurrency(entry.credit) : "",
+        Expense: entry.type === "expense" ? formatCurrency(entry.debit) : "",
+        Balance: formatCurrency(entry.balance),
       };
     });
   }, [filteredEntries]);
 
-  // Download PDF function
+  // Update the PDF export to use the function
   const handleDownloadPDF = useCallback(async () => {
     try {
       setIsExporting(true);
@@ -297,7 +373,7 @@ const LedgerBookPage = () => {
       // Add metadata
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
-      const dateStr = getFormattedDateRange;
+      const dateStr = getFormattedDateRange();
       doc.text(`Date Range: ${dateStr}`, 15, 35);
       doc.text(
         `Generated: ${new Date().toLocaleDateString()}`,
@@ -308,11 +384,11 @@ const LedgerBookPage = () => {
       // Add grand total
       const totalIncome = filteredEntries
         .filter((entry) => entry.type === "income")
-        .reduce((sum, entry) => sum + entry.amount, 0);
+        .reduce((sum, entry) => sum + (Number(entry.credit) || 0), 0);
 
       const totalExpense = filteredEntries
         .filter((entry) => entry.type === "expense")
-        .reduce((sum, entry) => sum + entry.amount, 0);
+        .reduce((sum, entry) => sum + (Number(entry.debit) || 0), 0);
 
       doc.setFontSize(11);
       doc.setTextColor(60, 60, 60);
@@ -390,7 +466,7 @@ const LedgerBookPage = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [getExportData, filteredEntries, getFormattedDateRange]);
+  }, [getExportData, getFormattedDateRange, filteredEntries]);
 
   // Download Excel function
   const handleDownloadExcel = useCallback(() => {
@@ -446,61 +522,19 @@ const LedgerBookPage = () => {
     }
   }, [getExportData]);
 
+  // Open modal to view entry details
+  const handleViewEntry = (entry) => {
+    setSelectedEntry(entry);
+    setIsEntryModalOpen(true);
+  };
+
+  // Close the entry details modal
+  const handleCloseEntryModal = () => {
+    setIsEntryModalOpen(false);
+    setSelectedEntry(null);
+  };
+
   // Download button component
-  const downloadButton = useMemo(
-    () => (
-      <Dropdown>
-        <DropdownTrigger>
-          <Button
-            isIconOnly
-            variant="flat"
-            className="bg-hotel-secondary"
-            isLoading={isExporting}
-          >
-            {isExporting ? <Spinner size="sm" /> : <Download size={18} />}
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu aria-label="Download Options">
-          <DropdownItem
-            key="pdf"
-            startContent={<FileText size={16} />}
-            onPress={handleDownloadPDF}
-            isDisabled={isExporting}
-          >
-            PDF
-          </DropdownItem>
-          <DropdownItem
-            key="excel"
-            startContent={<FileSpreadsheet size={16} />}
-            onPress={handleDownloadExcel}
-          >
-            Excel
-          </DropdownItem>
-          <DropdownItem
-            key="csv"
-            startContent={<FileText size={16} />}
-            onPress={handleDownloadCSV}
-          >
-            CSV
-          </DropdownItem>
-          <DropdownItem
-            key="json"
-            startContent={<FileJson size={16} />}
-            onPress={handleDownloadJSON}
-          >
-            JSON
-          </DropdownItem>
-        </DropdownMenu>
-      </Dropdown>
-    ),
-    [
-      isExporting,
-      handleDownloadPDF,
-      handleDownloadExcel,
-      handleDownloadCSV,
-      handleDownloadJSON,
-    ]
-  );
 
   return (
     <div className="container mx-auto p-6">
@@ -511,8 +545,10 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Total Income</p>
-              <h3 className="text-2xl font-bold">₹{summary.income || 0}</h3>
-              <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
+              <h3 className="text-2xl font-bold">
+                {formatCurrency(summary.income || 0)}
+              </h3>
+              <p className="text-gray-400 text-xs">{getFormattedDateRange()}</p>
             </div>
             <div className="bg-yellow-100 p-2 rounded-md">
               <IconDownload className="text-yellow-500" />
@@ -524,8 +560,10 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Total Expenses</p>
-              <h3 className="text-2xl font-bold">₹{summary.expenses || 0}</h3>
-              <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
+              <h3 className="text-2xl font-bold">
+                {formatCurrency(summary.expenses || 0)}
+              </h3>
+              <p className="text-gray-400 text-xs">{getFormattedDateRange()}</p>
             </div>
             <div className="bg-red-100 p-2 rounded-md">
               <IconPrinter className="text-red-500" />
@@ -539,13 +577,13 @@ const LedgerBookPage = () => {
               <p className="text-gray-500 text-sm">Bank Balance</p>
               <h3 className="text-2xl font-bold">
                 {selectedBank === "all"
-                  ? `₹${bankBalance || 0}`
-                  : `₹${
+                  ? formatCurrency(bankBalance || 0)
+                  : formatCurrency(
                       banks.find((bank) => bank._id === selectedBank)
                         ?.currentBalance || 0
-                    }`}
+                    )}
               </h3>
-              <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
+              <p className="text-gray-400 text-xs">{getFormattedDateRange()}</p>
             </div>
             <div className="bg-blue-100 p-2 rounded-md">
               <IconDownload className="text-blue-500" />
@@ -557,8 +595,10 @@ const LedgerBookPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-sm">Net Profit</p>
-              <h3 className="text-2xl font-bold">₹{summary.netProfit || 0}</h3>
-              <p className="text-gray-400 text-xs">{getFormattedDateRange}</p>
+              <h3 className="text-2xl font-bold">
+                {formatCurrency(summary.netProfit || 0)}
+              </h3>
+              <p className="text-gray-400 text-xs">{getFormattedDateRange()}</p>
             </div>
             <div className="bg-green-100 p-2 rounded-md">
               <IconDownload className="text-green-500" />
@@ -591,19 +631,20 @@ const LedgerBookPage = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <IconCalendarEvent size={18} />
-
               <DateRangePicker
                 id="ledger-date-range"
                 aria-label="Select date range"
                 value={dateRange}
                 onChange={handleDateRangeChange}
-                locale="en-US"
                 showMonthAndYearPickers
+                visibleMonths={2}
                 popoverProps={{
                   placement: "bottom-end",
-                  startIdentifier: "start",
-                  endIdentifier: "end",
+                }}
+                selectorIcon={<IconCalendarEvent size={18} />}
+                selectorButtonPlacement="end"
+                classNames={{
+                  base: "min-w-[240px]",
                 }}
               />
             </div>
@@ -651,15 +692,6 @@ const LedgerBookPage = () => {
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
-
-            <Button
-              size="sm"
-              color="primary"
-              isIconOnly
-              onClick={() => window.print()}
-            >
-              <IconPrinter size={18} />
-            </Button>
           </div>
         </div>
 
@@ -711,8 +743,9 @@ const LedgerBookPage = () => {
                         size="sm"
                         color="primary"
                         variant="light"
+                        onPress={() => handleViewEntry(entry)}
                       >
-                        <IconPrinter size={16} />
+                        <Eye size={16} />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -770,6 +803,107 @@ const LedgerBookPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Entry Details Modal */}
+      <Modal
+        isOpen={isEntryModalOpen}
+        onOpenChange={handleCloseEntryModal}
+        placement="center"
+        backdrop="blur"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-lg font-semibold">
+                Transaction Details
+              </ModalHeader>
+              <ModalBody>
+                {selectedEntry && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Date:</span>
+                      <span className="font-medium">
+                        {new Date(selectedEntry.date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Type:</span>
+                      <span
+                        className={`font-medium ${
+                          selectedEntry.type === "income"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {selectedEntry.type === "income"
+                          ? "Income"
+                          : "Expenses"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Category:</span>
+                      <span className="font-medium">
+                        {selectedEntry.category}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Reference ID:</span>
+                      <span className="font-medium">
+                        {selectedEntry.refId || "N/A"}
+                      </span>
+                    </div>
+                    {selectedEntry.type === "income" && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Credit Amount:</span>
+                        <span className="font-medium text-green-600">
+                          {formatCurrency(selectedEntry.credit || 0)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedEntry.type === "expenses" && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Debit Amount:</span>
+                        <span className="font-medium text-red-600">
+                          {formatCurrency(selectedEntry.debit || 0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Balance:</span>
+                      <span className="font-medium">
+                        {formatCurrency(selectedEntry.balance || 0)}
+                      </span>
+                    </div>
+                    {selectedEntry.description && (
+                      <div className="flex flex-col">
+                        <span className="text-gray-600">Description:</span>
+                        <p className="mt-1 p-2 bg-gray-50 rounded text-sm">
+                          {selectedEntry.description}
+                        </p>
+                      </div>
+                    )}
+                    {selectedEntry.bank && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Account:</span>
+                        <span className="font-medium">
+                          {selectedEntry.bank.type === "bank"
+                            ? selectedEntry.bank.bankName
+                            : selectedEntry.bank.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button color="default" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 };
