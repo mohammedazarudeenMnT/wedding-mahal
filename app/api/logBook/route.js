@@ -54,9 +54,17 @@ export async function POST(request) {
     const data = await request.json();
     
     // Validate required fields
-    if (!data.bookingId || !data.customerName || !data.propertyType || !data.eventType) {
+    if (!data.bookingId || !data.customerName || !data.propertyType) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate event type only for hall bookings
+    if (data.propertyType === 'hall' && !data.eventType) {
+      return NextResponse.json(
+        { success: false, error: 'Event type is required for hall bookings' },
         { status: 400 }
       );
     }

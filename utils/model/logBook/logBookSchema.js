@@ -20,7 +20,9 @@ const logBookSchema = new mongoose.Schema({
   },
   eventType: {
     type: String,
-    required: true,
+    required: function() {
+      return this.propertyType === 'hall';
+    },
   },
   dateRange: {
     from: {

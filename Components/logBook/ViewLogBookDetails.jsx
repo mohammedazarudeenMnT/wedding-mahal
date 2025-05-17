@@ -7,6 +7,20 @@ import { X, FileText, Calendar, Phone, Home, Tag, Clock, Notebook } from 'lucide
 export default function ViewLogBookDetails({ isOpen, onClose, logData }) {
   if (!isOpen || !logData) return null;
 
+  // Format check-in time to 12-hour format
+  const formatCheckInTime = (time) => {
+    if (!time) return "-";
+    try {
+      return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return time; // Fallback to original format if parsing fails
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
@@ -64,7 +78,7 @@ export default function ViewLogBookDetails({ isOpen, onClose, logData }) {
               <Clock className="h-4 w-4 text-hotel-primary" />
               <div>
                 <p className="text-xs text-gray-500">Check-in Time</p>
-                <p className="font-medium">{logData.checkInTime}</p>
+                <p className="font-medium">{formatCheckInTime(logData.checkInTime)}</p>
               </div>
             </div>
 

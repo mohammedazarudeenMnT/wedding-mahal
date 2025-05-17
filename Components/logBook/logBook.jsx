@@ -42,6 +42,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "propertyType",
   "event",
   "date",
+  "checkInTime",
   "issuedItems",
   "status",
   "actions"
@@ -71,6 +72,7 @@ export default function LogBook() {
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortDescriptor, setSortDescriptor] = useState({ column: "", direction: "ascending" });
 
   // Fetch log entries
   const fetchLogEntries = async () => {
@@ -311,6 +313,17 @@ export default function LogBook() {
             </p>
           </div>
         )
+      case "checkInTime":
+        if (!cellValue) return "-";
+        try {
+          return new Date(`2000-01-01T${cellValue}`).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        } catch (error) {
+          return cellValue;
+        }
       case "electricityReadings":
         return (
           <Chip
@@ -321,6 +334,16 @@ export default function LogBook() {
           >
             {item.electricityReadings.length > 0 ? "Yes" : "No"}
           </Chip>
+        )
+      case "eventType":
+        return (
+          <div className="flex flex-col">
+            {item.eventType ? (
+              <p className="text-bold text-small capitalize">{item.eventType}</p>
+            ) : (
+              <span className="text-gray-400 text-xs">N/A</span>
+            )}
+          </div>
         )
       case "actions":
         return (
@@ -418,6 +441,36 @@ export default function LogBook() {
       damagedItems
     }
   }, [logEntries])
+
+  const sortedItems = useMemo(() => {
+    const items = [...filteredData];
+    
+    if (!sortDescriptor.column) return items;
+
+    return items.sort((a, b) => {
+      let first = a[sortDescriptor.column];
+      let second = b[sortDescriptor.column];
+
+      // Handle special cases
+      switch (sortDescriptor.column) {
+        case "dateRange":
+          first = new Date(a.dateRange.from);
+          second = new Date(b.dateRange.from);
+          break;
+        case "itemsIssued":
+          first = a.itemsIssued?.length || 0;
+          second = b.itemsIssued?.length || 0;
+          break;
+        case "electricityReadings":
+          first = a.electricityReadings?.length || 0;
+          second = b.electricityReadings?.length || 0;
+          break;
+      }
+
+      const cmp = first < second ? -1 : first > second ? 1 : 0;
+      return sortDescriptor.direction === "descending" ? -cmp : cmp;
+    });
+  }, [filteredData, sortDescriptor]);
 
   return (
     <div className="container mx-auto p-4 bg-white">
@@ -613,6 +666,8 @@ export default function LogBook() {
 
         <Table
           aria-label="Inventory logs table"
+          sortDescriptor={sortDescriptor}
+          onSortChange={setSortDescriptor}
           bottomContent={
             <div className="py-2 px-2 flex justify-between items-center">
               <span className="w-[30%] text-small text-default-400">
@@ -650,7 +705,7 @@ export default function LogBook() {
             ))}
           </TableHeader>
           <TableBody 
-            items={filteredData}
+            items={sortedItems}
             loadingContent={<div>Loading...</div>}
             loadingState={isLoading ? "loading" : "idle"}
           >

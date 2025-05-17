@@ -7,7 +7,8 @@ import { Buttons } from "@/Components/ui/button"
 import { Textarea } from "@/Components/ui/textarea"
 import { X, Plus } from "lucide-react"
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@heroui/table"
-import { DateRangePicker } from "@heroui/date-picker"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 import { addDays } from "date-fns"
 import axios from "axios"
 import { toast } from "react-toastify"
@@ -231,8 +232,8 @@ export default function AddLogForm({ logId }) {
 
     setFilteredBookings(filtered)
     
-    // Clear form data if current selection is not in filtered results
-    if (!filtered.find(b => b.bookingNumber === formData.bookingId)) {
+    // Only clear form data if there are no bookings or if the current booking is not in the filtered results
+    if (filtered.length === 0 || !filtered.find(b => b.bookingNumber === formData.bookingId)) {
       setFormData({
         bookingId: "",
         customerName: "",
@@ -250,6 +251,15 @@ export default function AddLogForm({ logId }) {
       const response = await axios.get(`/api/bookings/${bookingId}`)
       if (response.data.success) {
         const booking = response.data.booking
+        
+        // Format check-in time properly
+        const checkInTime = booking.timeSlot?.fromTime || 
+          new Date(booking.checkInDate).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+
         setFormData({
           ...formData,
           bookingId: booking.bookingNumber,
@@ -257,8 +267,17 @@ export default function AddLogForm({ logId }) {
           mobileNo: booking.mobileNo,
           propertyType: booking.propertyType,
           eventType: booking.eventType || '',
-          checkInTime: booking.timeSlot?.fromTime || ''
+          checkInTime: checkInTime,
+          notes: booking.notes || ''
         })
+
+        // Update date range based on booking dates
+        if (booking.checkInDate && booking.checkOutDate) {
+          setDateRange({
+            from: new Date(booking.checkInDate),
+            to: new Date(booking.checkOutDate)
+          })
+        }
       }
     } catch (error) {
       console.error('Failed to fetch booking details:', error)
@@ -435,8 +454,8 @@ export default function AddLogForm({ logId }) {
       toast.error("Property type is required")
       return false
     }
-    if (!formData.eventType) {
-      toast.error("Event type is required")
+    if (formData.propertyType === "hall" && !formData.eventType) {
+      toast.error("Event type is required for hall bookings")
       return false
     }
     if (!formData.checkInTime) {
@@ -576,9 +595,6 @@ export default function AddLogForm({ logId }) {
     })
   }
 
-  // First, add a check if the selected date is today's date
-  const isDefaultDate = dateRange.from.toDateString() === new Date().toDateString();
-
   return (
     <div className="w-full px-4 py-2">
       <div className="p-4  rounded-lg shadow">
@@ -594,84 +610,125 @@ export default function AddLogForm({ logId }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date picker */}
             <div className="space-y-2">
-              <label htmlFor="date" className="text-sm text-gray-600">Date</label>
-              <DateRangePicker
-                className="bg-white text-[#333] border-0 w-full"
-                label="Select Date"
-                key={`date-range-${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
-                onChange={(range) => {
-                  if (!range || !range.start || !range.end) {
-                    const defaultRange = {
-                      from: new Date(),
-                      to: addDays(new Date(), 1),
-                    }
-                    setDateRange(defaultRange)
-                    filterBookingsByDate()
-                    return
-                  }
-
-                  const startDate = new Date(
-                    range.start.year,
-                    range.start.month - 1,
-                    range.start.day
-                  )
-                  const endDate = new Date(
-                    range.end.year,
-                    range.end.month - 1,
-                    range.end.day
-                  )
-
-                  const newRange = {
-                    from: startDate,
-                    to: endDate,
-                  }
-                  console.log("New date range selected:", newRange);
-                  setDateRange(newRange)
-                }}
-                classNames={{
-                  base: "bg-hotel-secondary rounded-lg h-[40px]",
-                  trigger: "bg-hotel-secondary rounded-lg h-[40px]",
-                  value: "text-hotel-primary-text text-sm",
-                  content: "h-[40px]",
-                  popover: "rounded-lg mt-1",
-                  input: "h-[40px]",
-                }}
-                popoverProps={{
-                  // Add these props to prevent the error
-                  placement: "bottom",
-                  offset: 13,
-                  triggerScaleOnOpen: false,
-                  classNames: {
-                    content: "min-w-[300px]"
-                  }
-                }}
-              />
+              <label htmlFor="date" className="text-sm text-gray-600">Date Range</label>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <DatePicker
+                    selected={dateRange.from}
+                    onChange={(date) => {
+                      if (date) {
+                        setDateRange(prev => ({
+                          ...prev,
+                          from: date,
+                          to: date > prev.to ? date : prev.to
+                        }));
+                        filterBookingsByDate();
+                      }
+                    }}
+                    selectsStart
+                    startDate={dateRange.from}
+                    endDate={dateRange.to}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Start Date"
+                    className="w-full rounded-lg border border-gray-300 p-2 pl-10 text-sm focus:border-[#010B13] focus:ring-1 focus:ring-[#010B13] bg-white"
+                    wrapperClassName="w-full"
+                    calendarClassName="shadow-lg border-gray-300"
+                    showPopperArrow={false}
+                  />
+                </div>
+                <div className="flex items-center justify-center">
+                  <span className="text-gray-500">to</span>
+                </div>
+                <div className="flex-1 relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <DatePicker
+                    selected={dateRange.to}
+                    onChange={(date) => {
+                      if (date) {
+                        setDateRange(prev => ({
+                          ...prev,
+                          to: date,
+                          from: date < prev.from ? date : prev.from
+                        }));
+                        filterBookingsByDate();
+                      }
+                    }}
+                    selectsEnd
+                    startDate={dateRange.from}
+                    endDate={dateRange.to}
+                    minDate={dateRange.from}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="End Date"
+                    className="w-full rounded-lg border border-gray-300 p-2 pl-10 text-sm focus:border-[#010B13] focus:ring-1 focus:ring-[#010B13] bg-white"
+                    wrapperClassName="w-full"
+                    calendarClassName="shadow-lg border-gray-300"
+                    showPopperArrow={false}
+                  />
+                </div>
+              </div>
+              {/* Date range summary */}
+              <div className="text-xs text-gray-500 mt-1">
+                {dateRange.from && dateRange.to && (
+                  <span>
+                    Selected period: {Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} day(s)
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Booking ID */}
-            <div className="space-y-2">
-              <label htmlFor="bookingId" className="text-sm text-gray-600">Booking Id</label>
-              {isDefaultDate ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded-md">
-                  Please select a date to view available bookings
-                </div>
-              ) : (
+            {/* Booking Selection Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Booking ID */}
+              <div className="space-y-2">
+                <label htmlFor="bookingId" className="text-sm text-gray-600">Booking Id</label>
                 <Select 
                   value={formData.bookingId}
                   onValueChange={(value) => handleBookingSelect(value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Booking" />
+                    <SelectValue placeholder={filteredBookings.length === 0 ? "No bookings available for selected dates" : "Select Booking"} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredBookings.map((booking) => (
                       <SelectItem key={booking.bookingNumber} value={booking.bookingNumber}>
-                        {booking.bookingNumber}
+                        {`${booking.bookingNumber} - ${booking.firstName} ${booking.lastName}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+                {filteredBookings.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">Please select a date range to view available bookings</p>
+                )}
+              </div>
+
+              {/* Phone Number Selection */}
+              <div className="space-y-2">
+                <label htmlFor="initialPhoneSelect" className="text-sm text-gray-600">Select by Phone Number</label>
+                <Select
+                  value={formData.bookingId}
+                  onValueChange={(value) => handleBookingSelect(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={filteredBookings.length === 0 ? "No bookings available" : "Select by Phone"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredBookings.map((booking) => (
+                      <SelectItem key={booking.bookingNumber} value={booking.bookingNumber}>
+                        {`${booking.mobileNo} - ${booking.firstName} ${booking.lastName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Customer Name */}
@@ -680,16 +737,19 @@ export default function AddLogForm({ logId }) {
               <Select
                 value={formData.customerName}
                 onValueChange={(value) => handleFormChange("customerName", value)}
+                disabled={!formData.bookingId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredBookings.map((booking) => (
-                    <SelectItem key={booking.bookingNumber} value={`${booking.firstName} ${booking.lastName}`}>
-                      {`${booking.firstName} ${booking.lastName}`}
-                    </SelectItem>
-                  ))}
+                  {filteredBookings
+                    .filter(booking => !formData.bookingId || booking.bookingNumber === formData.bookingId)
+                    .map(booking => (
+                      <SelectItem key={booking.bookingNumber} value={`${booking.firstName} ${booking.lastName}`}>
+                        {`${booking.firstName} ${booking.lastName}`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -700,16 +760,19 @@ export default function AddLogForm({ logId }) {
               <Select
                 value={formData.mobileNo}
                 onValueChange={(value) => handleFormChange("mobileNo", value)}
+                disabled={!formData.bookingId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Phone Number" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredBookings.map((booking) => (
-                    <SelectItem key={booking.bookingNumber} value={booking.mobileNo}>
-                      {booking.mobileNo}
-                    </SelectItem>
-                  ))}
+                  {filteredBookings
+                    .filter(booking => !formData.bookingId || booking.bookingNumber === formData.bookingId)
+                    .map(booking => (
+                      <SelectItem key={booking.bookingNumber} value={booking.mobileNo}>
+                        {booking.mobileNo}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -720,16 +783,19 @@ export default function AddLogForm({ logId }) {
               <Select
                 value={formData.propertyType}
                 onValueChange={(value) => handleFormChange("propertyType", value)}
+                disabled={!formData.bookingId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Property Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[...new Set(filteredBookings.map(booking => booking.propertyType))].map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type === 'hall' ? 'Hall' : 'Room'}
-                    </SelectItem>
-                  ))}
+                  {filteredBookings
+                    .filter(booking => !formData.bookingId || booking.bookingNumber === formData.bookingId)
+                    .map(booking => (
+                      <SelectItem key={booking.bookingNumber} value={booking.propertyType}>
+                        {booking.propertyType === 'hall' ? 'Hall' : 'Room'}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -740,18 +806,31 @@ export default function AddLogForm({ logId }) {
               <Select
                 value={formData.checkInTime}
                 onValueChange={(value) => handleFormChange("checkInTime", value)}
+                disabled={!formData.bookingId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Time" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredBookings
-                    .filter(booking => booking.timeSlot?.fromTime)
-                    .map((booking) => (
-                      <SelectItem key={booking.bookingNumber} value={booking.timeSlot.fromTime}>
-                        {booking.timeSlot.fromTime}
-                      </SelectItem>
-                    ))}
+                    .filter(booking => !formData.bookingId || booking.bookingNumber === formData.bookingId)
+                    .map(booking => {
+                      const time = booking.timeSlot?.fromTime || 
+                        new Date(booking.checkInDate).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        });
+                      return (
+                        <SelectItem key={booking.bookingNumber} value={time}>
+                          {new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>
@@ -762,17 +841,18 @@ export default function AddLogForm({ logId }) {
               <Select
                 value={formData.eventType}
                 onValueChange={(value) => handleFormChange("eventType", value)}
+                disabled={!formData.bookingId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Event" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[...new Set(filteredBookings
+                  {filteredBookings
+                    .filter(booking => !formData.bookingId || booking.bookingNumber === formData.bookingId)
                     .filter(booking => booking.eventType)
-                    .map(booking => booking.eventType))]
-                    .map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
+                    .map(booking => (
+                      <SelectItem key={booking.bookingNumber} value={booking.eventType}>
+                        {booking.eventType}
                       </SelectItem>
                     ))}
                 </SelectContent>
