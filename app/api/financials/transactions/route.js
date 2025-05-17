@@ -65,15 +65,23 @@ export async function POST(request) {
 
     // Ensure paymentType is a valid enum value for all payment methods
     if (
-      !["card", "upi", "netbanking", "cash", "bank", ""].includes(
-        requestData.paymentType
-      )
+      ![
+        "card",
+        "upi",
+        "netbanking",
+        "cash",
+        "bank",
+        "paymentLink",
+        "",
+      ].includes(requestData.paymentType)
     ) {
       // For any payment method, if paymentType is invalid, set it to a safe default
       if (requestData.paymentMethod === "cod") {
         requestData.paymentType = "cash"; // Default to cash for Pay at Hotel
       } else if (requestData.paymentMethod === "online") {
         requestData.paymentType = "bank"; // Default to bank for online
+      } else if (requestData.paymentMethod === "paymentLink") {
+        requestData.paymentType = "paymentLink"; // Set the payment type to paymentLink
       } else {
         requestData.paymentType = ""; // Default to empty string for others
       }

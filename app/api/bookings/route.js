@@ -7,6 +7,8 @@ import { getHotelDatabase } from "../../../utils/config/hotelConnection";
 import { getModel } from "../../../utils/helpers/getModel";
 import { getUniqueGuestId } from "../../../utils/helpers/guestIdGenerator";
 import Transaction from "../../../utils/model/financials/transactions/transactionSchema";
+import Room from "../../../utils/model/room/roomSchema";
+import RoomAvailability from "../../../utils/model/room/roomAvailabilitySchema";
 
 // Add export config for static rendering
 export const dynamic = "force-dynamic";
@@ -130,6 +132,20 @@ async function createInvoiceRecord(
     })),
   };
 
+  // Add hall-specific fields if property type is hall
+  const hasHall = booking.rooms.some((room) => room.type === "hall");
+  if (hasHall) {
+    // Add hall-specific data
+    invoiceData.hallDetails = {
+      eventType: booking.eventType || "Not specified",
+      eventName: booking.eventName || "Not specified",
+      guestCapacity: booking.guestCapacity || 0,
+      decorationPackage: booking.decorationPackage || "None",
+      additionalServices: booking.additionalServices || [],
+      specialRequirements: booking.specialRequirements || "None",
+    };
+  }
+
   // Add transaction data if available
   if (transaction) {
     invoiceData.transactions = {
@@ -160,7 +176,9 @@ async function updateBookingStatuses(
   FinanceSettingsModel,
   hotelData,
   InvoiceModel,
-  TransactionModel
+  TransactionModel,
+  RoomModel,
+  RoomAvailabilityModel
 ) {
   const now = new Date();
   const bookingsToUpdate = await GuestModel.find({
@@ -172,8 +190,110 @@ async function updateBookingStatuses(
     if (booking.status !== "checkout") {
       try {
         // Update booking status to checkout
+        const oldStatus = booking.status;
         booking.status = "checkout";
+
+        // Update status timestamp for checkout
+        if (!booking.statusTimestamps) {
+          booking.statusTimestamps = {};
+        }
+        booking.statusTimestamps.checkout = new Date();
+
         await booking.save();
+
+        // Update Room model - remove booking from bookedDates
+        for (const room of booking.rooms) {
+          try {
+            // Find the room in Room model
+            const roomData = await RoomModel.findOne({
+              $or: [
+                { "roomNumbers.number": room.number },
+                { "hallNumbers.number": room.number },
+              ],
+            });
+
+            if (roomData) {
+              // Determine if it's a room or hall
+              const isHall = roomData.type === "hall";
+              const numbersArray = isHall ? "hallNumbers" : "roomNumbers";
+
+              // Find the specific room/hall number index
+              const numberIndex = roomData[numbersArray].findIndex(
+                (item) => item.number === room.number
+              );
+
+              if (numberIndex !== -1) {
+                // Filter out this booking from the bookedDates array
+                const filteredBookedDates = roomData[numbersArray][
+                  numberIndex
+                ].bookeddates.filter(
+                  (bookedDate) =>
+                    bookedDate.bookingNumber !== booking.bookingNumber
+                );
+
+                // Update the room with filtered bookeddates
+                await RoomModel.updateOne(
+                  {
+                    _id: roomData._id,
+                    [`${numbersArray}.number`]: room.number,
+                  },
+                  {
+                    $set: {
+                      [`${numbersArray}.$.bookeddates`]: filteredBookedDates,
+                    },
+                  }
+                );
+
+                console.log(
+                  `Auto-checkout: Removed booking ${booking.bookingNumber} from room ${room.number} bookedDates array`
+                );
+              }
+            }
+
+            // Update RoomAvailability model
+            const roomAvailability = await RoomAvailabilityModel.findOne({
+              roomNumber: room.number,
+            });
+
+            if (roomAvailability) {
+              // Find booking in the history
+              const bookingIndex = roomAvailability.bookingHistory.findIndex(
+                (record) => record.bookingNumber === booking.bookingNumber
+              );
+
+              if (bookingIndex !== -1) {
+                // Update status
+                roomAvailability.bookingHistory[bookingIndex].status =
+                  "checkout";
+
+                // Set timestamp for checkout
+                if (
+                  !roomAvailability.bookingHistory[bookingIndex]
+                    .statusTimestamps
+                ) {
+                  roomAvailability.bookingHistory[
+                    bookingIndex
+                  ].statusTimestamps = {};
+                }
+
+                roomAvailability.bookingHistory[
+                  bookingIndex
+                ].statusTimestamps.checkout = new Date();
+
+                await roomAvailability.save();
+                console.log(
+                  `Auto-checkout: Updated RoomAvailability status for booking ${booking.bookingNumber}, room ${room.number}`
+                );
+              }
+            }
+          } catch (roomError) {
+            console.error(
+              `Error updating room data for auto-checkout (${room.number}):`,
+              roomError
+            );
+            // Continue with the next room even if this one fails
+          }
+        }
 
         // Get transaction data to check payment status
         const transaction = await TransactionModel.findOne({
@@ -230,6 +350,11 @@ export async function GET(request) {
     const FinanceSettingsModel = getModel("FinanceSettings", FinanceSettings);
     const InvoiceModel = getModel("Invoice", Invoice);
     const TransactionModel = getModel("Transaction", Transaction);
+    const RoomModel = getModel("Room", Room);
+    const RoomAvailabilityModel = getModel(
+      "RoomAvailability",
+      RoomAvailability
+    );
 
     // Update booking statuses with invoice generation
     const updatedCount = await updateBookingStatuses(
@@ -237,7 +362,9 @@ export async function GET(request) {
       FinanceSettingsModel,
       hotelData,
       InvoiceModel,
-      TransactionModel
+      TransactionModel,
+      RoomModel,
+      RoomAvailabilityModel
     );
 
     // Get search params safely

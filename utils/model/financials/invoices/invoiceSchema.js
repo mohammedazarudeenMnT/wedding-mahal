@@ -53,6 +53,14 @@ const invoiceSchema = new mongoose.Schema(
         totalAmount: Number,
       },
     ],
+    hallDetails: {
+      eventType: String,
+      eventName: String,
+      guestCapacity: Number,
+      decorationPackage: String,
+      additionalServices: [String],
+      specialRequirements: String,
+    },
     paymentDetails: {
       method: {
         type: String,

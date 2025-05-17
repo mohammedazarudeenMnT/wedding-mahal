@@ -15,7 +15,7 @@ const BankEntrySchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ["bank", "cash"],
+      enum: ["bank", "cash", "paymentLink", "card", "upi", "netbanking"],
       required: true,
     },
     fromAccount: {
@@ -43,6 +43,9 @@ const BankEntrySchema = new mongoose.Schema(
       type: String,
     },
     guestId: {
+      type: String,
+    },
+    razorpayPaymentLinkId: {
       type: String,
     },
   },
