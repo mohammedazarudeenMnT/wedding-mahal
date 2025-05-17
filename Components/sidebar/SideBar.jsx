@@ -82,13 +82,7 @@ export function SidebarDemo() {
     //     <IconMessage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
     //   ),
     // },
-    {
-      label: "Housekeeping",
-      href: `/dashboard/house-keeping`,
-      icon: (
-        <IconSpray className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
+
     {
       label: "Inventory",
       href: `/dashboard/inventory`,

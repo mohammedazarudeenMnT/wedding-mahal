@@ -40,6 +40,20 @@ export async function POST(request) {
       );
     }
 
+    // If payment type is paymentLink, razorpayPaymentLinkId is required
+    if (
+      requestData.paymentType === "paymentLink" &&
+      !requestData.razorpayPaymentLinkId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Razorpay payment link ID is required for payment link type",
+        },
+        { status: 400 }
+      );
+    }
+
     // Remove toAccount if it's empty and transaction is not transfer
     if (requestData.transactionType !== "transfer") {
       requestData.toAccount = undefined;
@@ -51,7 +65,10 @@ export async function POST(request) {
     }
 
     // Create new bank entry
-    const bankEntry = new BankEntry(requestData);
+    const bankEntry = new BankEntry({
+      ...requestData,
+      razorpayPaymentLinkId: requestData.razorpayPaymentLinkId || undefined,
+    });
     await bankEntry.save();
 
     // Update bank account balances based on transaction type
@@ -237,6 +254,8 @@ async function createLedgerEntry(entryData, Ledger) {
       credit: Math.round(parseFloat(entryData.credit) || 0),
       balance: currentBalance,
       bank: entryData.bank || null,
+      paymentType: entryData.paymentType,
+      razorpayPaymentLinkId: entryData.razorpayPaymentLinkId,
     };
 
     // Update ledger summary

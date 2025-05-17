@@ -214,6 +214,140 @@ const InvoiceContent = React.forwardRef(({ ...props }, ref) => {
             </div>
           </div>
         </div>
+        {/* Hall Details Section - Only display if hallDetails exists */}
+        {props.hallDetails && (
+          <div className="mb-6 print:mb-2">
+            <h2 className="text-lg font-semibold mb-2 text-gray-700 print:text-base">
+              Hall Event Details
+            </h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Event Type:</span>{" "}
+                  {props.hallDetails.eventType}
+                </p>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Event Name:</span>{" "}
+                  {props.hallDetails.eventName}
+                </p>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Guest Capacity:</span>{" "}
+                  {props.hallDetails.guestCapacity} persons
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 print:text-xs">
+                  <span className="font-medium">Decoration Package:</span>{" "}
+                  {props.hallDetails.decorationPackage}
+                </p>
+                {props.hallDetails.additionalServices &&
+                  props.hallDetails.additionalServices.length > 0 && (
+                    <p className="text-sm text-gray-600 print:text-xs">
+                      <span className="font-medium">Additional Services:</span>{" "}
+                      {props.hallDetails.additionalServices.join(", ")}
+                    </p>
+                  )}
+                {props.hallDetails.specialRequirements && (
+                  <p className="text-sm text-gray-600 print:text-xs">
+                    <span className="font-medium">Special Requirements:</span>{" "}
+                    {props.hallDetails.specialRequirements}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Transaction History Section - Only display if transactions exist */}
+        {props.transactions &&
+          props.transactions.payments &&
+          props.transactions.payments.length > 0 && (
+            <div className="mb-6 print:mb-2">
+              <h2 className="text-lg font-semibold mb-2 text-gray-700 print:text-base">
+                Payment Transactions
+              </h2>
+              <table className="w-full mb-3 text-sm">
+                <thead>
+                  <tr
+                    className="bg-gray-100 print:bg-gray-200"
+                    style={{
+                      backgroundColor: props.style?.color || "#00569B",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <th className="py-2 px-2 text-left text-white-700">No.</th>
+                    <th className="py-2 px-2 text-left text-white-700">Date</th>
+                    <th className="py-2 px-2 text-right text-white-700">
+                      Amount
+                    </th>
+                    <th className="py-2 px-2 text-left text-white-700">
+                      Method
+                    </th>
+                    <th className="py-2 px-2 text-left text-white-700">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {props.transactions.payments.map((payment, index) => (
+                    <tr
+                      key={`payment-${index}`}
+                      className="border-b border-gray-200"
+                    >
+                      <td className="py-1 px-2 text-gray-800 print:text-xs">
+                        {payment.paymentNumber || index + 1}
+                      </td>
+                      <td className="py-1 px-2 text-gray-800 print:text-xs">
+                        {new Date(payment.paymentDate).toLocaleDateString()}
+                      </td>
+                      <td className="py-1 px-2 text-right text-gray-800 print:text-xs">
+                        ₹{payment.amount.toFixed(2)}
+                      </td>
+                      <td className="py-1 px-2 text-left text-gray-800 print:text-xs capitalize">
+                        {payment.paymentMethod}{" "}
+                        {payment.paymentType ? `(${payment.paymentType})` : ""}
+                      </td>
+                      <td className="py-1 px-2 text-left print:text-xs">
+                        <span
+                          className={`capitalize ${
+                            payment.status === "completed"
+                              ? "text-green-600"
+                              : payment.status === "pending"
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {payment.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50">
+                    <td colSpan="2" className="py-1 px-2 font-semibold">
+                      Total Paid
+                    </td>
+                    <td className="py-1 px-2 text-right font-semibold text-green-600">
+                      ₹{props.transactions.totalPaid.toFixed(2)}
+                    </td>
+                    <td colSpan="2" className="py-1 px-2">
+                      {props.transactions.isFullyPaid ? (
+                        <span className="text-green-600 font-medium">
+                          Fully Paid
+                        </span>
+                      ) : (
+                        <span className="text-amber-600 font-medium">
+                          Remaining: ₹
+                          {(
+                            props.transactions.payableAmount -
+                            props.transactions.totalPaid
+                          ).toFixed(2)}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         <table className="w-full mb-6 print:mb-2">
           {/* Reduced margin */}
           <thead>
@@ -294,6 +428,71 @@ const InvoiceContent = React.forwardRef(({ ...props }, ref) => {
             ))}
           </tbody>
         </table>
+        {/* Services Table - Only show if there are services */}
+        {props.selectedServices && props.selectedServices.length > 0 && (
+          <table className="w-full mb-6 print:mb-2">
+            <thead>
+              <tr
+                className="bg-gray-100 print:bg-gray-200"
+                style={{
+                  backgroundColor: props.style?.color || "#00569B",
+                  color: "#ffffff",
+                }}
+              >
+                <th className="py-2 px-4 text-left text-white-700">
+                  Additional Services
+                </th>
+                <th className="py-2 px-4 text-right text-white-700">
+                  Quantity
+                </th>
+                <th className="py-2 px-4 text-right text-white-700">Price</th>
+                <th className="py-2 px-4 text-right text-white-700">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.selectedServices.map((service, index) => (
+                <tr
+                  key={`service-${index}`}
+                  className="border-b border-gray-200"
+                >
+                  <td className="py-2 px-4 text-gray-800 print:text-xs">
+                    {service.name}
+                  </td>
+                  <td className="py-2 px-4 text-right text-gray-800 print:text-xs">
+                    {service.quantity || 1}
+                  </td>
+                  <td className="py-2 px-4 text-right text-gray-800 print:text-xs">
+                    ₹{service.price.toFixed(2)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-gray-800 print:text-xs">
+                    ₹
+                    {(
+                      service.totalAmount ||
+                      service.price * (service.quantity || 1)
+                    ).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-gray-50">
+                <td colSpan="3" className="py-2 px-4 font-semibold">
+                  Services Total
+                </td>
+                <td className="py-2 px-4 text-right font-semibold">
+                  ₹
+                  {props.selectedServices
+                    .reduce(
+                      (sum, service) =>
+                        sum +
+                        (service.totalAmount ||
+                          service.price * (service.quantity || 1)),
+                      0
+                    )
+                    .toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        )}
         <div className="mb-6 print:mb-2">
           {" "}
           {/* Reduced margin */}
@@ -317,6 +516,45 @@ const InvoiceContent = React.forwardRef(({ ...props }, ref) => {
                 .toFixed(2)}
             </span>
           </div>
+          {/* Selected Services */}
+          {props.selectedServices && props.selectedServices.length > 0 && (
+            <div className="flex justify-between py-2 print:py-1">
+              <span className="text-gray-700 print:text-xs">
+                Additional Services
+              </span>
+              <span className="text-gray-800 print:text-xs">
+                ₹
+                {props.selectedServices
+                  ?.reduce(
+                    (sum, service) => sum + (service.totalAmount || 0),
+                    0
+                  )
+                  .toFixed(2)}
+              </span>
+            </div>
+          )}
+          {/* Service Charge */}
+          {props.amounts?.servicesCharge > 0 && (
+            <div className="flex justify-between py-2 print:py-1">
+              <span className="text-gray-700 print:text-xs">
+                Service Charge
+              </span>
+              <span className="text-gray-800 print:text-xs">
+                ₹{(props.amounts?.servicesCharge || 0).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {/* Discount */}
+          {props.amounts?.discount > 0 && (
+            <div className="flex justify-between py-2 print:py-1">
+              <span className="text-gray-700 print:text-xs">
+                Discount ({props.amounts.discount}%)
+              </span>
+              <span className="text-green-600 print:text-xs">
+                -₹{(props.amounts?.discountAmount || 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between py-2 print:py-1">
             <span className="text-gray-700 print:text-xs">Total Taxes</span>
             <span className="text-gray-800 print:text-xs">
@@ -330,9 +568,11 @@ const InvoiceContent = React.forwardRef(({ ...props }, ref) => {
             <span className="text-gray-800">Total Amount</span>
             <span className="text-gray-800">
               ₹
-              {invoiceItems
-                ?.reduce((sum, item) => sum + item.total, 0)
-                .toFixed(2)}
+              {props.amounts?.totalAmount
+                ? props.amounts.totalAmount.toFixed(2)
+                : invoiceItems
+                    ?.reduce((sum, item) => sum + item.total, 0)
+                    .toFixed(2)}
             </span>
           </div>
         </div>

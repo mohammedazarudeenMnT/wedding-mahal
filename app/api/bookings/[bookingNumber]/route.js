@@ -1,7 +1,6 @@
 // app/api/[hotelDb]/bookings/[bookingNumber]/route.js
 import { NextResponse } from "next/server";
 import Guest from "../../../../utils/model/booking/bookingSchema";
-import Housekeeping from "../../../../utils/model/houseKeeping/HousekeepingSchema";
 import RoomSettings from "../../../../utils/model/settings/room/roomSettingsSchema";
 import { getHotelDatabase } from "../../../../utils/config/hotelConnection";
 import { getModel } from "../../../../utils/helpers/getModel";
@@ -9,6 +8,8 @@ import { updateComplementaryInventory } from "../../../../utils/helpers/inventor
 import fs from "fs/promises";
 import path from "path";
 import { sendBookingCancellationEmail } from "../../../../lib/bookingMail";
+import Room from "../../../../utils/model/room/roomSchema";
+import RoomAvailability from "../../../../utils/model/room/roomAvailabilitySchema";
 
 export async function GET(request, { params }) {
   const { bookingNumber } = params;
@@ -50,8 +51,12 @@ export async function PUT(request, { params }) {
     const formData = await request.formData();
     await getHotelDatabase();
     const GuestModel = getModel("Guest", Guest);
-    const HousekeepingModel = getModel("Housekeeping", Housekeeping);
     const RoomSettingsModel = getModel("RoomSettings", RoomSettings);
+    const RoomModel = getModel("Room", Room);
+    const RoomAvailabilityModel = getModel(
+      "RoomAvailability",
+      RoomAvailability
+    );
 
     // Find the existing booking
     const existingBooking = await GuestModel.findOne({
@@ -81,6 +86,99 @@ export async function PUT(request, { params }) {
       } catch (error) {
         console.error("Error updating complementary inventory:", error);
         // Continue with booking update even if inventory update fails
+      }
+    }
+
+    // If booking status is being updated, update RoomAvailability and Room models
+    if (newStatus && newStatus !== existingBooking.status) {
+      try {
+        // Process each room in the booking
+        for (const room of existingBooking.rooms) {
+          // Update RoomAvailability model - sync statusTimestamps
+          const roomAvailability = await RoomAvailabilityModel.findOne({
+            roomNumber: room.number,
+          });
+
+          if (roomAvailability) {
+            // Find booking in the history
+            const bookingIndex = roomAvailability.bookingHistory.findIndex(
+              (record) => record.bookingNumber === bookingNumber
+            );
+
+            if (bookingIndex !== -1) {
+              // Update status and statusTimestamps
+              roomAvailability.bookingHistory[bookingIndex].status = newStatus;
+
+              // Set timestamp for the status change
+              if (
+                !roomAvailability.bookingHistory[bookingIndex].statusTimestamps
+              ) {
+                roomAvailability.bookingHistory[bookingIndex].statusTimestamps =
+                  {};
+              }
+
+              roomAvailability.bookingHistory[bookingIndex].statusTimestamps[
+                newStatus
+              ] = new Date();
+
+              await roomAvailability.save();
+              console.log(
+                `Updated RoomAvailability status for booking ${bookingNumber}, room ${room.number}`
+              );
+            }
+          }
+
+          // If this is a checkout, remove the booking from Room model's bookedDates
+          if (newStatus === "checkout") {
+            // Find the room in Room model
+            const roomData = await RoomModel.findOne({
+              $or: [
+                { "roomNumbers.number": room.number },
+                { "hallNumbers.number": room.number },
+              ],
+            });
+
+            if (roomData) {
+              // Determine if it's a room or hall
+              const isHall = roomData.type === "hall";
+              const numbersArray = isHall ? "hallNumbers" : "roomNumbers";
+
+              // Find the specific room/hall number index
+              const numberIndex = roomData[numbersArray].findIndex(
+                (item) => item.number === room.number
+              );
+
+              if (numberIndex !== -1) {
+                // Filter out this booking from the bookedDates array
+                const filteredBookedDates = roomData[numbersArray][
+                  numberIndex
+                ].bookeddates.filter(
+                  (booking) => booking.bookingNumber !== bookingNumber
+                );
+
+                // Update the room with filtered bookeddates
+                await RoomModel.updateOne(
+                  {
+                    _id: roomData._id,
+                    [`${numbersArray}.number`]: room.number,
+                  },
+                  {
+                    $set: {
+                      [`${numbersArray}.$.bookeddates`]: filteredBookedDates,
+                    },
+                  }
+                );
+
+                console.log(
+                  `Removed booking ${bookingNumber} from room ${room.number} bookedDates array`
+                );
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error updating room/availability data:", error);
+        // Continue with booking update even if room update fails
       }
     }
 
@@ -120,11 +218,6 @@ export async function PUT(request, { params }) {
             hotelAddress: hotelAddress,
             hotelPhone: hotelData?.mobileNo || "Contact number not available",
             hotelEmail: hotelData?.emailId || "Email not available",
-            /*    hotelName: existingHotel.hotelName,
-              hotelDisplayName: cleanHotelName, // Add this line
-              hotelAddress: `${existingHotel.doorNo}, ${existingHotel.streetName}, ${existingHotel.district}`,
-              hotelPhone: existingHotel.mobileNo,
-              hotelEmail: existingHotel.emailId */
           },
         });
         emailSent = true; // Set flag when email is sent successfully
@@ -213,49 +306,6 @@ export async function PUT(request, { params }) {
       { $set: updatedData },
       { new: true, runValidators: true }
     );
-
-    // Create housekeeping tasks if status changed to checkout
-    if (
-      formData.get("status") === "checkout" &&
-      existingBooking.status !== "checkout"
-    ) {
-      // Get housekeeping buffer from settings
-      const settings = await RoomSettingsModel.findOne({});
-      const bufferHours = settings?.housekeepingBuffer || 2; // Default 2 hours if not set
-
-      for (const room of updatedBooking.rooms) {
-        // Check for existing incomplete task
-        const existingTask = await HousekeepingModel.findOne({
-          roomNumber: room.number,
-          bookingNumber: bookingNumber,
-          status: { $ne: "completed" },
-        });
-
-        if (!existingTask) {
-          const currentTime = new Date();
-          const task = new HousekeepingModel({
-            roomNumber: room.number,
-            roomType: room.type,
-            bookingNumber: bookingNumber,
-            checkOutDate: currentTime,
-            guests: updatedBooking.guests,
-            status: "pending",
-            priority: "medium",
-            reservationStatus: "checkout",
-            expectedStartTime: currentTime,
-            expectedEndTime: new Date(
-              currentTime.getTime() + bufferHours * 60 * 60 * 1000
-            ),
-            notes:
-              existingBooking.checkOutDate > currentTime
-                ? `Early checkout - Original checkout date was: ${existingBooking.checkOutDate.toLocaleDateString()}`
-                : undefined,
-          });
-
-          await task.save();
-        }
-      }
-    }
 
     return NextResponse.json(
       {

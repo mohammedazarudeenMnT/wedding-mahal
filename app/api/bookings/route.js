@@ -6,6 +6,9 @@ import Invoice from "../../../utils/model/financials/invoices/invoiceSchema";
 import { getHotelDatabase } from "../../../utils/config/hotelConnection";
 import { getModel } from "../../../utils/helpers/getModel";
 import { getUniqueGuestId } from "../../../utils/helpers/guestIdGenerator";
+import Transaction from "../../../utils/model/financials/transactions/transactionSchema";
+import Room from "../../../utils/model/room/roomSchema";
+import RoomAvailability from "../../../utils/model/room/roomAvailabilitySchema";
 
 // Add export config for static rendering
 export const dynamic = "force-dynamic";
@@ -49,7 +52,12 @@ async function getNextInvoiceNumber(FinanceSettingsModel) {
   return `${settings.invoiceFormat.prefix}/${activeYear.yearFormat}/${nextSequence}`;
 }
 
-async function createInvoiceRecord(booking, hotelData, InvoiceModel) {
+async function createInvoiceRecord(
+  booking,
+  hotelData,
+  InvoiceModel,
+  transaction
+) {
   // Ensure booking has invoice number
   if (!booking.invoiceNumber) {
     throw new Error("Invoice number is required");
@@ -110,8 +118,43 @@ async function createInvoiceRecord(booking, hotelData, InvoiceModel) {
         (sum, room) => sum + room.totalAmount,
         0
       ),
+      discount: booking.discount || 0,
+      discountAmount: booking.discountAmount || 0,
+      servicesCharge: booking.servicesCharge || 0,
     },
+    // Add selected services if available
+    selectedServices: (booking.selectedServices || []).map((service) => ({
+      name: service.name,
+      price: service.price,
+      quantity: service.quantity || 1,
+      totalAmount:
+        service.totalAmount || service.price * (service.quantity || 1),
+    })),
   };
+
+  // Add hall-specific fields if property type is hall
+  const hasHall = booking.rooms.some((room) => room.type === "hall");
+  if (hasHall) {
+    // Add hall-specific data
+    invoiceData.hallDetails = {
+      eventType: booking.eventType || "Not specified",
+      eventName: booking.eventName || "Not specified",
+      guestCapacity: booking.guestCapacity || 0,
+      decorationPackage: booking.decorationPackage || "None",
+      additionalServices: booking.additionalServices || [],
+      specialRequirements: booking.specialRequirements || "None",
+    };
+  }
+
+  // Add transaction data if available
+  if (transaction) {
+    invoiceData.transactions = {
+      totalPaid: transaction.totalPaid,
+      payableAmount: transaction.payableAmount,
+      isFullyPaid: transaction.isFullyPaid,
+      payments: transaction.payments,
+    };
+  }
 
   try {
     // Check if invoice already exists
@@ -132,7 +175,10 @@ async function updateBookingStatuses(
   GuestModel,
   FinanceSettingsModel,
   hotelData,
-  InvoiceModel
+  InvoiceModel,
+  TransactionModel,
+  RoomModel,
+  RoomAvailabilityModel
 ) {
   const now = new Date();
   const bookingsToUpdate = await GuestModel.find({
@@ -143,26 +189,147 @@ async function updateBookingStatuses(
   const updatePromises = bookingsToUpdate.map(async (booking) => {
     if (booking.status !== "checkout") {
       try {
-        // First generate invoice number
-        const invoiceNumber = await getNextInvoiceNumber(FinanceSettingsModel);
-        if (!invoiceNumber) {
-          throw new Error("Failed to generate invoice number");
-        }
-
-        // Update booking with invoice number
+        // Update booking status to checkout
+        const oldStatus = booking.status;
         booking.status = "checkout";
-        booking.invoiceNumber = invoiceNumber;
+
+        // Update status timestamp for checkout
+        if (!booking.statusTimestamps) {
+          booking.statusTimestamps = {};
+        }
+        booking.statusTimestamps.checkout = new Date();
+
         await booking.save();
 
-        // Then create invoice record
-        await createInvoiceRecord(
-          {
-            ...booking.toObject(),
-            invoiceNumber, // Ensure invoiceNumber is passed
-          },
-          hotelData,
-          InvoiceModel
-        );
+        // Update Room model - remove booking from bookedDates
+        for (const room of booking.rooms) {
+          try {
+            // Find the room in Room model
+            const roomData = await RoomModel.findOne({
+              $or: [
+                { "roomNumbers.number": room.number },
+                { "hallNumbers.number": room.number },
+              ],
+            });
+
+            if (roomData) {
+              // Determine if it's a room or hall
+              const isHall = roomData.type === "hall";
+              const numbersArray = isHall ? "hallNumbers" : "roomNumbers";
+
+              // Find the specific room/hall number index
+              const numberIndex = roomData[numbersArray].findIndex(
+                (item) => item.number === room.number
+              );
+
+              if (numberIndex !== -1) {
+                // Filter out this booking from the bookedDates array
+                const filteredBookedDates = roomData[numbersArray][
+                  numberIndex
+                ].bookeddates.filter(
+                  (bookedDate) =>
+                    bookedDate.bookingNumber !== booking.bookingNumber
+                );
+
+                // Update the room with filtered bookeddates
+                await RoomModel.updateOne(
+                  {
+                    _id: roomData._id,
+                    [`${numbersArray}.number`]: room.number,
+                  },
+                  {
+                    $set: {
+                      [`${numbersArray}.$.bookeddates`]: filteredBookedDates,
+                    },
+                  }
+                );
+
+                console.log(
+                  `Auto-checkout: Removed booking ${booking.bookingNumber} from room ${room.number} bookedDates array`
+                );
+              }
+            }
+
+            // Update RoomAvailability model
+            const roomAvailability = await RoomAvailabilityModel.findOne({
+              roomNumber: room.number,
+            });
+
+            if (roomAvailability) {
+              // Find booking in the history
+              const bookingIndex = roomAvailability.bookingHistory.findIndex(
+                (record) => record.bookingNumber === booking.bookingNumber
+              );
+
+              if (bookingIndex !== -1) {
+                // Update status
+                roomAvailability.bookingHistory[bookingIndex].status =
+                  "checkout";
+
+                // Set timestamp for checkout
+                if (
+                  !roomAvailability.bookingHistory[bookingIndex]
+                    .statusTimestamps
+                ) {
+                  roomAvailability.bookingHistory[
+                    bookingIndex
+                  ].statusTimestamps = {};
+                }
+
+                roomAvailability.bookingHistory[
+                  bookingIndex
+                ].statusTimestamps.checkout = new Date();
+
+                await roomAvailability.save();
+                console.log(
+                  `Auto-checkout: Updated RoomAvailability status for booking ${booking.bookingNumber}, room ${room.number}`
+                );
+              }
+            }
+          } catch (roomError) {
+            console.error(
+              `Error updating room data for auto-checkout (${room.number}):`,
+              roomError
+            );
+            // Continue with the next room even if this one fails
+          }
+        }
+
+        // Get transaction data to check payment status
+        const transaction = await TransactionModel.findOne({
+          bookingId: booking._id.toString(),
+        });
+
+        // Only generate invoice number if payment is completed AND isFullyPaid is true
+        if (
+          booking.paymentStatus === "completed" &&
+          !booking.invoiceNumber &&
+          transaction &&
+          transaction.isFullyPaid
+        ) {
+          // First generate invoice number
+          const invoiceNumber = await getNextInvoiceNumber(
+            FinanceSettingsModel
+          );
+          if (!invoiceNumber) {
+            throw new Error("Failed to generate invoice number");
+          }
+
+          // Update booking with invoice number
+          booking.invoiceNumber = invoiceNumber;
+          await booking.save();
+
+          // Then create invoice record
+          await createInvoiceRecord(
+            {
+              ...booking.toObject(),
+              invoiceNumber, // Ensure invoiceNumber is passed
+            },
+            hotelData,
+            InvoiceModel,
+            transaction // Pass transaction data to the invoice creation
+          );
+        }
       } catch (error) {
         console.error("Error processing checkout:", error);
         booking.status = "checkout";
@@ -182,13 +349,22 @@ export async function GET(request) {
     const GuestModel = getModel("Guest", Guest);
     const FinanceSettingsModel = getModel("FinanceSettings", FinanceSettings);
     const InvoiceModel = getModel("Invoice", Invoice);
+    const TransactionModel = getModel("Transaction", Transaction);
+    const RoomModel = getModel("Room", Room);
+    const RoomAvailabilityModel = getModel(
+      "RoomAvailability",
+      RoomAvailability
+    );
 
     // Update booking statuses with invoice generation
     const updatedCount = await updateBookingStatuses(
       GuestModel,
       FinanceSettingsModel,
       hotelData,
-      InvoiceModel
+      InvoiceModel,
+      TransactionModel,
+      RoomModel,
+      RoomAvailabilityModel
     );
 
     // Get search params safely
@@ -236,13 +412,25 @@ export async function GET(request) {
     // Generate invoice numbers for checkout bookings that don't have one
     const updatedBookings = await Promise.all(
       bookingsWithGuestIds.map(async (booking) => {
-        if (booking.status === "checkout" && !booking.invoiceNumber) {
+        // Get transaction data to check payment status
+        const transaction = await TransactionModel.findOne({
+          bookingId: booking._id.toString(),
+        });
+
+        if (
+          booking.status === "checkout" &&
+          booking.paymentStatus === "completed" &&
+          !booking.invoiceNumber &&
+          transaction &&
+          transaction.isFullyPaid
+        ) {
           try {
             // Lock the document while updating
             const updatedBooking = await GuestModel.findOneAndUpdate(
               {
                 _id: booking._id,
                 invoiceNumber: { $exists: false }, // Only update if no invoice number
+                paymentStatus: "completed", // Ensure payment is completed
               },
               {
                 $set: {
@@ -258,7 +446,8 @@ export async function GET(request) {
               await createInvoiceRecord(
                 updatedBooking,
                 hotelData,
-                InvoiceModel
+                InvoiceModel,
+                transaction // Pass transaction data to the invoice creation
               );
               return updatedBooking;
             }
