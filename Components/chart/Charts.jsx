@@ -21,7 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select.tsx";
+} from "../../Components/ui/select";
 import {
   addDays,
   startOfWeek,
@@ -31,8 +31,8 @@ import {
   endOfDay,
 } from "date-fns";
 import axios from "axios";
-import { SimpleCalendar } from "./SimpleCalendar";
-import { DonutChart } from "./donut-chart";
+import { SimpleCalendar } from "./SimpleCalendar.jsx";
+import { DonutChart } from "./donut-chart.jsx";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Button } from "@heroui/button";
 

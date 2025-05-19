@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import DashboardHeader from "../../dashboardHeader/DashboardHeader";
 import ReservationList from "../../checkIn/CheckIn.jsx";
 import { usePagePermission } from "../../../hooks/usePagePermission";
-import Charts from "../../chart/Charts";
+import Charts from "../../../Components/chart/Charts";
 
 const HotelDashboardPage = ({ params }) => {
   const router = useRouter();
