@@ -96,11 +96,9 @@ export default function OnlineRoomBooking({ initialData }) {
         <div className="container mx-auto px-4">
           <div className="mb-8 text-center">
             <h2 className="text-3xl font-bold text-center mb-3">
-              Our Comfortable Rooms
-            </h2>
+Comfortable Rooms            </h2>
             <p className="text-sm sm:text-base text-gray-600">
-              Stay relaxed and refreshed for every occasion
-            </p>
+Stay relaxed and refreshed for every occasion            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
