@@ -94,11 +94,9 @@ export default function OnlineHallBooking({ initialData }) {
         <div className="container mx-auto px-4">
           <div className="mb-8 text-center">
             <h2 className="text-3xl font-bold text-center mb-3">
-              Our Banquet Halls
-            </h2>
+Elegant Halls            </h2>
             <p className="text-sm sm:text-base text-gray-600">
-              Perfect venues for your special events
-            </p>
+From grand weddings to intimate gathering.            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
