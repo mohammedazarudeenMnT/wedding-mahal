@@ -4,9 +4,10 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import DashboardHeader from "../../dashboardHeader/DashboardHeader";
-import ReservationList from "../../checkIn/CheckIn.jsx";
+// import ReservationList from "../../checkIn/CheckIn.jsx";
 import { usePagePermission } from "../../../hooks/usePagePermission";
 import Charts from "../../../Components/chart/Charts";
+import RecentEnquiries from "../../../Components/RecentEnquiries/RecentEnquiries";
 
 const HotelDashboardPage = ({ params }) => {
   const router = useRouter();
@@ -36,8 +37,9 @@ const HotelDashboardPage = ({ params }) => {
         <main className="flex-1 p-6">
           <div>
             <div>
-              <ReservationList />
+              {/* <ReservationList /> */}
               <Charts />
+              <RecentEnquiries />
             </div>
           </div>
         </main>
