@@ -165,6 +165,38 @@ const EmptyState = () => (
   </div>
 );
 
+// Add this new function to fetch revenue data
+const fetchRevenueData = async (period) => {
+  try {
+    const months = period === "last-6-months" ? 6 : 12;
+    const monthsData = [];
+    
+    // Get current date
+    const currentDate = new Date();
+    
+    // Fetch data for each month
+    for (let i = months - 1; i >= 0; i--) {
+      const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const month = targetDate.getMonth() + 1;
+      const year = targetDate.getFullYear();
+      
+      const response = await axios.get(`/api/financials/ledger-book?month=${month}&year=${year}`);
+      
+      if (response.data.success) {
+        monthsData.push({
+          month: format(targetDate, "MMM yyyy"),
+          revenue: response.data.ledger?.totalIncome || 0
+        });
+      }
+    }
+    
+    return monthsData;
+  } catch (error) {
+    console.error("Error fetching revenue data:", error);
+    return [];
+  }
+};
+
 export default function Charts() {
   const [bookings, setBookings] = useState([]);
   const [revenue, setRevenue] = useState([]);
@@ -583,28 +615,166 @@ export default function Charts() {
     return donutDateRange.replace(/-/g, " ");
   };
 
-  // Update where you display revenue amounts
+  // Update useEffect to fetch revenue data when period changes
+  useEffect(() => {
+    const loadRevenueData = async () => {
+      try {
+        const months = revenuePeriod === "last-6-months" ? 6 : 12;
+        const monthsData = [];
+        
+        // Get current date
+        const currentDate = new Date();
+        
+        // Fetch data for each month
+        for (let i = months - 1; i >= 0; i--) {
+          const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+          const month = targetDate.getMonth() + 1;
+          const year = targetDate.getFullYear();
+          
+          const response = await axios.get(`/api/financials/ledger-book?month=${month}&year=${year}`);
+          
+          if (response.data.success) {
+            monthsData.push({
+              month: format(targetDate, "MMM yyyy"),
+              revenue: response.data.ledger?.totalIncome || 0
+            });
+          }
+        }
+        
+        setRevenue(monthsData);
+      } catch (error) {
+        console.error("Error fetching revenue data:", error);
+        setRevenue([]);
+      }
+    };
+    
+    loadRevenueData();
+  }, [revenuePeriod]);
+
+  // Update the revenue chart section
   const RevenueDisplay = () => {
     const totalRevenue = revenue.reduce((sum, month) => sum + month.revenue, 0);
 
     return (
-      <div className="text-xl font-bold">₹{formatCurrency(totalRevenue)}</div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Revenue</CardTitle>
+          <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
+            <SelectTrigger className="w-[180px] bg-[#EFF6FF]">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <SelectValue>
+                  {revenuePeriod === "last-year" ? "Last Year" : "Last 6 Months"}
+                </SelectValue>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last-6-months">Last 6 Months</SelectItem>
+              <SelectItem value="last-year">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            {/* Centered "Total Revenue" label */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center bg-white border border-gray-200 rounded-md shadow p-3">
+              <div className="text-sm font-semibold text-gray-500">
+                Total Revenue
+              </div>
+              <div className="text-xl font-bold">₹{formatCurrency(totalRevenue)}</div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={revenue}
+                margin={{
+                  top: 20,
+                  right: 30,
+                  left: 70,
+                  bottom: 30,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  horizontal={true}
+                />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  interval={revenuePeriod === "last-year" ? 1 : 0}
+                  dy={10}
+                  tick={{
+                    fill: "#6B7280",
+                    fontSize: 12,
+                  }}
+                />
+                {(() => {
+                  const { ticks, domainMax } = calculateYAxisTicks(
+                    Math.max(...revenue.map((item) => item.revenue))
+                  );
+                  return (
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => {
+                        if (value >= 10000000) {
+                          return `₹${(value / 10000000).toFixed(1)}Cr`;
+                        } else if (value >= 100000) {
+                          return `₹${(value / 100000).toFixed(1)}L`;
+                        } else if (value >= 1000) {
+                          return `₹${(value / 1000).toFixed(0)}K`;
+                        } else {
+                          return `₹${value}`;
+                        }
+                      }}
+                      tickMargin={12}
+                      ticks={ticks}
+                      domain={[0, domainMax]}
+                      allowDecimals={false}
+                      dx={-10}
+                      tick={{
+                        fill: "#6B7280",
+                        fontSize: 12,
+                      }}
+                    />
+                  );
+                })()}
+                <Tooltip
+                  contentStyle={{
+                    background: "white",
+                    border: "1px solid #ccc",
+                  }}
+                  formatter={(value) => [`₹${formatCurrency(value)}`, "Revenue"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#ffc933"
+                  strokeWidth={2}
+                  dot={revenuePeriod === "last-year"}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
   return (
     <div className="p-6 space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6" style={{ gridTemplateColumns: '2fr 3fr' }}>
         {/* Booking Status Card with Donut Chart */}
         <Card className="p-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              <div className="flex flex-col">
+          <div className="flex justify-between items-start mb-8"> {/* Changed items-center to items-start */}
+            <h2 className="text-2xl font-semibold text-gray-800 mr-4"> {/* Added mr-4 for right margin */}
+              <div className="flex flex-col space-y-0.5"> {/* Added space-y-0.5 for slight spacing between lines */}
                 <span>Booking</span>
                 <span>Status</span>
               </div>
             </h2>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4 ml-auto"> {/* Added ml-auto to push controls to the right */}
               <Dropdown>
                 <DropdownTrigger>
                   <Button
@@ -839,14 +1009,7 @@ export default function Charts() {
                         return value.split(" - ")[0];
                       }
                       const date = parseDate(value);
-                      if (selectedDateRange === "today") {
-                        return format(date, "HH:mm");
-                      } else if (
-                        selectedDateRange === "this-week" ||
-                        selectedDateRange === "next-week"
-                      ) {
-                        return format(date, "EEE dd");
-                      }
+                      // Remove time formatting for today's view since we don't have time data
                       return format(date, "MMM dd");
                     }}
                     interval={selectedDateRange === "custom" ? 0 : "preserveStartEnd"}
@@ -924,126 +1087,7 @@ export default function Charts() {
       </div>
 
       {/* Revenue Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Revenue</CardTitle>
-          <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
-            <SelectTrigger className="w-[180px] bg-[#EFF6FF]">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <SelectValue>
-                  {revenuePeriod === "last-year"
-                    ? "Last Year"
-                    : "Last 6 Months"}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-              <SelectItem value="last-year">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            {/* Centered "Total Revenue" label */}
-            <div
-              className="
-      absolute 
-      top-1/2 left-1/2 
-      -translate-x-1/2 -translate-y-1/2 
-      flex flex-col items-center 
-      bg-white 
-      border border-gray-200 
-      rounded-md 
-      shadow 
-      p-3
-    "
-            >
-              <div className="text-sm font-semibold text-gray-500">
-                Total Revenue
-              </div>
-              <RevenueDisplay />
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={revenue}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 70, // Increased left margin for larger currency values
-                  bottom: 30, // Increased bottom margin
-                }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  horizontal={true}
-                />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  interval={revenuePeriod === "last-year" ? 1 : 0}
-                  dy={10}
-                  tick={{
-                    fill: "#6B7280",
-                    fontSize: 12,
-                  }}
-                />
-                {(() => {
-                  const { ticks, domainMax } = calculateYAxisTicks(
-                    Math.max(...revenue.map((item) => item.revenue))
-                  );
-                  return (
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => {
-                        if (value >= 10000000) {
-                          return `₹${(value / 10000000).toFixed(1)}Cr`;
-                        } else if (value >= 100000) {
-                          return `₹${(value / 100000).toFixed(1)}L`;
-                        } else if (value >= 1000) {
-                          return `₹${(value / 1000).toFixed(0)}K`;
-                        } else {
-                          return `₹${value}`;
-                        }
-                      }}
-                      tickMargin={12}
-                      ticks={ticks}
-                      domain={[0, domainMax]} // Use exact calculated domain max
-                      allowDecimals={false}
-                      dx={-10}
-                      tick={{
-                        fill: "#6B7280",
-                        fontSize: 12,
-                      }}
-                    />
-                  );
-                })()}
-                <Tooltip
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid #ccc",
-                  }}
-                  formatter={(value) => [
-                    `₹${formatCurrency(value)}`,
-                    "Revenue",
-                  ]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={revenuePeriod === "last-year"}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <RevenueDisplay />
 
       {/* Render calendar at root level */}
       {isCalendarOpen && (

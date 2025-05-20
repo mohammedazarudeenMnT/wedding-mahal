@@ -33,21 +33,29 @@ export default function CalendarView() {
     setOccasionsDate(addMonths(occasionsDate, 1))
   }
 
+  // Add function to check if we can go to previous month
+  const canGoToPreviousMonth = (date) => {
+    const today = new Date();
+    const prevMonth = subMonths(date, 1);
+    return prevMonth.getMonth() >= today.getMonth() && 
+           prevMonth.getFullYear() >= today.getFullYear();
+  };
+
+  // Update the handlers to check for past months
   const handleBookingsPrevMonth = () => {
-    setBookingsDate(subMonths(bookingsDate, 1))
-  }
+    if (canGoToPreviousMonth(bookingsDate)) {
+      setBookingsDate(subMonths(bookingsDate, 1));
+    }
+  };
 
-  const handleBookingsNextMonth = () => {
-    setBookingsDate(addMonths(bookingsDate, 1))
-  }
-
-  // Add month navigation function
+  // Update month navigation function
   const handleMonthChange = (direction) => {
-    setBookingsDate(direction === 'next' ? 
-      addMonths(bookingsDate, 1) : 
-      subMonths(bookingsDate, 1)
-    )
-  }
+    if (direction === 'next') {
+      setBookingsDate(addMonths(bookingsDate, 1));
+    } else if (canGoToPreviousMonth(bookingsDate)) {
+      setBookingsDate(subMonths(bookingsDate, 1));
+    }
+  };
 
   // Add useEffect to fetch occasions
   useEffect(() => {
@@ -174,8 +182,9 @@ export default function CalendarView() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleMonthChange('prev')}
-                    className="h-8 w-8"
+                    onPress={() => handleMonthChange('prev')}
+                    disabled={!canGoToPreviousMonth(bookingsDate)}
+                    className={`h-8 w-8 ${!canGoToPreviousMonth(bookingsDate) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -185,7 +194,7 @@ export default function CalendarView() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleMonthChange('next')}
+                    onPress={() => handleMonthChange('next')}
                     className="h-8 w-8"
                   >
                     <ChevronRight className="h-4 w-4" />

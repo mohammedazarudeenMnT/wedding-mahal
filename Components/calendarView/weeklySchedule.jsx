@@ -9,6 +9,7 @@ export default function WeeklySchedule({ currentDate, category, bookings }) {
   useEffect(() => {
     const monthStart = startOfMonth(currentDate)
     const weeks = []
+    const today = new Date()
 
     for (let i = 0; i < 5; i++) {
       const week = []
@@ -23,6 +24,10 @@ export default function WeeklySchedule({ currentDate, category, bookings }) {
   }, [currentDate])
 
   const getBookingsForDay = (day) => {
+    // Don't show bookings for past dates
+    const today = new Date()
+    if (day < today && !isSameDay(day, today)) return []
+
     return bookings.filter((booking) => {
       const isSameDate = isSameDay(booking.date, day)
       if (category === 'all') return isSameDate
@@ -30,6 +35,11 @@ export default function WeeklySchedule({ currentDate, category, bookings }) {
       if (category === 'room') return isSameDate && booking.propertyType === 'room'
       return false
     })
+  }
+
+  const isPastDate = (day) => {
+    const today = new Date()
+    return day < today && !isSameDay(day, today)
   }
 
   return (
@@ -43,24 +53,42 @@ export default function WeeklySchedule({ currentDate, category, bookings }) {
       <div className="text-center text-sm font-bold py-2 text-gray-600">Saturday</div>
 
       {weeks.map((week, weekIndex) =>
-        week.map((day, dayIndex) => (
-          <div key={`${weekIndex}-${dayIndex}`} className="min-h-[120px] border border-gray-100 p-1">
-            <div className="text-xs text-gray-500 mb-1">{format(day, "d")}</div>
-            <div className="space-y-1">
-              {getBookingsForDay(day).map((booking, index) => (
-                <div key={`${booking.id}-${index}`} className={`${booking.color} p-2 rounded text-xs`}>
-                  <div className="text-[10px] text-gray-600">
-                    {booking.propertyId}
+        week.map((day, dayIndex) => {
+          const isDatePast = isPastDate(day)
+          
+          return (
+            <div 
+              key={`${weekIndex}-${dayIndex}`} 
+              className={`min-h-[120px] border border-gray-100 p-1 ${
+                isDatePast ? 'bg-gray-50' : ''
+              }`}
+            >
+              <div className={`text-xs ${
+                isDatePast ? 'text-gray-400' : 'text-gray-500'
+              } mb-1`}>
+                {format(day, "d")}
+              </div>
+              <div className="space-y-1">
+                {getBookingsForDay(day).map((booking, index) => (
+                  <div 
+                    key={`${booking.id}-${index}`} 
+                    className={`${booking.color} p-2 rounded text-xs`}
+                  >
+                    <div className="text-[10px] text-gray-600">
+                      {booking.propertyId}
+                    </div>
+                    <div className="font-medium">
+                      {booking.title} - {booking.type}
+                    </div>
+                    {booking.subtitle && (
+                      <div className="text-[10px] mt-1">{booking.subtitle}</div>
+                    )}
                   </div>
-                  <div className="font-medium">
-                    {booking.title} - {booking.type}
-                  </div>
-                  {booking.subtitle && <div className="text-[10px] mt-1">{booking.subtitle}</div>}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))
+          )
+        })
       )}
     </div>
   )
