@@ -98,25 +98,22 @@ const getDatesBetween = (startDate, endDate) => {
 const groupDatesByWeek = (dates) => {
   const weeks = {};
   dates.forEach((date) => {
-    const weekStart = startOfWeek(new Date(date.date));
-    const weekKey = format(weekStart, "MMM dd");
+    const weekStart = startOfWeek(new Date(date.rawDate || date.date));
+    const weekKey = format(weekStart, "yyyy-MM-dd");
     if (!weeks[weekKey]) {
       weeks[weekKey] = {
         weekLabel: `${format(weekStart, "MMM dd")}`,
         booked: 0,
         available: 0,
         checkIn: 0,
-        notReady: 0,
         date: weekKey,
+        weekStart: weekStart,
+        weekEnd: endOfWeek(weekStart),
       };
     }
-    weeks[weekKey].booked += date.booked;
-    weeks[weekKey].available = Math.max(
-      date.available,
-      weeks[weekKey].available
-    );
-    weeks[weekKey].checkIn += date.checkIn;
-    weeks[weekKey].notReady += date.notReady;
+    weeks[weekKey].booked += date.booked || 0;
+    weeks[weekKey].available = Math.max(date.available || 0, weeks[weekKey].available);
+    weeks[weekKey].checkIn += date.checkIn || 0;
   });
   return Object.values(weeks);
 };
@@ -187,26 +184,17 @@ export default function Charts() {
   const [appliedDonutRange, setAppliedDonutRange] = useState(null);
   const [selectedType, setSelectedType] = useState("hall");
 
-  const staticData = {
-    hall: {
-      booked: 20,
-      occupied: 1,
-      available: 10,
-    },
-    room: {
-      booked: 15,
-      occupied: 5,
-      available: 30,
-    },
-  };
-
-  const bookingData = staticData[selectedType];
+  // Replace the static data with dynamic state
+  const [bookingStats, setBookingStats] = useState({
+    hall: { booked: 0, occupied: 0, available: 0 },
+    room: { booked: 0, occupied: 0, available: 0 }
+  });
 
   // Create donut chart data
   const chartData = [
-    { name: "Booked", value: bookingData.booked, color: "#FFCA28" },
-    { name: "Occupied", value: bookingData.occupied, color: "#FF7A00" },
-    { name: "Available", value: bookingData.available, color: "#A9A9A9" },
+    { name: "Booked", value: bookingStats[selectedType].booked, color: "#FFCA28" },
+    { name: "Occupied", value: bookingStats[selectedType].occupied, color: "#FF7A00" },
+    { name: "Available", value: bookingStats[selectedType].available, color: "#A9A9A9" },
   ];
 
   // Fetch bookings data using hotelDb
@@ -217,12 +205,10 @@ export default function Charts() {
   // Modify the fetchData function
   const fetchData = async () => {
     try {
-      const [bookingsResponse, roomsResponse, housekeepingResponse] =
-        await Promise.all([
-          axios.get(`/api/bookings`),
-          axios.get(`/api/rooms`),
-          axios.get(`/api/houseKeeping`),
-        ]);
+      const [bookingsResponse, roomsResponse] = await Promise.all([
+        axios.get(`/api/bookings`),
+        axios.get(`/api/rooms`),
+      ]);
 
       if (bookingsResponse.data.success && roomsResponse.data.rooms) {
         const rooms = roomsResponse.data.rooms;
@@ -237,15 +223,6 @@ export default function Charts() {
           months
         );
         setRevenue(revenueData);
-
-        // Calculate not ready rooms
-        const notReadyCount = housekeepingResponse.data.tasks.filter(
-          (task) =>
-            task.status !== "completed" &&
-            (task.status === "pending" ||
-              task.status === "maintenance" ||
-              task.status === "in-progress")
-        ).length;
 
         const today = new Date();
         const todayString = today.toISOString().split("T")[0];
@@ -269,7 +246,6 @@ export default function Charts() {
         const formattedData = formatBookingsData(
           bookingsResponse.data.bookings,
           totalRooms,
-          notReadyCount,
           checkInCount
         );
 
@@ -285,7 +261,6 @@ export default function Charts() {
   const formatBookingsData = (
     rawBookings,
     totalRooms,
-    notReadyCount,
     checkInCount
   ) => {
     const bookingsByDate = {};
@@ -297,8 +272,7 @@ export default function Charts() {
       date: todayString,
       booked: 0,
       checkIn: checkInCount,
-      notReady: notReadyCount,
-      available: totalRooms - checkInCount - notReadyCount,
+      available: totalRooms - checkInCount,
     };
 
     // Process bookings
@@ -310,7 +284,6 @@ export default function Charts() {
           date: bookingDate,
           booked: 0,
           checkIn: 0,
-          notReady: 0,
           available: totalRooms,
         };
       }
@@ -322,8 +295,7 @@ export default function Charts() {
           0,
           totalRooms -
             bookingsByDate[bookingDate].booked -
-            bookingsByDate[bookingDate].checkIn -
-            bookingsByDate[bookingDate].notReady
+            bookingsByDate[bookingDate].checkIn
         );
       }
     });
@@ -334,72 +306,126 @@ export default function Charts() {
     };
   };
 
-  // Update filterDataByDateRange function
-  const filterDataByDateRange = (data, dateRange) => {
-    const start = startOfDay(dateRange.from);
-    const end = endOfDay(dateRange.to);
-    const allDates = getDatesBetween(start, end);
-    const daysDifference = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-
-    // Map all dates with their booking data
-    const datesWithData = allDates.map((date) => {
-      const dateString = format(date, "MMM dd, yyyy");
-      const existingData = data.find((item) => item.date === dateString);
-
-      if (existingData) {
-        // Calculate available rooms correctly
-        const bookedRooms = existingData.booked || 0;
-        const checkedInRooms = existingData.checkIn || 0;
-        const notReadyRooms = existingData.notReady || 0;
-        const availableRooms = Math.max(
-          0,
-          maxRooms - bookedRooms - checkedInRooms - notReadyRooms
-        );
-
-        return {
-          ...existingData,
-          available: availableRooms,
-        };
-      }
-
-      // Default values for dates without bookings
-      return {
-        date: dateString,
-        booked: 0,
-        checkIn: 0,
-        notReady: 0,
-        available: maxRooms,
-      };
-    });
-
-    // Group by week if needed
-    if (daysDifference > 14 && selectedDateRange === "custom") {
-      const weeklyData = groupDatesByWeek(datesWithData);
-      return weeklyData.map((week) => ({
-        ...week,
-        available: Math.max(
-          0,
-          maxRooms - week.booked - week.checkIn - week.notReady
-        ),
-      }));
-    }
-
-    return datesWithData;
+  // Add a utility function to ensure proper date parsing
+  const parseDate = (dateString) => {
+    const parsed = new Date(dateString);
+    return parsed.getFullYear() < 2000 ? new Date() : parsed;
   };
 
+  // Update fetchBarChartData to handle dates more accurately
+  const fetchBarChartData = async () => {
+    try {
+      const roomsResponse = await axios.get('/api/rooms');
+
+      if (roomsResponse.data.rooms) {
+        const dateRange = getDateRange();
+        
+        // Filter rooms based on selectedType
+        const filteredRooms = roomsResponse.data.rooms.filter(
+          room => room.type === selectedType
+        );
+        
+        // Calculate total rooms/halls available
+        const totalCapacity = filteredRooms.reduce((total, room) => {
+          return total + (selectedType === 'hall' ? 
+            (room.hallNumbers?.length || 0) : 
+            (room.roomNumbers?.length || 0));
+        }, 0);
+
+        setMaxRooms(totalCapacity);
+
+        // Get all dates in the range
+        const dates = getDatesBetween(dateRange.from, dateRange.to);
+        
+        // Initialize booking data for each date
+        const bookingData = dates.map(date => ({
+          date: format(date, "yyyy-MM-dd"),
+          rawDate: date,
+          booked: 0,
+          available: totalCapacity
+        }));
+
+        // Process rooms data
+        filteredRooms.forEach(room => {
+          const numbers = selectedType === 'hall' ? room.hallNumbers : room.roomNumbers;
+
+          if (!numbers) return;
+
+          numbers.forEach(number => {
+            if (!number.bookeddates) return;
+
+            number.bookeddates.forEach(booking => {
+              const bookingDate = new Date(booking.checkIn);
+              if (bookingDate >= startOfDay(dateRange.from) && 
+                  bookingDate <= endOfDay(dateRange.to)) {
+                
+                const dateStr = format(bookingDate, "yyyy-MM-dd");
+                const dateEntry = bookingData.find(d => d.date === dateStr);
+                
+                if (dateEntry) {
+                  // Count both 'booked' and 'checkin' status as booked for bar chart
+                  if (booking.status === 'checkin' || booking.status === 'booked') {
+                    dateEntry.booked++;
+                    dateEntry.available--;
+                  }
+                  // If status is checkout, it counts as available
+                }
+              }
+            });
+          });
+        });
+
+        // Handle custom date range grouping
+        const daysDifference = Math.ceil(
+          (dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysDifference > 14 && selectedDateRange === "custom") {
+          // Group by week for longer ranges
+          const weeklyData = groupDatesByWeek(bookingData);
+          const processedWeeklyData = weeklyData.map(week => ({
+            ...week,
+            available: Math.max(0, totalCapacity - week.booked),
+            weekRange: `${format(week.weekStart, "MMM dd, yyyy")} - ${format(week.weekEnd, "MMM dd, yyyy")}`
+          }));
+          setFilteredBookings(processedWeeklyData);
+        } else {
+          // Use daily data for shorter ranges
+          const processedDailyData = bookingData.map(day => ({
+            ...day,
+            displayDate: format(new Date(day.date), "MMM dd, yyyy")
+          }));
+          setFilteredBookings(processedDailyData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching bar chart data:', error);
+    }
+  };
+
+  // Update useEffect to fetch both charts' data
+  useEffect(() => {
+    fetchDonutChartData();
+    fetchBarChartData();
+  }, [selectedType, donutDateRange, appliedDonutRange, selectedDateRange, appliedDateRange]);
+
+  // Update handleDateRangeChange
   const handleDateRangeChange = (value) => {
     if (value === "custom") {
       setIsCalendarOpen(true);
     } else {
       setSelectedDateRange(value);
+      fetchBarChartData();
     }
   };
 
+  // Update handleDateSelect
   const handleDateSelect = (dateRange) => {
     setCustomDateRange(dateRange);
     setSelectedDateRange("custom");
-    setAppliedDateRange(dateRange); // Set the applied date range
+    setAppliedDateRange(dateRange);
     setIsCalendarOpen(false);
+    fetchBarChartData();
   };
 
   // Add a function to format the date range display
@@ -447,24 +473,104 @@ export default function Charts() {
     }
   };
 
-  useEffect(() => {
-    const dateRange = getDateRange();
-    const filtered = filterDataByDateRange(bookings, dateRange);
-    setFilteredBookings(filtered);
-    if (isDatePickerOpen && selectTriggerRef.current) {
-      const rect = selectTriggerRef.current.getBoundingClientRect();
-      setCalendarPosition({
-        top: rect.bottom + window.scrollY, // Position below the select
-        left: rect.left + window.scrollX, // Align horizontally
-      });
+  // Add function to get date range for donut chart
+  const getDonutDateRange = () => {
+    const today = new Date();
+    switch (donutDateRange) {
+      case "today":
+        return {
+          from: startOfDay(today),
+          to: endOfDay(today)
+        };
+      case "this-week":
+        return {
+          from: startOfWeek(today),
+          to: endOfWeek(today)
+        };
+      case "next-week":
+        const nextWeekStart = addDays(startOfWeek(today), 7);
+        return {
+          from: nextWeekStart,
+          to: endOfWeek(nextWeekStart)
+        };
+      case "custom":
+        return appliedDonutRange || {
+          from: startOfDay(today),
+          to: endOfDay(today)
+        };
+      default:
+        return {
+          from: startOfWeek(today),
+          to: endOfWeek(today)
+        };
     }
-  }, [
-    selectedDateRange,
-    customDateRange,
-    bookings,
-    isDatePickerOpen,
-    maxRooms,
-  ]);
+  };
+
+  // Add function to fetch donut chart data
+  const fetchDonutChartData = async () => {
+    try {
+      const roomsResponse = await axios.get('/api/rooms');
+
+      if (roomsResponse.data.rooms) {
+        const dateRange = getDonutDateRange();
+        const totalRooms = {
+          hall: 0,
+          room: 0
+        };
+
+        // Calculate total rooms/halls
+        roomsResponse.data.rooms.forEach(room => {
+          if (room.type === 'hall') {
+            totalRooms.hall += room.hallNumbers?.length || 0;
+          } else {
+            totalRooms.room += room.roomNumbers?.length || 0;
+          }
+        });
+
+        // Initialize counts
+        const counts = {
+          hall: { booked: 0, occupied: 0, available: 0 },
+          room: { booked: 0, occupied: 0, available: 0 }
+        };
+
+        // Process rooms data
+        roomsResponse.data.rooms.forEach(room => {
+          const type = room.type;
+          const numbers = type === 'hall' ? room.hallNumbers : room.roomNumbers;
+
+          if (!numbers) return;
+
+          numbers.forEach(number => {
+            if (!number.bookeddates) return;
+
+            // Check all bookings within date range
+            number.bookeddates.forEach(booking => {
+              const bookingDate = new Date(booking.checkIn);
+              const startDate = startOfDay(dateRange.from);
+              const endDate = endOfDay(dateRange.to);
+
+              // Check if booking date falls within the range
+              if (bookingDate >= startDate && bookingDate <= endDate) {
+                if (booking.status === 'checkin') {
+                  counts[type].occupied++;
+                } else if (booking.status === 'booked') {
+                  counts[type].booked++;
+                }
+              }
+            });
+          });
+        });
+
+        // Calculate available properties
+        counts.hall.available = totalRooms.hall - (counts.hall.booked + counts.hall.occupied);
+        counts.room.available = totalRooms.room - (counts.room.booked + counts.room.occupied);
+
+        setBookingStats(counts);
+      }
+    } catch (error) {
+      console.error('Error fetching donut chart data:', error);
+    }
+  };
 
   // Add this function for donut chart date display
   const getDonutDateDisplay = () => {
@@ -490,17 +596,22 @@ export default function Charts() {
     <div className="p-6 space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         {/* Booking Status Card with Donut Chart */}
-        <Card className="p-6 bg-white rounded-lg">
+        <Card className="p-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-medium">Booking</h2>
-            <div className="flex gap-3">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              <div className="flex flex-col">
+                <span>Booking</span>
+                <span>Status</span>
+              </div>
+            </h2>
+            <div className="flex gap-4">
               <Dropdown>
                 <DropdownTrigger>
                   <Button
                     variant="outline"
-                    className="min-w-[120px] h-10 bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 flex items-center justify-between px-4"
+                    className="min-w-[130px] h-11 bg-gray-50/50 border border-gray-200 text-gray-700 hover:bg-gray-100 flex items-center justify-between px-4 rounded-lg transition-all duration-200"
                   >
-                    <span className="mr-2">
+                    <span className="mr-2 font-medium">
                       {selectedType === "hall" ? "Hall" : "Room"}
                     </span>
                     <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -509,17 +620,17 @@ export default function Charts() {
                 <DropdownMenu
                   aria-label="Booking type selection"
                   onAction={(key) => setSelectedType(key)}
-                  className="min-w-[120px]"
+                  className="min-w-[130px]"
                 >
                   <DropdownItem
                     key="hall"
-                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                    className="px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
                   >
                     Hall
                   </DropdownItem>
                   <DropdownItem
                     key="room"
-                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                    className="px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
                   >
                     Room
                   </DropdownItem>
@@ -536,10 +647,10 @@ export default function Charts() {
                   }
                 }}
               >
-                <SelectTrigger className="w-[180px] bg-[#EFF6FF]">
+                <SelectTrigger className="w-[180px] h-11 bg-gray-50/50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all duration-200">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <SelectValue>{getDonutDateDisplay()}</SelectValue>
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <SelectValue className="font-medium">{getDonutDateDisplay()}</SelectValue>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -559,170 +670,248 @@ export default function Charts() {
             </div>
           </div>
 
-          <div className="flex items-center gap-12">
-            <div className="w-[250px] h-[250px]">
+          <div className="flex items-center justify-center gap-6">
+            <div className="flex items-center justify-center w-[220px] h-[220px] relative">
               <DonutChart data={chartData} />
+              {/* Add center stats */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-gray-800">
+                  {bookingStats[selectedType].booked + bookingStats[selectedType].occupied}
+                </span>
+                <span className="text-xs text-gray-500">Total Bookings</span>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#FFCA28]"></div>
-                <div className="text-lg">
-                  <span className="font-semibold">{bookingData.booked}</span>{" "}
-                  <span className="text-gray-600">Booked</span>
+            <div className="space-y-6 px-4 min-w-[140px]">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 group hover:bg-gray-50/80 p-2.5 rounded-lg transition-all duration-200">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#FFCA28] ring-4 ring-[#FFCA28]/10"></div>
+                  <div>
+                    <span className="text-xl font-bold text-gray-800">
+                      {bookingStats[selectedType].booked}
+                    </span>
+                    <p className="text-xs font-medium text-gray-500">Booked</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 group hover:bg-gray-50/80 p-2.5 rounded-lg transition-all duration-200">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#FF7A00] ring-4 ring-[#FF7A00]/10"></div>
+                  <div>
+                    <span className="text-xl font-bold text-gray-800">
+                      {bookingStats[selectedType].occupied}
+                    </span>
+                    <p className="text-xs font-medium text-gray-500">Occupied</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 group hover:bg-gray-50/80 p-2.5 rounded-lg transition-all duration-200">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#A9A9A9] ring-4 ring-[#A9A9A9]/10"></div>
+                  <div>
+                    <span className="text-xl font-bold text-gray-800">
+                      {bookingStats[selectedType].available}
+                    </span>
+                    <p className="text-xs font-medium text-gray-500">Available</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#FF7A00]"></div>
-                <div className="text-lg">
-                  <span className="font-semibold">{bookingData.occupied}</span>{" "}
-                  <span className="text-gray-600">Occupied</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#A9A9A9]"></div>
-                <div className="text-lg">
-                  <span className="font-semibold">{bookingData.available}</span>{" "}
-                  <span className="text-gray-600">Available</span>
-                </div>
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Total Capacity: {" "}
+                  <span className="font-semibold text-gray-700">
+                    {bookingStats[selectedType].booked + 
+                     bookingStats[selectedType].occupied + 
+                     bookingStats[selectedType].available}
+                  </span>
+                </p>
               </div>
             </div>
           </div>
         </Card>
 
         {/* Bookings Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <Card className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="space-y-1">
-              <CardTitle className="text-base font-semibold">
-                Bookings
-              </CardTitle>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                {/* Only Booked and Available */}
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-[#6B7280]" />
+            <CardTitle className="text-lg font-semibold text-gray-800">
+              <div className="flex flex-col">
+                <span>{selectedType === 'hall' ? 'Hall' : 'Room'}</span>
+                <span>Bookings Overview</span>
+              </div>
+            </CardTitle>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-[#FFCA28]" />
                   <span>Booked</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-[#25D366]" />
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-[#404040]" />
                   <span>Available</span>
                 </div>
               </div>
             </div>
-            <Select
-              value={selectedDateRange}
-              onValueChange={handleDateRangeChange}
-            >
-              <SelectTrigger
-                ref={selectTriggerRef}
-                className="w-[180px] bg-[#EFF6FF]"
+            <div className="flex items-center gap-4">
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    variant="outline"
+                    className="min-w-[130px] h-11 bg-gray-50/50 border border-gray-200 text-gray-700 hover:bg-gray-100 flex items-center justify-between px-4 rounded-lg transition-all duration-200"
+                  >
+                    <span className="mr-2 font-medium">
+                      {selectedType === "hall" ? "Hall" : "Room"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  aria-label="Booking type selection"
+                  onAction={(key) => {
+                    setSelectedType(key);
+                    fetchBarChartData();
+                  }}
+                  className="min-w-[130px]"
+                >
+                  <DropdownItem
+                    key="hall"
+                    className="px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                  >
+                    Hall
+                  </DropdownItem>
+                  <DropdownItem
+                    key="room"
+                    className="px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                  >
+                    Room
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
+
+              <Select
+                value={selectedDateRange}
+                onValueChange={handleDateRangeChange}
               >
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <SelectValue>{getDateRangeDisplay()}</SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="this-week">This week</SelectItem>
-                <SelectItem value="next-week">Next week</SelectItem>
-                <SelectItem value="custom">
-                  {selectedDateRange === "custom" && appliedDateRange
-                    ? `${format(appliedDateRange.from, "MMM dd")} - ${format(
-                        appliedDateRange.to,
-                        "MMM dd"
-                      )}`
-                    : "Custom"}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  ref={selectTriggerRef}
+                  className="w-[180px] h-11 bg-gray-50/50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <SelectValue className="font-medium">{getDateRangeDisplay()}</SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="this-week">This week</SelectItem>
+                  <SelectItem value="next-week">Next week</SelectItem>
+                  <SelectItem value="custom">
+                    {selectedDateRange === "custom" && appliedDateRange
+                      ? `${format(appliedDateRange.from, "MMM dd")} - ${format(
+                          appliedDateRange.to,
+                          "MMM dd"
+                        )}`
+                      : "Custom"}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="pt-4">
             {maxRooms > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart
                   data={filteredBookings}
-                  margin={{ top: 20, right: 0, left: -20, bottom: 0 }}
-                  barSize={50}
+                  margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+                  barSize={32}
                 >
-                  {/* Green dotted horizontal lines, no vertical lines */}
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#10B981"
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    vertical={false} 
+                    stroke="#f1f1f1"
                   />
-
                   <XAxis
                     dataKey="date"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: "#6B7280", fontSize: 12 }}
+                    tick={{ fill: "#404040", fontSize: 11, fontWeight: 500 }}
                     tickFormatter={(value) => {
-                      const date = new Date(value);
-                      // For this-week and next-week, show day and date
-                      if (
+                      if (selectedDateRange === "custom" && value.includes(" - ")) {
+                        // For weekly view, show the week start date
+                        return value.split(" - ")[0];
+                      }
+                      const date = parseDate(value);
+                      if (selectedDateRange === "today") {
+                        return format(date, "HH:mm");
+                      } else if (
                         selectedDateRange === "this-week" ||
                         selectedDateRange === "next-week"
                       ) {
                         return format(date, "EEE dd");
                       }
-                      // For custom ranges, keep the week format
-                      return value;
+                      return format(date, "MMM dd");
                     }}
-                    interval={
-                      selectedDateRange === "custom" ? 0 : "preserveStartEnd"
-                    }
+                    interval={selectedDateRange === "custom" ? 0 : "preserveStartEnd"}
+                    dy={8}
                   />
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: "#6B7280", fontSize: 12 }}
+                    tick={{ fill: "#404040", fontSize: 11, fontWeight: 500 }}
                     ticks={Array.from({ length: maxRooms + 1 }, (_, i) => i)}
                     domain={[0, maxRooms]}
+                    dx={-8}
                   />
                   <Tooltip
+                    cursor={{ fill: 'rgba(0, 0, 0, 0.04)' }}
                     contentStyle={{
-                      background: "white",
-                      border: "1px solid #ccc",
+                      backgroundColor: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 12px -2px rgb(0 0 0 / 0.15)",
+                      padding: "8px 12px",
                     }}
                     formatter={(value, name) => [
                       value,
                       name === "booked" ? "Booked" : "Available",
                     ]}
                     labelFormatter={(label) => {
-                      if (selectedDateRange === "custom") {
-                        return `Week of ${label}`;
+                      if (selectedDateRange === "custom" && filteredBookings[0]?.weekRange) {
+                        // For weekly view, show the full week range
+                        const weekData = filteredBookings.find(d => d.date === label);
+                        return weekData?.weekRange || format(parseDate(label), "MMMM dd, yyyy");
                       }
-                      return format(new Date(label), "MMM dd, yyyy");
+                      // For daily view, show the full date
+                      return format(parseDate(label), "MMMM dd, yyyy");
                     }}
+                    labelStyle={{ fontWeight: 500, marginBottom: 4 }}
                   />
-
                   <Bar
                     dataKey="booked"
                     stackId="a"
-                    fill="#6B7280"
+                    fill="#FFCA28"
                     radius={[4, 4, 0, 0]}
                   >
                     <LabelList
                       dataKey="booked"
                       position="center"
                       fill="#FFFFFF"
-                      fontSize={12}
+                      fontSize={10}
+                      fontWeight={600}
+                      formatter={(value) => (value > 0 ? value : '')}
                     />
                   </Bar>
-
                   <Bar
                     dataKey="available"
                     stackId="a"
-                    fill="#25D366"
+                    fill="#404040"
                     radius={[0, 0, 4, 4]}
                   >
                     <LabelList
                       dataKey="available"
                       position="center"
                       fill="#FFFFFF"
-                      fontSize={12}
+                      fontSize={10}
+                      fontWeight={600}
+                      formatter={(value) => (value > 0 ? value : '')}
                     />
                   </Bar>
                 </BarChart>
@@ -864,6 +1053,7 @@ export default function Charts() {
             setIsCalendarOpen(false);
           }}
           onClose={() => setIsCalendarOpen(false)}
+          minDate={new Date()}
         />
       )}
 
@@ -875,6 +1065,7 @@ export default function Charts() {
             setDonutCalendarOpen(false);
           }}
           onClose={() => setDonutCalendarOpen(false)}
+          minDate={new Date()}
         />
       )}
     </div>
