@@ -16,7 +16,7 @@ import {
   TableCell,
 } from "@heroui/table";
 
-import { format, parseISO, isValid, parse, differenceInDays } from "date-fns";
+import { format, parseISO, isValid, differenceInDays } from "date-fns";
 
 const ConfirmationModal = ({
   isOpen,
@@ -39,30 +39,8 @@ const ConfirmationModal = ({
   };
 
   // Add function to format time similar to BookingModal
-  const formatTo12HourUsingDateFns = (time) => {
-    if (!time) return ""; // Add null check
-    try {
-      const parsedTime = parse(time, "HH:mm", new Date());
-      return format(parsedTime, "hh:mm a");
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return time; // Return original time if parsing fails
-    }
-  };
 
   // Helper function to check if a date is a weekend
-  const isWeekend = (dateString) => {
-    try {
-      const date =
-        typeof dateString === "string"
-          ? parseISO(dateString)
-          : new Date(dateString);
-      return roomSettings.weekend.includes(format(date, "EEE"));
-    } catch (error) {
-      console.error("Error checking weekend:", error);
-      return false;
-    }
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -77,7 +55,21 @@ const ConfirmationModal = ({
     const start = new Date(startDate);
     const end = new Date(endDate);
     // Calculate nights by getting the difference in days between end and start dates
-    return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    // Use exact midnight-to-midnight days for accurate calculation
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return differenceInDays(end, start);
+  };
+
+  // Helper function to check for special offerings
+  const getSpecialOffering = (date, propertyType) => {
+    if (!roomSettings?.specialOfferings) return null;
+    return roomSettings.specialOfferings.find(
+      (offering) =>
+        offering.propertyType === propertyType &&
+        new Date(offering.startDate) <= new Date(date) &&
+        new Date(offering.endDate) >= new Date(date)
+    );
   };
 
   return (
@@ -128,32 +120,43 @@ const ConfirmationModal = ({
             </TableHeader>
             <TableBody>
               {priceBreakdown
-                .filter((day) => !day.isCheckout && day.roomType !== "Discount")
-                .map((day, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {format(new Date(day.date), "dd MMM yyyy")}
-                      {day.isWeekend && (
-                        <span className="ml-2 text-blue-600 text-sm">
-                          (Weekend +{roomSettings.weekendPriceHike}%)
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{`${day.roomType} - ${day.roomNumber}`}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(day.roomCharge)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(day.taxes)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(day.additionalCharge)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(day.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                .filter((day) => day.roomType !== "Discount")
+                .map((day, index) => {
+                  const specialOffering = getSpecialOffering(day.date, "room");
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>
+                        {format(new Date(day.date), "dd MMM yyyy")}
+                        {day.isWeekend && (
+                          <span className="ml-2 text-blue-600 text-sm">
+                            (Weekend +{roomSettings.weekendPriceHike}%)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {`${day.roomType} - ${day.roomNumber}`}
+                        {specialOffering && (
+                          <span className="ml-2 text-sm text-green-600">
+                            ({specialOffering.name}:{" "}
+                            {specialOffering.discountPercentage}% off)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(day.roomCharge)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(day.taxes)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(day.additionalCharge)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(day.total)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               {/* Display discount row if it exists */}
               {priceBreakdown.find((day) => day.roomType === "Discount") && (
                 <TableRow className="text-green-600">
@@ -184,6 +187,39 @@ const ConfirmationModal = ({
                 <TableCell className="text-right">₹0.00</TableCell>
                 <TableCell className="text-right">₹0.00</TableCell>
               </TableRow>
+
+              {/* Special Offerings Summary */}
+              {roomSettings?.specialOfferings?.some(
+                (offering) =>
+                  offering.propertyType === "room" &&
+                  new Date(offering.startDate) <= new Date(dateRange.endDate) &&
+                  new Date(offering.endDate) >= new Date(dateRange.startDate)
+              ) && (
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <div className="text-sm text-green-600 mt-2">
+                      <p className="font-semibold">Special Offers Applied:</p>
+                      {roomSettings.specialOfferings
+                        .filter(
+                          (offering) =>
+                            offering.propertyType === "room" &&
+                            new Date(offering.startDate) <=
+                              new Date(dateRange.endDate) &&
+                            new Date(offering.endDate) >= new Date(
+                              dateRange.startDate
+                            )
+                        )
+                        .map((offering, index) => (
+                          <p key={index}>
+                            {offering.name}: {offering.discountPercentage}% off (
+                            {formatDate(offering.startDate)} -{" "}
+                            {formatDate(offering.endDate)})
+                          </p>
+                        ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
 

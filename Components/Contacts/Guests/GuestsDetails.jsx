@@ -156,6 +156,8 @@ export default function GuestProfile({ guestId }) {
   const [selectedTab, setSelectedTab] = useState("bookings");
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [transactionRowsPerPage, setTransactionRowsPerPage] = useState(5);
 
   const columns = useMemo(
     () => [
@@ -184,6 +186,19 @@ export default function GuestProfile({ guestId }) {
       ),
     };
   }, [filteredBookings]);
+
+  // Update calculatePendingAmount to check for partial payments
+  const calculatePendingAmount = useMemo(() => {
+    if (!transactionHistory || transactionHistory.length === 0) return 0;
+
+    return transactionHistory.reduce((total, transaction) => {
+      // Only include remaining balance if the transaction is not fully paid
+      if (!transaction.isFullyPaid) {
+        return total + (transaction.remainingBalance || 0);
+      }
+      return total;
+    }, 0);
+  }, [transactionHistory]);
 
   // Now handleDownloadPDF can access calculateTotals
   const handleDownloadPDF = useCallback(async () => {
@@ -523,22 +538,25 @@ export default function GuestProfile({ guestId }) {
 
   useEffect(() => {
     if (guestId) {
-      fetchGuestData();
+      const fetchInitialData = async () => {
+        setLoading(true);
+        try {
+          await Promise.all([fetchGuestData(), fetchTransactionHistory()]);
+        } catch (error) {
+          console.error("Error fetching initial data:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchInitialData();
     }
-  }, [guestId, fetchGuestData]);
+  }, [guestId, fetchGuestData, fetchTransactionHistory]);
 
   useEffect(() => {
     const filtered = filterBookingsByDateRange(bookings, date);
     setFilteredBookings(filtered);
     setPage(1); // Reset to first page when filter changes
   }, [date, bookings, filterBookingsByDateRange]);
-
-  // Fetch transaction history when guest tab is selected
-  useEffect(() => {
-    if (selectedTab === "transactions") {
-      fetchTransactionHistory();
-    }
-  }, [selectedTab, fetchTransactionHistory]);
 
   // Add a cleanup effect
   useEffect(() => {
@@ -554,11 +572,22 @@ export default function GuestProfile({ guestId }) {
     return filteredBookings.slice(start, end);
   }, [page, rowsPerPage, filteredBookings]);
 
+  const paginatedTransactions = useMemo(() => {
+    const start = (transactionPage - 1) * transactionRowsPerPage;
+    const end = start + transactionRowsPerPage;
+    return transactionHistory.slice(start, end);
+  }, [transactionPage, transactionRowsPerPage, transactionHistory]);
+
   const pages = Math.ceil(filteredBookings.length / rowsPerPage);
 
   const onRowsPerPageChange = useCallback((e) => {
     setRowsPerPage(Number(e.target.value));
     setPage(1);
+  }, []);
+
+  const onTransactionRowsPerPageChange = useCallback((e) => {
+    setTransactionRowsPerPage(Number(e.target.value));
+    setTransactionPage(1);
   }, []);
 
   const downloadButton = useMemo(
@@ -1140,8 +1169,7 @@ export default function GuestProfile({ guestId }) {
 
         <div className="w-3/4 p-8">
           <h2 className="text-xl font-medium mb-6">Overview</h2>
-
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
               <CardBody className="flex flex-row justify-between items-center p-4">
                 <div>
@@ -1179,155 +1207,345 @@ export default function GuestProfile({ guestId }) {
                 </Button>
               </CardBody>
             </Card>
+            <Card className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+              <CardBody className="flex flex-row justify-between items-center p-4">
+                <div>
+                  <div className="text-sm text-gray-500">Pending&apos;s</div>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(calculatePendingAmount)}
+                  </div>
+                </div>
+                <Button
+                  isIconOnly
+                  variant="light"
+                  className="text-black bg-hotel-secondary"
+                >
+                  <IndianRupee size={18} />{" "}
+                </Button>
+              </CardBody>
+            </Card>
           </div>
-
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"
-                />
-              </svg>
-              <span className="font-medium">Bookings</span>
-            </div>
-
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Buttons
-                    variant="outline"
-                    className={cn(
-                      "w-[240px] justify-start text-left font-normal bg-hotel-secondary",
-                      !(date?.from && date?.to) && "text-muted-foreground"
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {date?.from && date?.to ? (
-                      <>
-                        {format(date.from, "LLL dd, y")} -{" "}
-                        {format(date.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Buttons>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    initialFocus
-                    mode="range"
-                    selected={tempDate}
-                    onSelect={handleDateChange}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button className="bg-hotel-secondary">
-                    <PiFadersHorizontal />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu
-                  disallowEmptySelection
-                  aria-label="Table Columns"
-                  closeOnSelect={false}
-                  selectedKeys={visibleColumns}
-                  selectionMode="multiple"
-                  onSelectionChange={setVisibleColumns}
+              <div className="flex gap-4">
+                <button
+                  className={`py-2 px-4 font-medium ${
+                    selectedTab === "bookings"
+                      ? "text-hotel-primary border-b-2 border-hotel-primary"
+                      : "text-gray-600 hover:text-hotel-primary"
+                  }`}
+                  onClick={() => setSelectedTab("bookings")}
                 >
-                  {columns.map((column) => (
-                    <DropdownItem key={column.uid} className="capitalize">
-                      {column.name}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </Dropdown>
-
-              {downloadButton}
-
-              <Link
-                href={`/dashboard/bookings/add-booking?email=${guestData.email}`}
-              >
-                {" "}
-                <Button className="bg-yellow-400 text-black">Add New</Button>
-              </Link>
+                  Booking History
+                </button>
+                <button
+                  className={`py-2 px-4 font-medium ${
+                    selectedTab === "transactions"
+                      ? "text-hotel-primary border-b-2 border-hotel-primary"
+                      : "text-gray-600 hover:text-hotel-primary"
+                  }`}
+                  onClick={() => setSelectedTab("transactions")}
+                >
+                  Transaction History
+                </button>
+              </div>
             </div>
-          </div>
+            <div className="flex items-center gap-6">
+              {/* Tabs navigation */}
 
-          <div className="shadow-[0_2px_12px_rgba(0,0,0,0.08)] rounded-lg overflow-hidden">
-            <Table
-              aria-label="Bookings history table"
-              bottomContent={
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">
-                      Rows per page:{" "}
-                      <select
-                        className="bg-transparent outline-none text-default-400"
-                        onChange={onRowsPerPageChange}
-                        value={rowsPerPage}
+              {/* Action buttons - only show filter controls for bookings tab */}
+              <div className="flex gap-2">
+                {selectedTab === "bookings" && (
+                  <>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Buttons
+                          variant="outline"
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal bg-hotel-secondary",
+                            !(date?.from && date?.to) && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {date?.from && date?.to ? (
+                            <>
+                              {format(date.from, "LLL dd, y")} -{" "}
+                              {format(date.to, "LLL dd, y")}
+                            </>
+                          ) : (
+                            <span>Pick a date range</span>
+                          )}
+                        </Buttons>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          initialFocus
+                          mode="range"
+                          selected={tempDate}
+                          onSelect={handleDateChange}
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button className="bg-hotel-secondary">
+                          <PiFadersHorizontal />
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownMenu
+                        disallowEmptySelection
+                        aria-label="Table Columns"
+                        closeOnSelect={false}
+                        selectedKeys={visibleColumns}
+                        selectionMode="multiple"
+                        onSelectionChange={setVisibleColumns}
                       >
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="15">15</option>
-                      </select>
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      Showing{" "}
-                      {Math.min(
-                        (page - 1) * rowsPerPage + 1,
-                        filteredBookings.length
-                      )}
-                      -{Math.min(page * rowsPerPage, filteredBookings.length)}{" "}
-                      of {filteredBookings.length}
-                    </span>
-                  </div>
-                  <Pagination
-                    showControls
-                    classNames={{
-                      cursor: "bg-hotel-primary",
-                      item: "text-gray-600 hover:text-hotel-primary",
-                      next: "text-hotel-primary",
-                      prev: "text-hotel-primary",
-                    }}
-                    page={page}
-                    total={pages}
-                    onChange={setPage}
-                  />
-                </div>
-              }
-            >
-              <TableHeader>
-                {Array.from(visibleColumns).map((columnKey) => (
-                  <TableColumn
-                    key={columnKey}
-                    className="bg-hotel-primary text-white font-medium"
-                  >
-                    {columns.find((col) => col.uid === columnKey)?.name}
-                  </TableColumn>
-                ))}
-              </TableHeader>
-              <TableBody items={paginatedBookings}>
-                {(item) => (
-                  <TableRow key={item.id}>
-                    {Array.from(visibleColumns).map((columnKey) => (
-                      <TableCell key={columnKey}>
-                        {renderCell(item, columnKey)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                        {columns.map((column) => (
+                          <DropdownItem key={column.uid} className="capitalize">
+                            {column.name}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
+                    </Dropdown>
+
+                    {downloadButton}
+                  </>
                 )}
-              </TableBody>
-            </Table>
+
+                <Link
+                  href={
+                    selectedTab === "bookings"
+                      ? `/dashboard/bookings/add-booking?email=${guestData.email}`
+                      : "/dashboard/financials/invoices/record-payement"
+                  }
+                >
+                  {" "}
+                  <Button className="bg-yellow-400 text-black">
+                    {selectedTab === "bookings"
+                      ? "Add Booking"
+                      : "Record Payment"}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>{" "}
+          <div className="shadow-[0_2px_12px_rgba(0,0,0,0.08)] rounded-lg overflow-hidden">
+            {selectedTab === "bookings" ? (
+              // Bookings Table
+              <Table
+                aria-label="Bookings history table"
+                bottomContent={
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        Rows per page:{" "}
+                        <select
+                          className="bg-transparent outline-none text-default-400"
+                          onChange={onRowsPerPageChange}
+                          value={rowsPerPage}
+                        >
+                          <option value="5">5</option>
+                          <option value="10">10</option>
+                          <option value="15">15</option>
+                        </select>
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        Showing{" "}
+                        {Math.min(
+                          (page - 1) * rowsPerPage + 1,
+                          filteredBookings.length
+                        )}
+                        -{Math.min(page * rowsPerPage, filteredBookings.length)}{" "}
+                        of {filteredBookings.length}
+                      </span>
+                    </div>
+                    <Pagination
+                      showControls
+                      classNames={{
+                        cursor: "bg-hotel-primary",
+                        item: "text-gray-600 hover:text-hotel-primary",
+                        next: "text-hotel-primary",
+                        prev: "text-hotel-primary",
+                      }}
+                      page={page}
+                      total={pages}
+                      onChange={setPage}
+                    />
+                  </div>
+                }
+              >
+                <TableHeader>
+                  {Array.from(visibleColumns).map((columnKey) => (
+                    <TableColumn
+                      key={columnKey}
+                      className="bg-hotel-primary text-white font-medium"
+                    >
+                      {columns.find((col) => col.uid === columnKey)?.name}
+                    </TableColumn>
+                  ))}
+                </TableHeader>
+                <TableBody items={paginatedBookings}>
+                  {(item) => (
+                    <TableRow key={item.id}>
+                      {Array.from(visibleColumns).map((columnKey) => (
+                        <TableCell key={columnKey}>
+                          {renderCell(item, columnKey)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            ) : (
+              // Transaction History Table
+              <>
+                {" "}
+                {loadingTransactions ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="lg" />
+                  </div>
+                ) : transactionHistory.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No transaction records found for this guest
+                  </div>
+                ) : (
+                  <Table
+                    aria-label="Transaction history"
+                    bottomContent={
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">
+                            Rows per page:{" "}
+                            <select
+                              className="bg-transparent outline-none text-default-400"
+                              onChange={onTransactionRowsPerPageChange}
+                              value={transactionRowsPerPage}
+                            >
+                              <option value="5">5</option>
+                              <option value="10">10</option>
+                              <option value="15">15</option>
+                            </select>
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Showing{" "}
+                            {Math.min(
+                              (transactionPage - 1) * transactionRowsPerPage +
+                                1,
+                              transactionHistory.length
+                            )}
+                            -
+                            {Math.min(
+                              transactionPage * transactionRowsPerPage,
+                              transactionHistory.length
+                            )}{" "}
+                            of {transactionHistory.length}
+                          </span>
+                        </div>
+                        <Pagination
+                          showControls
+                          classNames={{
+                            cursor: "bg-hotel-primary",
+                            item: "text-gray-600 hover:text-hotel-primary",
+                            next: "text-hotel-primary",
+                            prev: "text-hotel-primary",
+                          }}
+                          page={transactionPage}
+                          total={Math.ceil(
+                            transactionHistory.length / transactionRowsPerPage
+                          )}
+                          onChange={setTransactionPage}
+                        />
+                      </div>
+                    }
+                  >
+                    <TableHeader>
+                      <TableColumn key="bookingNumber">BOOKING ID</TableColumn>
+                      <TableColumn key="date">DATE</TableColumn>
+                      <TableColumn key="paymentMethod">
+                        PAYMENT METHOD
+                      </TableColumn>
+                      <TableColumn key="paymentType">PAYMENT TYPE</TableColumn>
+                      <TableColumn key="amount">AMOUNT</TableColumn>
+                      <TableColumn key="status">STATUS</TableColumn>
+                      <TableColumn key="transactionId">
+                        TRANSACTION ID
+                      </TableColumn>
+                    </TableHeader>
+                    <TableBody
+                      emptyContent={"No transactions found."}
+                      items={paginatedTransactions}
+                    >
+                      {(transaction) => (
+                        <TableRow key={transaction._id}>
+                          <TableCell>
+                            <Link
+                              href={`/dashboard/bookings/${transaction.bookingNumber}`}
+                            >
+                              <span className="text-hotel-primary hover:underline">
+                                {transaction.bookingNumber}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {transaction.payments &&
+                            transaction.payments.length > 0
+                              ? new Date(
+                                  transaction.payments[0].paymentDate
+                                ).toLocaleDateString()
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <span className="capitalize">
+                              {transaction.payments &&
+                              transaction.payments.length > 0
+                                ? transaction.payments[0].paymentMethod
+                                : "N/A"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="capitalize">
+                              {transaction.payments &&
+                              transaction.payments.length > 0
+                                ? transaction.payments[0].paymentType || "N/A"
+                                : "N/A"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">
+                              {formatCurrency(transaction.totalPaid)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                transaction.isFullyPaid
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {transaction.isFullyPaid
+                                ? "Fully Paid"
+                                : "Partial Payment"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-gray-600">
+                              {transaction.payments &&
+                              transaction.payments.length > 0 &&
+                              transaction.payments[0].transactionId
+                                ? transaction.payments[0].transactionId
+                                : "N/A"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1368,181 +1586,6 @@ export default function GuestProfile({ guestId }) {
         description="Are you sure you want to delete this file? This action cannot be undone."
         confirmText="Delete"
       />
-
-      {/* Tab navigation */}
-      <div className="flex border-b mb-4">
-        <button
-          className={`py-2 px-4 font-medium ${
-            selectedTab === "bookings"
-              ? "text-hotel-primary border-b-2 border-hotel-primary"
-              : "text-gray-600 hover:text-hotel-primary"
-          }`}
-          onClick={() => setSelectedTab("bookings")}
-        >
-          Booking History
-        </button>
-        <button
-          className={`py-2 px-4 font-medium ${
-            selectedTab === "transactions"
-              ? "text-hotel-primary border-b-2 border-hotel-primary"
-              : "text-gray-600 hover:text-hotel-primary"
-          }`}
-          onClick={() => setSelectedTab("transactions")}
-        >
-          Transaction History
-        </button>
-      </div>
-
-      {/* Conditional Content Based on Selected Tab */}
-      {selectedTab === "bookings" ? (
-        <div>
-          {/* Existing Booking History content */}
-          <div className="flex justify-between mb-4">
-            {/* ... existing filter controls ... */}
-          </div>
-
-          {/* ... existing table ... */}
-        </div>
-      ) : (
-        <div>
-          {/* Transaction History Tab Content */}
-          <Card className="mb-4">
-            <CardBody>
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold">Transaction History</h2>
-                  <p className="text-sm text-gray-500">
-                    View all financial transactions for this guest
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="flat"
-                    color="primary"
-                    startContent={<FileText size={18} />}
-                    onClick={() =>
-                      handleDownloadPDF(transactionHistory, "transactions")
-                    }
-                    isDisabled={
-                      loadingTransactions || !transactionHistory.length
-                    }
-                  >
-                    PDF
-                  </Button>
-                  <Button
-                    variant="flat"
-                    color="success"
-                    startContent={<FileSpreadsheet size={18} />}
-                    onClick={() =>
-                      handleExportExcel(transactionHistory, "transactions")
-                    }
-                    isDisabled={
-                      loadingTransactions || !transactionHistory.length
-                    }
-                  >
-                    Excel
-                  </Button>
-                </div>
-              </div>
-
-              {loadingTransactions ? (
-                <div className="flex justify-center py-8">
-                  <Spinner size="lg" />
-                </div>
-              ) : transactionHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No transaction records found for this guest
-                </div>
-              ) : (
-                <Table aria-label="Transaction history">
-                  <TableHeader>
-                    <TableColumn key="bookingNumber">BOOKING ID</TableColumn>
-                    <TableColumn key="date">DATE</TableColumn>
-                    <TableColumn key="paymentMethod">
-                      PAYMENT METHOD
-                    </TableColumn>
-                    <TableColumn key="paymentType">PAYMENT TYPE</TableColumn>
-                    <TableColumn key="amount">AMOUNT</TableColumn>
-                    <TableColumn key="status">STATUS</TableColumn>
-                    <TableColumn key="transactionId">
-                      TRANSACTION ID
-                    </TableColumn>
-                  </TableHeader>
-                  <TableBody
-                    emptyContent={"No transactions found."}
-                    items={transactionHistory}
-                  >
-                    {(transaction) => (
-                      <TableRow key={transaction._id}>
-                        <TableCell>
-                          <Link
-                            href={`/dashboard/bookings/${transaction.bookingNumber}`}
-                          >
-                            <span className="text-hotel-primary hover:underline">
-                              {transaction.bookingNumber}
-                            </span>
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          {transaction.payments &&
-                          transaction.payments.length > 0
-                            ? new Date(
-                                transaction.payments[0].paymentDate
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <span className="capitalize">
-                            {transaction.payments &&
-                            transaction.payments.length > 0
-                              ? transaction.payments[0].paymentMethod
-                              : "N/A"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="capitalize">
-                            {transaction.payments &&
-                            transaction.payments.length > 0
-                              ? transaction.payments[0].paymentType || "N/A"
-                              : "N/A"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">
-                            {formatCurrency(transaction.totalPaid)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              transaction.isFullyPaid
-                                ? "bg-green-100 text-green-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {transaction.isFullyPaid
-                              ? "Fully Paid"
-                              : "Partial Payment"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-600">
-                            {transaction.payments &&
-                            transaction.payments.length > 0 &&
-                            transaction.payments[0].transactionId
-                              ? transaction.payments[0].transactionId
-                              : "N/A"}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardBody>
-          </Card>
-        </div>
-      )}
     </>
   );
 }
