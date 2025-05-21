@@ -29,7 +29,6 @@ import AddBookingSkeleton from "./AddBookingSkeleton"; // Import the skeleton co
 import { countries } from "countries-list";
 import ConfirmationModal from "../../ui/BookingConfirmationModal.jsx";
 import { Button } from "@heroui/button";
-import { RadioGroup, Radio } from "@heroui/radio";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import PhoneInput from "react-phone-input-2";
@@ -95,8 +94,7 @@ export default function AddGuest() {
     total: 0,
   });
   const [roomSettings, setRoomSettings] = useState({
-    weekend: [],
-    weekendPriceHike: 0,
+    specialOfferings: [],
   });
 
   const [priceBreakdown, setPriceBreakdown] = useState([]);
@@ -269,8 +267,7 @@ export default function AddGuest() {
         setCheckInTime(fullDayTimeSlot?.fromTime || "14:00");
         setCheckOutTime(fullDayTimeSlot?.toTime || "12:00");
         setRoomSettings({
-          weekend: settingsData.weekend || [],
-          weekendPriceHike: settingsData.weekendPriceHike || 0,
+          specialOfferings: settingsData.specialOfferings || [],
         });
 
         // Set hall-specific settings
@@ -581,15 +578,36 @@ export default function AddGuest() {
     handleFileUpload(event);
   };
 
-  const calculateRoomPrice = useCallback((room, date, roomSettings) => {
-    const dayOfWeek = format(date, "EEE");
-    const isWeekendDay = roomSettings.weekend.includes(dayOfWeek);
-    if (isWeekendDay) {
-      const hikePercentage = 1 + roomSettings.weekendPriceHike / 100;
-      return Math.round(parseFloat(room.price) * hikePercentage);
-    }
-    return Math.round(parseFloat(room.price));
-  }, []);
+  const calculateRoomPrice = useCallback(
+    (room, date, roomSettings) => {
+      if (!room || !room.price) return 0;
+
+      let basePrice = parseFloat(room.price);
+
+      // Check if it's a half-day booking
+      if (timeSlot.name === "halfday") {
+        basePrice = basePrice / 2; // Half the price for half-day bookings
+      }
+
+      // Check for any applicable special offerings for this date
+      const applicableOffering = roomSettings.specialOfferings?.find(
+        (offering) =>
+          offering.propertyType === propertyType &&
+          new Date(offering.startDate) <= date &&
+          new Date(offering.endDate) >= date
+      );
+
+      // Apply special offering discount if applicable
+      if (applicableOffering) {
+        const discount =
+          (basePrice * applicableOffering.discountPercentage) / 100;
+        basePrice -= discount;
+      }
+
+      return basePrice;
+    },
+    [timeSlot, propertyType]
+  );
 
   const calculateTotalAmount = useCallback(() => {
     if (selectedRooms.some((room) => !room.type || !room.number || !room.price))
@@ -670,7 +688,7 @@ export default function AddGuest() {
           taxes: igst,
           additionalCharge: roomAdditionalCharge,
           total: basePrice + igst + roomAdditionalCharge,
-          isWeekend: roomSettings.weekend.includes(format(currentDate, "EEE")),
+          // isWeekend: roomSettings.weekend.includes(format(currentDate, "EEE")),
         });
       }
 
@@ -699,7 +717,7 @@ export default function AddGuest() {
         discount: discountAmount,
         discountPercentage: discountPercentage,
         total: -discountAmount, // Negative because it's a reduction
-        isWeekend: false,
+        // isWeekend: false,
       });
     }
 
@@ -731,7 +749,8 @@ export default function AddGuest() {
     totalGuests,
     roomSettings,
     totalAmount.discount,
-    calculateRoomPrice,
+    calculateRoomPrice, // Added timeSlot dependency
+    ,
   ]);
 
   useEffect(() => {

@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import React from "react"
-import { useRouter } from "next/navigation"
-import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader"
-import { usePagePermission } from "../../../hooks/usePagePermission"
-import RoomList from "../../../Components/Rooms/RoomList"
-import RoomListSkeleton from "../../../Components/Rooms/RoomSkeleton.jsx"
+import React from "react";
+import { useRouter } from "next/navigation";
+import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader";
+import { usePagePermission } from "../../../hooks/usePagePermission";
+import RoomList from "../../../Components/Rooms/RoomList";
+import RoomListSkeleton from "../../../Components/Rooms/RoomSkeleton.jsx";
 
 const Page = () => {
   const hasPermission = usePagePermission("Rooms", "view");
@@ -23,7 +23,7 @@ const Page = () => {
   return (
     <section>
       <div className="bgclrrr pt-3">
-        <DashboardHeader headerName="Rooms" />
+        <DashboardHeader headerName="Property Management" />
       </div>
       <RoomList />
     </section>

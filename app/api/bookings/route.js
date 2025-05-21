@@ -9,6 +9,7 @@ import { getUniqueGuestId } from "../../../utils/helpers/guestIdGenerator";
 import Transaction from "../../../utils/model/financials/transactions/transactionSchema";
 import Room from "../../../utils/model/room/roomSchema";
 import RoomAvailability from "../../../utils/model/room/roomAvailabilitySchema";
+import { gu } from "date-fns/locale";
 
 // Add export config for static rendering
 export const dynamic = "force-dynamic";
@@ -64,7 +65,7 @@ async function createInvoiceRecord(
   }
 
   const invoiceData = {
-    invoiceNumber: booking.invoiceNumber, // This should now be defined
+    invoiceNumber: booking.invoiceNumber,
     bookingId: booking._id,
     bookingNumber: booking.bookingNumber,
     customerDetails: {
@@ -72,6 +73,7 @@ async function createInvoiceRecord(
       email: booking.email,
       phone: booking.mobileNo,
       address: booking.address,
+      guestId: booking.guestId,
     },
     hotelDetails: {
       name: hotelData.hotelName,
@@ -86,6 +88,8 @@ async function createInvoiceRecord(
       numberOfNights: booking.numberOfNights,
       numberOfRooms: booking.numberOfRooms,
       numberOfGuests: booking.guests,
+      propertyType: booking.propertyType || "room", // Add property type
+      timeSlot: booking.timeSlot || null, // Add time slot for hall bookings
     },
     rooms: booking.rooms.map((room) => ({
       roomNumber: room.number,
@@ -108,41 +112,36 @@ async function createInvoiceRecord(
       razorpayQrCodeId: booking.razorpayQrCodeId,
     },
     amounts: {
-      subtotal: booking.rooms.reduce((sum, room) => sum + room.price, 0),
-      totalTax: booking.rooms.reduce(
-        (sum, room) =>
-          sum + (room.igst || 0) + (room.cgst || 0) + (room.sgst || 0),
-        0
-      ),
-      totalAmount: booking.rooms.reduce(
-        (sum, room) => sum + room.totalAmount,
-        0
-      ),
-      discount: booking.discount || 0,
-      discountAmount: booking.discountAmount || 0,
-      servicesCharge: booking.servicesCharge || 0,
+      subtotal: booking.totalAmount.roomCharge || 0,
+      totalTax: booking.totalAmount.taxes || 0,
+      additionalGuestCharge: booking.totalAmount.additionalGuestCharge || 0,
+      servicesCharge: booking.totalAmount.servicesCharge || 0,
+      discount: booking.totalAmount.discount || 0,
+      discountAmount: booking.totalAmount.discountAmount || 0,
+      totalAmount: booking.totalAmount.total || 0,
     },
-    // Add selected services if available
-    selectedServices: (booking.selectedServices || []).map((service) => ({
+    status: booking.status,
+  };
+
+  // Add selected services if available
+  if (booking.selectedServices && booking.selectedServices.length > 0) {
+    invoiceData.selectedServices = booking.selectedServices.map((service) => ({
       name: service.name,
       price: service.price,
       quantity: service.quantity || 1,
       totalAmount:
         service.totalAmount || service.price * (service.quantity || 1),
-    })),
-  };
+    }));
+  }
 
   // Add hall-specific fields if property type is hall
-  const hasHall = booking.rooms.some((room) => room.type === "hall");
-  if (hasHall) {
-    // Add hall-specific data
+  if (booking.propertyType === "hall") {
     invoiceData.hallDetails = {
       eventType: booking.eventType || "Not specified",
-      eventName: booking.eventName || "Not specified",
-      guestCapacity: booking.guestCapacity || 0,
-      decorationPackage: booking.decorationPackage || "None",
-      additionalServices: booking.additionalServices || [],
-      specialRequirements: booking.specialRequirements || "None",
+
+      groomDetails: booking.groomDetails || null,
+      brideDetails: booking.brideDetails || null,
+      timeSlot: booking.timeSlot || null,
     };
   }
 
