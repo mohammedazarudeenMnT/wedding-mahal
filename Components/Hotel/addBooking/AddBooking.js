@@ -29,7 +29,6 @@ import AddBookingSkeleton from "./AddBookingSkeleton"; // Import the skeleton co
 import { countries } from "countries-list";
 import ConfirmationModal from "../../ui/BookingConfirmationModal.jsx";
 import { Button } from "@heroui/button";
-import { RadioGroup, Radio } from "@heroui/radio";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import PhoneInput from "react-phone-input-2";
@@ -95,8 +94,7 @@ export default function AddGuest() {
     total: 0,
   });
   const [roomSettings, setRoomSettings] = useState({
-    weekend: [],
-    weekendPriceHike: 0,
+    specialOfferings: [],
   });
 
   const [priceBreakdown, setPriceBreakdown] = useState([]);
@@ -269,8 +267,7 @@ export default function AddGuest() {
         setCheckInTime(fullDayTimeSlot?.fromTime || "14:00");
         setCheckOutTime(fullDayTimeSlot?.toTime || "12:00");
         setRoomSettings({
-          weekend: settingsData.weekend || [],
-          weekendPriceHike: settingsData.weekendPriceHike || 0,
+          specialOfferings: settingsData.specialOfferings || [],
         });
 
         // Set hall-specific settings
@@ -301,25 +298,26 @@ export default function AddGuest() {
     fetchInitialData();
   }, []);
 
+  // Modify this useEffect to avoid continuous re-renders
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.has("email")) {
-      const email = params.get("email");
+    const email = params.get("email");
+
+    // Only run this effect on mount
+    if (email && !formData.email) {
       setFormData((prev) => ({
         ...prev,
         firstName: params.get("firstName") || "",
         lastName: params.get("lastName") || "",
-        email: email || "",
+        email: email,
         mobileNo: params.get("mobileNo") || "",
         notes: params.get("notes") || "",
       }));
 
       // Trigger guest search by email
-      if (email) {
-        debouncedSearch("email", email);
-      }
+      debouncedSearch("email", email);
     }
-  }, [debouncedSearch]);
+  }, []); // Empty dependency array as this should only run once on mount
 
   const isRoomAvailableForDateRange = useCallback(
     (roomNumber, startDate, endDate) => {
@@ -359,6 +357,14 @@ export default function AddGuest() {
   );
 
   const filterAvailableRooms = useCallback(() => {
+    if (
+      !dateRange[0]?.startDate ||
+      !dateRange[0]?.endDate ||
+      rooms.length === 0
+    ) {
+      return;
+    }
+
     const startDate = dateRange[0].startDate;
     const endDate = dateRange[0].endDate;
 
@@ -416,7 +422,7 @@ export default function AddGuest() {
   ]);
 
   useEffect(() => {
-    if (dateRange[0].startDate && dateRange[0].endDate && rooms.length > 0) {
+    if (dateRange[0]?.startDate && dateRange[0]?.endDate && rooms.length > 0) {
       filterAvailableRooms();
     }
   }, [
@@ -581,27 +587,60 @@ export default function AddGuest() {
     handleFileUpload(event);
   };
 
-  const calculateRoomPrice = useCallback((room, date, roomSettings) => {
-    const dayOfWeek = format(date, "EEE");
-    const isWeekendDay = roomSettings.weekend.includes(dayOfWeek);
-    if (isWeekendDay) {
-      const hikePercentage = 1 + roomSettings.weekendPriceHike / 100;
-      return Math.round(parseFloat(room.price) * hikePercentage);
-    }
-    return Math.round(parseFloat(room.price));
-  }, []);
+  const calculateRoomPrice = useCallback(
+    (room, date, roomSettings) => {
+      if (!room || !room.price) return 0;
 
+      let basePrice = parseFloat(room.price);
+
+      // Check if it's a half-day booking
+      if (timeSlot.name === "halfday") {
+        basePrice = basePrice / 2; // Half the price for half-day bookings
+      }
+
+      // Check for any applicable special offerings for this date
+      const applicableOffering = roomSettings.specialOfferings?.find(
+        (offering) =>
+          offering.propertyType === propertyType &&
+          new Date(offering.startDate) <= date &&
+          new Date(offering.endDate) >= date
+      );
+
+      // Apply special offering discount if applicable
+      if (applicableOffering) {
+        const discount =
+          (basePrice * applicableOffering.discountPercentage) / 100;
+        basePrice -= discount;
+      }
+
+      return basePrice;
+    },
+    [timeSlot, propertyType]
+  );
+
+  // Modify calculateTotalAmount to be more stable
   const calculateTotalAmount = useCallback(() => {
-    if (selectedRooms.some((room) => !room.type || !room.number || !room.price))
+    // Return early if required data is not available
+    if (
+      selectedRooms.some((room) => !room.type || !room.number || !room.price)
+    ) {
       return;
+    }
 
-    const checkInDate = new Date(dateRange[0].startDate);
-    const checkOutDate = new Date(dateRange[0].endDate);
+    const checkInDate = dateRange[0]?.startDate;
+    const checkOutDate = dateRange[0]?.endDate;
+
+    if (!checkInDate || !checkOutDate) {
+      return;
+    }
+
     const nights = Math.ceil(
       (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
     );
 
-    if (nights < 1) return;
+    if (nights < 1) {
+      return;
+    }
 
     let priceBreakdownArray = [];
     let totalRoomCharge = 0;
@@ -670,7 +709,7 @@ export default function AddGuest() {
           taxes: igst,
           additionalCharge: roomAdditionalCharge,
           total: basePrice + igst + roomAdditionalCharge,
-          isWeekend: roomSettings.weekend.includes(format(currentDate, "EEE")),
+          // isWeekend: roomSettings.weekend.includes(format(currentDate, "EEE")),
         });
       }
 
@@ -699,7 +738,7 @@ export default function AddGuest() {
         discount: discountAmount,
         discountPercentage: discountPercentage,
         total: -discountAmount, // Negative because it's a reduction
-        isWeekend: false,
+        // isWeekend: false,
       });
     }
 
@@ -730,28 +769,19 @@ export default function AddGuest() {
     selectedServices,
     totalGuests,
     roomSettings,
-    totalAmount.discount,
-    calculateRoomPrice,
-  ]);
+    timeSlot,
+  ]); // Add all dependencies that are used in the calculation
 
   useEffect(() => {
     if (
       selectedRooms.length > 0 &&
-      dateRange[0].startDate &&
-      dateRange[0].endDate
+      dateRange[0]?.startDate &&
+      dateRange[0]?.endDate &&
+      !isNaN(totalAmount.total) // Add check to prevent unnecessary calculations
     ) {
       calculateTotalAmount();
     }
-  }, [
-    selectedRooms,
-    dateRange,
-    adults,
-    children,
-    checkInTime,
-    checkOutTime,
-    roomSettings,
-    calculateTotalAmount,
-  ]);
+  }, [selectedRooms, dateRange, calculateTotalAmount]);
 
   const handleRoomChange = (index, field, value) => {
     const newSelectedRooms = [...selectedRooms];

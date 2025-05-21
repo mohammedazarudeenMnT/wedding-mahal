@@ -21,6 +21,7 @@ const invoiceSchema = new mongoose.Schema(
       email: String,
       phone: String,
       address: String,
+      guestId: String,
     },
     hotelDetails: {
       name: String,
@@ -37,6 +38,16 @@ const invoiceSchema = new mongoose.Schema(
       numberOfGuests: {
         adults: Number,
         children: Number,
+      },
+      propertyType: {
+        type: String,
+        enum: ["room", "hall"],
+        default: "room",
+      },
+      timeSlot: {
+        name: String,
+        fromTime: String,
+        toTime: String,
       },
     },
     rooms: [
@@ -55,11 +66,30 @@ const invoiceSchema = new mongoose.Schema(
     ],
     hallDetails: {
       eventType: String,
-      eventName: String,
-      guestCapacity: Number,
-      decorationPackage: String,
-      additionalServices: [String],
-      specialRequirements: String,
+
+      groomDetails: {
+        name: String,
+        mobileNo: String,
+        email: String,
+        address: String,
+        dob: String,
+        gender: String,
+        verificationId: String,
+      },
+      brideDetails: {
+        name: String,
+        mobileNo: String,
+        email: String,
+        address: String,
+        dob: String,
+        gender: String,
+        verificationId: String,
+      },
+      timeSlot: {
+        name: String,
+        fromTime: String,
+        toTime: String,
+      },
     },
     paymentDetails: {
       method: {
@@ -79,6 +109,10 @@ const invoiceSchema = new mongoose.Schema(
       subtotal: Number,
       totalTax: Number,
       totalAmount: Number,
+      additionalGuestCharge: {
+        type: Number,
+        default: 0,
+      },
       discount: {
         type: Number,
         default: 0,

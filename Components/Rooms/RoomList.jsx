@@ -84,8 +84,12 @@ export default function RoomList() {
 
       const settings = settingsResponse.data.settings;
       setRoomSettings({
-        checkIn: settings?.checkIn || "14:00",
-        checkOut: settings?.checkOut || "12:00",
+        checkIn:
+          settings?.timeSlots?.find((slot) => slot.name === "full day")
+            ?.fromTime || "14:00",
+        checkOut:
+          settings?.timeSlots?.find((slot) => slot.name === "full day")
+            ?.toTime || "12:00",
       });
 
       setLoading(false);
@@ -174,9 +178,12 @@ export default function RoomList() {
         return false; // Room not available during housekeeping
       }
 
-      // Rest of the existing availability check logic
-      const checkIn = roomSettings?.checkIn || "14:00";
-      const checkOut = roomSettings?.checkOut || "12:00";
+      // Get check-in and check-out times from room settings full day timeslot
+      const fullDaySlot = roomSettings?.timeSlots?.find(
+        (slot) => slot.name === "full day"
+      );
+      const checkIn = fullDaySlot?.fromTime || "16:00";
+      const checkOut = fullDaySlot?.toTime || "16:00";
 
       const [checkInHours, checkInMinutes] = checkIn.split(":").map(Number);
       const [checkOutHours, checkOutMinutes] = checkOut.split(":").map(Number);

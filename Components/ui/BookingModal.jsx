@@ -202,11 +202,15 @@ export default function BookingModal({
       const bookedStart = new Date(bookedDate.checkIn);
       const bookedEnd = new Date(bookedDate.checkOut);
 
-      return (
-        (requestedCheckIn < bookedEnd && requestedCheckOut > bookedStart) ||
-        requestedCheckIn.getTime() === bookedStart.getTime() ||
-        requestedCheckOut.getTime() === bookedEnd.getTime()
-      );
+      // The key check: if the checkout time of the existing booking is the same day
+      // as the checkin time of the new booking, check the actual hours
+      if (bookedEnd.toDateString() === requestedCheckIn.toDateString()) {
+        // Allow booking if the new check-in time is after the existing check-out time
+        return requestedCheckIn.getTime() < bookedEnd.getTime();
+      }
+
+      // Standard overlap check
+      return requestedCheckIn < bookedEnd && requestedCheckOut > bookedStart;
     });
   };
 
@@ -218,8 +222,11 @@ export default function BookingModal({
   function getNights(startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
+    // Set both dates to midnight for accurate day calculation
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
     const timeDiff = end.getTime() - start.getTime();
-    return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    return Math.round(timeDiff / (1000 * 60 * 60 * 24));
   }
 
   // Add new function to verify room availability
@@ -270,11 +277,16 @@ export default function BookingModal({
             if (["checkin", "booked"].includes(booking.status)) {
               const bookedStart = new Date(booking.checkIn);
               const bookedEnd = new Date(booking.checkOut);
-              return (
-                (checkInDate < bookedEnd && checkOutDate > bookedStart) ||
-                checkInDate.getTime() === bookedStart.getTime() ||
-                checkOutDate.getTime() === bookedEnd.getTime()
-              );
+
+              // The key check: if the checkout time of the existing booking is the same day
+              // as the checkin time of the new booking, check the actual hours
+              if (bookedEnd.toDateString() === checkInDate.toDateString()) {
+                // Allow booking if the new check-in time is after the existing check-out time
+                return checkInDate.getTime() < bookedEnd.getTime();
+              }
+
+              // Standard overlap check
+              return checkInDate < bookedEnd && checkOutDate > bookedStart;
             }
 
             return false;

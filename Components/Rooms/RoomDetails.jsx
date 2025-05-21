@@ -73,14 +73,15 @@ const RoomDetails = ({ room, dateRange, roomSettings }) => {
       if (selectedDate >= housekeepingDate) {
         return "housekeeping";
       }
-    }
+    } // Get check-in and check-out times from room settings full day timeslot
+    const fullDaySlot = roomSettings?.timeSlots?.find(
+      (slot) => slot.name === "full day"
+    );
+    const checkIn = fullDaySlot?.fromTime || "16:00";
+    const checkOut = fullDaySlot?.toTime || "16:00";
 
-    const [checkInHours, checkInMinutes] = roomSettings.checkIn
-      .split(":")
-      .map(Number);
-    const [checkOutHours, checkOutMinutes] = roomSettings.checkOut
-      .split(":")
-      .map(Number);
+    const [checkInHours, checkInMinutes] = checkIn.split(":").map(Number);
+    const [checkOutHours, checkOutMinutes] = checkOut.split(":").map(Number);
 
     const isSingleDate = dateRange.from.getTime() === dateRange.to.getTime();
     const requestedCheckIn = setMinutes(
