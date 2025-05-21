@@ -36,6 +36,7 @@ import { toast } from "react-toastify"
 import { Modal } from "@heroui/modal"
 import ViewLogBookDetails from "@/Components/logBook/ViewLogBookDetails"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/Components/ui/select"
+import LogBookSkeleton from "./LogBookSkeleton"
 
 const INITIAL_VISIBLE_COLUMNS = [
   "customerName",
@@ -471,6 +472,10 @@ export default function LogBook() {
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
     });
   }, [filteredData, sortDescriptor]);
+
+  if (isLoading) {
+    return <LogBookSkeleton />;
+  }
 
   return (
     <div className="container mx-auto p-4 bg-white">

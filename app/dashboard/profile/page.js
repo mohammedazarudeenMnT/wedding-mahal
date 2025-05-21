@@ -23,7 +23,7 @@ const ProfilePage = () => {
     setUserData({
       name: session.user.name || 'N/A', // Fallback if name is undefined
       email: session.user.email,
-      role: session.user.isEmployee ? session.user.role : "Hotel Admin",
+      role: session.user.isEmployee ? session.user.role : "Mahal Admin",
       permissions: session.user.isEmployee ? session.user.permissions : []
     });
     setLoading(false);

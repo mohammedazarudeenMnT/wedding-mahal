@@ -8,6 +8,8 @@ import DashboardHeader from "../../dashboardHeader/DashboardHeader";
 import { usePagePermission } from "../../../hooks/usePagePermission";
 import Charts from "../../../Components/chart/Charts";
 import RecentEnquiries from "../../../Components/RecentEnquiries/RecentEnquiries";
+import PendingPayments from "../../../Components/PendingPayments/PendingPayments";
+import DashboardCards from "../../../Components/DashboardCards/DashboardCards";
 
 const HotelDashboardPage = ({ params }) => {
   const router = useRouter();
@@ -38,8 +40,10 @@ const HotelDashboardPage = ({ params }) => {
           <div>
             <div>
               {/* <ReservationList /> */}
+              <DashboardCards />
               <Charts />
               <RecentEnquiries />
+              <PendingPayments />
             </div>
           </div>
         </main>

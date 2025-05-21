@@ -10,6 +10,7 @@ import { Button } from "@heroui/button"
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown"
 // import { Calendar } from "@/Components/ui/calendar"
 import { toast } from "react-toastify"
+import CalendarViewSkeleton from "./CalendarViewSkeleton"
 
 export default function CalendarView() {
   // Add state for occasions
@@ -131,6 +132,10 @@ export default function CalendarView() {
     return acc
   }, [])
 
+  if (isLoading) {
+    return <CalendarViewSkeleton />;
+  }
+
   return (
     <div className="flex bg-gray-900">
       <div className="flex-1 flex flex-col bg-white">
@@ -218,17 +223,11 @@ export default function CalendarView() {
               </div>
             </div>
             
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[600px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-              </div>
-            ) : (
-              <WeeklySchedule 
-                currentDate={bookingsDate} 
-                category={selectedCategory}
-                bookings={bookings}
-              />
-            )}
+            <WeeklySchedule 
+              currentDate={bookingsDate} 
+              category={selectedCategory}
+              bookings={bookings}
+            />
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/Components/ui/card";
 import { useRouter } from "next/navigation";
+import DashboardTableSkeleton from "../DashboardTableSkeleton";
 
 const columns = [
   {
@@ -137,13 +138,18 @@ export default function RecentEnquiries() {
       case "eventType":
         return item.eventType?.toLowerCase() || "marriage";
       case "notes":
-        return item.notes || "gfdh";
+        const notes = item.notes || "gfdh";
+        return (
+          <div className="max-w-[200px] truncate" title={notes}>
+            {notes}
+          </div>
+        );
       case "actions":
         return (
           <Button
             size="sm"
             variant="flat"
-            className="bg-[#FF4D4F] text-white capitalize"
+            className="bg-hotel-primary text-white capitalize"
             onClick={() => handleMoveToBooking(item)}
           >
             MoveTo
@@ -153,6 +159,10 @@ export default function RecentEnquiries() {
         return null;
     }
   };
+
+  if (loading) {
+    return <DashboardTableSkeleton />;
+  }
 
   return (
     <Card className="mt-6">
@@ -170,7 +180,7 @@ export default function RecentEnquiries() {
                 key={column.key}
                 align={column.key === "actions" ? "center" : "start"}
                 allowsSorting={column.allowsSorting}
-                className="bg-[#FF4D4F] text-white"
+                className="bg-hotel-primary text-white"
               >
                 {column.label}
               </TableColumn>

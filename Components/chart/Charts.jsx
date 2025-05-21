@@ -35,6 +35,7 @@ import { SimpleCalendar } from "./SimpleCalendar.jsx";
 import { DonutChart } from "./donut-chart.jsx";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Button } from "@heroui/button";
+import ChartsSkeleton from "./ChartsSkeleton";
 
 // Remove the static revenueData constant and add these utility functions
 const getLastNMonths = (n) => {
@@ -215,6 +216,7 @@ export default function Charts() {
   const [donutCalendarOpen, setDonutCalendarOpen] = useState(false);
   const [appliedDonutRange, setAppliedDonutRange] = useState(null);
   const [selectedType, setSelectedType] = useState("hall");
+  const [isLoading, setIsLoading] = useState(true);
 
   // Replace the static data with dynamic state
   const [bookingStats, setBookingStats] = useState({
@@ -224,7 +226,7 @@ export default function Charts() {
 
   // Create donut chart data
   const chartData = [
-    { name: "Booked", value: bookingStats[selectedType].booked, color: "#FFCA28" },
+    { name: "Booked", value: bookingStats[selectedType].booked, color: "#ff4e4e" },
     { name: "Occupied", value: bookingStats[selectedType].occupied, color: "#FF7A00" },
     { name: "Available", value: bookingStats[selectedType].available, color: "#A9A9A9" },
   ];
@@ -286,6 +288,8 @@ export default function Charts() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -660,7 +664,7 @@ export default function Charts() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Revenue</CardTitle>
           <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
-            <SelectTrigger className="w-[180px] bg-[#EFF6FF]">
+            <SelectTrigger className="w-[180px] bg-gray-50/50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all duration-200">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <SelectValue>
@@ -750,7 +754,7 @@ export default function Charts() {
                 <Line
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#ffc933"
+                  stroke="var(--hotel-primary)"
                   strokeWidth={2}
                   dot={revenuePeriod === "last-year"}
                 />
@@ -762,8 +766,12 @@ export default function Charts() {
     );
   };
 
+  if (isLoading) {
+    return <ChartsSkeleton />;
+  }
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="grid gap-6" style={{ gridTemplateColumns: '2fr 3fr' }}>
         {/* Booking Status Card with Donut Chart */}
         <Card className="p-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -855,7 +863,7 @@ export default function Charts() {
             <div className="space-y-6 px-4 min-w-[140px]">
               <div className="space-y-4">
                 <div className="flex items-center gap-3 group hover:bg-gray-50/80 p-2.5 rounded-lg transition-all duration-200">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#FFCA28] ring-4 ring-[#FFCA28]/10"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff4e4e] ring-4 ring-[#ff4e4e]/10"></div>
                   <div>
                     <span className="text-xl font-bold text-gray-800">
                       {bookingStats[selectedType].booked}
@@ -910,11 +918,11 @@ export default function Charts() {
             </CardTitle>
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-sm bg-[#FFCA28]" />
+                  <div className="h-2.5 w-2.5 rounded-sm bg-[#ff4e4e]" />
                   <span>Booked</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-sm bg-[#404040]" />
+                  <div className="h-2.5 w-2.5 rounded-sm bg-[#696969]" />
                   <span>Available</span>
                 </div>
               </div>
@@ -1050,7 +1058,7 @@ export default function Charts() {
                   <Bar
                     dataKey="booked"
                     stackId="a"
-                    fill="#FFCA28"
+                    fill="#ff4e4e"
                     radius={[4, 4, 0, 0]}
                   >
                     <LabelList
@@ -1065,7 +1073,7 @@ export default function Charts() {
                   <Bar
                     dataKey="available"
                     stackId="a"
-                    fill="#404040"
+                    fill="#696969"
                     radius={[0, 0, 4, 4]}
                   >
                     <LabelList
