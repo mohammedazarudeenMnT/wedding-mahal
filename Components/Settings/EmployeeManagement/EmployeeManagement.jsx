@@ -204,7 +204,7 @@ export default function EmployeeManagement() {
   return (
     <div className=" mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm min-h-[811px]">
       <div className="space-y-8">
-        <div className="flex items-center">
+        <div className="flex items-center" ref={departmentInputRef}>
           <label
             htmlFor="department-input"
             className="block text-[15px] font-medium text-[#111111] mb-2 w-1/3 items-center mt-2"
@@ -214,7 +214,6 @@ export default function EmployeeManagement() {
           <div className="relative w-1/3">
             <Input
               id="department-input"
-              ref={departmentInputRef}
               placeholder="Select or create department"
               value={departmentInput}
               onChange={(e) => handleDepartmentInputChange(e.target.value)}

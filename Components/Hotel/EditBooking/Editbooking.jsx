@@ -13,7 +13,7 @@ import {
   Dropdown,
   Badge,
 } from "react-bootstrap";
-import { Button } from "@nextui-org/react";
+import { Button } from "@heroui/button";
 
 import { FaCalendarAlt, FaTimes, FaUpload } from "react-icons/fa";
 import { DateRange } from "react-date-range";
