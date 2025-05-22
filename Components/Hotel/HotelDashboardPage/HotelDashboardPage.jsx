@@ -4,9 +4,12 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import DashboardHeader from "../../dashboardHeader/DashboardHeader";
-import ReservationList from "../../checkIn/CheckIn.jsx";
+// import ReservationList from "../../checkIn/CheckIn.jsx";
 import { usePagePermission } from "../../../hooks/usePagePermission";
-import Charts from "../../chart/Charts";
+import Charts from "../../../Components/chart/Charts";
+import RecentEnquiries from "../../../Components/RecentEnquiries/RecentEnquiries";
+import PendingPayments from "../../../Components/PendingPayments/PendingPayments";
+import DashboardCards from "../../../Components/DashboardCards/DashboardCards";
 
 const HotelDashboardPage = ({ params }) => {
   const router = useRouter();
@@ -36,8 +39,11 @@ const HotelDashboardPage = ({ params }) => {
         <main className="flex-1 p-6">
           <div>
             <div>
-              <ReservationList />
+              {/* <ReservationList /> */}
+              <DashboardCards />
               <Charts />
+              <RecentEnquiries />
+              <PendingPayments />
             </div>
           </div>
         </main>

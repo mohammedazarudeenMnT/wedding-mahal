@@ -27,17 +27,11 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import {
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-} from "@heroui/dropdown";
+import { Dropdown, DropdownTrigger } from "@heroui/dropdown";
+import { DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { Input } from "@heroui/input";
 import { Chip } from "@heroui/chip";
-import { Spinner } from "@heroui/spinner";
-
 import { Pagination } from "@heroui/pagination";
 import { PlusIcon } from "../ui/Table/PlusIcon.jsx";
 import { SearchIcon } from "../ui/Table/SearchIcon.jsx";

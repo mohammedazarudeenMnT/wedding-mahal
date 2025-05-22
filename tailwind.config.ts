@@ -138,7 +138,7 @@ import type { Config } from "tailwindcss";
 
 import {heroui} from "@heroui/theme";
 
-/** @type {Config} */
+/** @type {Config} */ 
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",

@@ -10,7 +10,8 @@ import {
   eachDayOfInterval, 
   isSameMonth, 
   isSameDay, 
-  subDays 
+  subDays,
+  startOfDay 
 } from 'date-fns'
 
 const QUICK_RANGES = [
@@ -39,7 +40,7 @@ const QUICK_RANGES = [
   },
 ]
 
-export function SimpleCalendar({ onSelect, onClose }) {
+export function SimpleCalendar({ onSelect, onClose, minDate = new Date() }) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedRange, setSelectedRange] = useState({ start: null, end: null })
   const [activePreset, setActivePreset] = useState('Custom')
@@ -48,12 +49,20 @@ export function SimpleCalendar({ onSelect, onClose }) {
   const handleQuickRange = (preset) => {
     setActivePreset(preset.label)
     if (preset.range) {
-      setSelectedRange(preset.range)
+      // Ensure the range doesn't include past dates
+      const range = {
+        start: startOfDay(preset.range.start) < startOfDay(minDate) ? minDate : preset.range.start,
+        end: startOfDay(preset.range.end) < startOfDay(minDate) ? minDate : preset.range.end
+      }
+      setSelectedRange(range)
     }
   }
 
   // Handle individual day selection
   function handleDayClick(day) {
+    // Don't allow selecting dates before minDate
+    if (startOfDay(day) < startOfDay(minDate)) return
+
     if (!start || (start && end)) {
       setSelectedRange({ start: day, end: null })
     } else {
@@ -172,11 +181,13 @@ export function SimpleCalendar({ onSelect, onClose }) {
                     <button
                       key={day.toString()}
                       onClick={() => handleDayClick(day)}
+                      disabled={startOfDay(day) < startOfDay(minDate)}
                       className={`
                         aspect-square p-1 text-xs rounded-md transition-all
                         ${!isSameMonth(day, currentMonth) ? 'text-gray-300' : 'text-gray-700'}
                         ${isSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}
                         ${isInRange ? 'bg-blue-50 text-blue-600' : ''}
+                        ${startOfDay(day) < startOfDay(minDate) ? 'opacity-50 cursor-not-allowed' : ''}
                       `}
                     >
                       {format(day, 'd')}

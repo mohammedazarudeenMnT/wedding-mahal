@@ -9,14 +9,16 @@ export async function GET() {
     await getHotelDatabase();
     const InventoryModel = getModel("InventorySettings", InventorySettings);
     
-    const settings = await InventoryModel.findOne({});
+    const settings = await InventoryModel.findOne({}) || new InventoryModel({});
+    if (!Array.isArray(settings.electricityTypes)) settings.electricityTypes = [];
     return NextResponse.json({
       success: true,
       settings: settings || {
         suppliers: [],
         categories: [],
         subCategories: [],
-        brands: []
+        brands: [],
+        electricityTypes: []
       }
     }, { status: 200 });
   } catch (error) {
@@ -35,6 +37,7 @@ export async function POST(request) {
     
     const { type, data } = await request.json();
     let settings = await InventoryModel.findOne({}) || new InventoryModel({});
+    if (!Array.isArray(settings.electricityTypes)) settings.electricityTypes = [];
     
     switch (type) {
       case 'supplier':
@@ -56,6 +59,16 @@ export async function POST(request) {
           name: data.name,
           subCategoryId: data.subCategoryId
         });
+        break;
+      case 'electricityType':
+        // Prevent duplicate electricityType names (case-insensitive)
+        if (settings.electricityTypes.some(type => type.name.toLowerCase() === data.name.toLowerCase())) {
+          return NextResponse.json({
+            success: false,
+            error: 'Electricity/Generator Type with this name already exists.'
+          }, { status: 400 });
+        }
+        settings.electricityTypes.push({ name: data.name });
         break;
       default:
         throw new Error('Invalid type');
@@ -80,6 +93,7 @@ export async function PUT(request) {
     
     const { type, id, data } = await request.json();
     const settings = await InventoryModel.findOne({});
+    if (!Array.isArray(settings.electricityTypes)) settings.electricityTypes = [];
     
     if (!settings) {
       return NextResponse.json({
@@ -113,6 +127,17 @@ export async function PUT(request) {
         const brand = categoryForBrand.brands.id(id);
         if (brand) brand.name = data.name;
         break;
+      case 'electricityType':
+        // Prevent duplicate electricityType names (case-insensitive) on update
+        if (settings.electricityTypes.some(type => type.name.toLowerCase() === data.name.toLowerCase() && type._id.toString() !== id)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Electricity/Generator Type with this name already exists.'
+          }, { status: 400 });
+        }
+        const electricityType = settings.electricityTypes.id(id);
+        if (electricityType) electricityType.name = data.name;
+        break;
       default:
         throw new Error('Invalid type');
     }
@@ -136,6 +161,7 @@ export async function DELETE(request) {
     
     const { type, id } = await request.json();
     const settings = await InventoryModel.findOne({});
+    if (!Array.isArray(settings.electricityTypes)) settings.electricityTypes = [];
     
     if (!settings) {
       return NextResponse.json({
@@ -184,6 +210,10 @@ export async function DELETE(request) {
         
       case 'brand':
         settings.brands.pull(id);
+        break;
+        
+      case 'electricityType':
+        settings.electricityTypes.pull(id);
         break;
         
       default:

@@ -1,6 +1,10 @@
 import axios from "axios";
 import { headers } from "next/headers";
-import OnlineRoomBooking from "../../Components/OnlineRoomBooking/OnlineRoomBooking.jsx";
+import OnlineRoomBooking from "../../Components/OnlineRoomBooking/OnlineRoomBooking";
+import Facilities from "../../Components/home/Facilities";
+import ExtraService from "../../Components/home/ExtraService";
+import QuoteRequest from "../../Components/home/QuoteRequest";
+
 
 export const metadata = {
   title: "Mahaal Rooms - Book Your Stay",
@@ -16,29 +20,17 @@ async function getRoomData() {
   const baseUrl = `${protocol}://${host}`;
 
   try {
-    const [roomsResponse, settingsResponse, hotelResponse] = await Promise.all([
-      axios.get(`${baseUrl}/api/rooms`, {
-        headers: {
-          "x-api-key": process.env.API_KEY,
-        },
-      }),
-      axios.get(`${baseUrl}/api/settings/rooms`, {
-        headers: {
-          "x-api-key": process.env.API_KEY,
-        },
-      }),
-      axios.get(`${baseUrl}/api/hotelDetails`, {
-        headers: {
-          "x-api-key": process.env.API_KEY,
-        },
-      }),
-    ]);
+    const roomsResponse = await axios.get(`${baseUrl}/api/rooms`, {
+      headers: {
+        "x-api-key": process.env.API_KEY,
+      },
+    });
 
-    return {
-      rooms: roomsResponse.data.rooms,
-      settings: settingsResponse.data.settings,
-      hotelInfo: hotelResponse.data.hotelData,
-    };
+    const rooms = roomsResponse.data.rooms.filter(
+      (room) => room.type === "room"
+    );
+
+    return { rooms };
   } catch (error) {
     console.error("Error fetching data:", error);
     throw new Error(error.response?.data?.error || "Failed to fetch room data");
@@ -50,9 +42,14 @@ export default async function RoomsPage() {
     const initialData = await getRoomData();
 
     return (
-      <section className="min-h-[calc(100vh-64px-80px)]">
-        <OnlineRoomBooking initialData={initialData} />
-      </section>
+      <>
+        <section className="min-h-[calc(100vh-64px-80px)]">
+          <OnlineRoomBooking initialData={initialData} />
+        </section>
+        <Facilities />
+        <ExtraService />
+        <QuoteRequest />
+      </>
     );
   } catch (error) {
     return (

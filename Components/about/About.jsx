@@ -1,65 +1,13 @@
+"use client";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { useState } from "react";
+import BookingModal from "../home/BookingModal";
 import Link from "next/link";
 
-import {
-  Crown,
-  BedDouble,
-  ArrowLeft,
-  ArrowRight,
-  Wifi,
-  Coffee,
-  School as Pool,
-  Car,
-  Dumbbell,
-  UtensilsCrossed,
-  WashingMachine,
-} from "lucide-react";
-import { motion } from "framer-motion";
-
-const facilities = [
-  {
-    icon: BedDouble,
-    title: "Room Services",
-    description: "24/7 in-room dining service",
-  },
-  {
-    icon: Wifi,
-    title: "Wi-Fi Internet",
-    description: "High-speed internet access",
-  },
-  {
-    icon: Coffee,
-    title: "Breakfast",
-    description: "Gourmet breakfast buffet",
-  },
-  {
-    icon: Pool,
-    title: "Swimming Pool",
-    description: "Heated indoor/outdoor pool",
-  },
-  {
-    icon: Car,
-    title: "Parking Space",
-    description: "Secure valet parking",
-  },
-  {
-    icon: Dumbbell,
-    title: "Fitness Center",
-    description: "State-of-the-art equipment",
-  },
-  {
-    icon: UtensilsCrossed,
-    title: "Restaurant & Bar",
-    description: "Fine dining experience",
-  },
-  {
-    icon: WashingMachine,
-    title: "Laundry Service",
-    description: "Same-day laundry service",
-  },
-];
-
 export default function About() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -67,7 +15,7 @@ export default function About() {
         className="h-[300px] relative flex items-center justify-center"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=2070")',
+            'linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("/banner/1.jpg")',
           backgroundPosition: "center",
           backgroundSize: "cover",
         }}
@@ -83,157 +31,103 @@ export default function About() {
       </div>
 
       {/* Luxury Hotel Section */}
-      <section className="max-w-7xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div className="relative">
-            <Image
-              src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&q=80&w=2070"
-              alt="Luxury Hotel Room"
-              className=" shadow-lg"
-              width={1000}
-              height={667}
-            />
-            <div className="absolute -bottom-0 right-0  bg-[#1c1c1ce3] text-white p-3 border-l-8 border-t-8 border-[#cececedc]">
-              <div className="text-center">
-                <div className="text-hotel-primary text-4xl font-serif mb-2">
-                  ★
-                </div>
-                <div className="uppercase text-sm mb-1">AWARD WINNING</div>
-                <div className="uppercase text-sm">HOTEL</div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-sm text-hotel-primary mb-2">
-              LUXURY HOTEL AND RESORT
-            </h2>
-            <h3 className="text-3xl font-serif mb-6">
-              LUXURY BEST HOTEL IN CITY MADURAI, TAMILNADU
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Experience unparalleled luxury at our award-winning hotel. Nestled
-              in the heart of California, we offer a perfect blend of
-              sophistication, comfort, and world-class service.
-            </p>
-            <p className="text-gray-600 mb-8">
-              Our commitment to excellence has made us the preferred choice for
-              discerning travelers seeking an exceptional hospitality
-              experience.
-            </p>
-            <div className="text-gray-600">
-              <p className="mb-2">
-                {" "}
-                3/508, Bharathi St, Muneeswarar Nagar, Iyer Bungalow,
-              </p>
-              <p>Madurai, Tamil Nadu 625014</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Hotel Facilities */}
-      {/* Hotel Facilities */}
-      <section className="bg-[#F8F6F3] py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-4">
-              <Crown className="h-12 w-12 text-hotel-primary" />
-            </div>
-            <h2 className="text-3xl font-serif mb-4">
-              HOTEL&apos;S FACILITIES
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Proactively morph optimal infomediaries rather than accurate
-              expertise. Intrinsicly progressive resources rather than
-              resource-leveling
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-            {facilities.map((facility, index) => (
-              <div
-                key={index}
-                className="group bg-white p-8  cursor-pointer transition-all duration-300 hover:shadow-lg"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 flex items-center justify-center mb-4">
-                    <facility.icon className="w-10 h-10 text-hotel-primary group-hover:scale-110 transition-transform duration-300" />
-                  </div>
-                  <h3 className="text-lg font-serif mb-2">{facility.title}</h3>
-                  <p className="text-sm text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    {facility.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="mb-12">
-            <h2 className="text-sm text-hotel-primary mb-2">
-              LUXURY HOTEL AND RESORT
-            </h2>
-            <h3 className="text-3xl font-serif">
-              RESORT CLIENTS FEEDBACK
-              <br />
-              ABOUT SERVICES
-            </h3>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "John D. Alexon",
-                role: "Traveler",
-                image:
-                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100",
-                comment:
-                  "Exceptional service and luxurious accommodations. The attention to detail and professional staff made our stay truly memorable.",
-              },
-              {
-                name: "Zaman D. John",
-                role: "Tourist",
-                image:
-                  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100",
-                comment:
-                  "Outstanding experience from check-in to check-out. The facilities are world-class and the service is impeccable.",
-              },
-              {
-                name: "Mukul Ansari",
-                role: "Business",
-                image:
-                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100",
-                comment:
-                  "Perfect for business travelers. The amenities and location are excellent, and the staff goes above and beyond.",
-              },
-            ].map((testimonial, index) => (
-              <div key={index} className="bg-white p-8  shadow-lg">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="relative w-12 h-12">
-                    <Image
-                      src={testimonial.image || "/placeholder.svg"}
-                      alt={testimonial.name}
-                      className=" object-cover"
-                      fill
-                      sizes="48px"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">{testimonial.name}</h4>
-                    <p className="text-gray-500 text-sm">{testimonial.role}</p>
-                  </div>
-                </div>
-                <p className="text-gray-600">{testimonial.comment}</p>
-                <div className="text-hotel-primary mt-4">★★★★★</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+     <motion.div 
+           initial={{ opacity: 0 }}
+           whileInView={{ opacity: 1 }}
+           transition={{ duration: 0.6 }}
+           className="w-full py-16 px-4 md:px-8 lg:px-16 xl:px-0 bg-white"
+         >
+           <div className="max-w-7xl mx-auto">
+             {/* Main content section */}
+             <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+               {/* Left Content */}
+               <motion.div 
+                 initial={{ x: -50, opacity: 0 }}
+                 whileInView={{ x: 0, opacity: 1 }}
+                 transition={{ duration: 0.6 }}
+                 className="w-full lg:w-1/2 text-center lg:text-left px-4 sm:px-6 lg:px-0"
+               >
+                 {/* Brand name with responsive sizing */}
+                 <h3 className="text-xs sm:text-sm md:text-base text-gray-700 uppercase tracking-wider font-medium mb-2 sm:mb-3 
+                   relative inline-block after:content-[''] after:absolute after:w-1/2 after:h-0.5 after:bg-hotel-primary 
+                   after:bottom-0 after:left-1/2 after:-translate-x-1/2 lg:after:left-0 lg:after:translate-x-0"
+                 >
+                   HOTEL JRV
+                 </h3>
+     
+                 {/* Main heading with dynamic line height and responsive font sizes */}
+                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl 
+                   font-medium text-gray-800 leading-[1.2] sm:leading-[1.3] md:leading-[1.4] 
+                   tracking-tight mb-4 sm:mb-6 md:mb-8"
+                 >
+                   <span className="block">Welcome to JRV Mahal –</span>
+                   <span className="block mt-1 sm:mt-2 bg-gradient-to-r from-hotel-primary to-hotel-primary
+                     text-transparent bg-clip-text"
+                   >
+                     Where Celebrations Begin
+                   </span>
+                 </h1>
+     
+                 {/* Description text with improved readability */}
+                 <p className="text-sm sm:text-base md:text-lg text-gray-600 
+                   max-w-[280px] sm:max-w-lg mx-auto lg:mx-0 
+                   leading-relaxed sm:leading-relaxed md:leading-loose 
+                   mb-6 sm:mb-8 md:mb-10"
+                 >
+                   At JRV Mahal, we believe that every celebration deserves the
+                   perfect setting. Whether it&apos;s a grand wedding, an elegant
+                   reception, or an intimate family function, our venue is designed
+                   to host moments that matter.
+                 </p>
+     
+                 {/* CTA Button with responsive padding and hover effects */}
+                 <button
+                   onClick={() => setIsModalOpen(true)}
+                   className="group relative inline-flex items-center justify-center
+                     px-6 sm:px-8 py-2.5 sm:py-3 md:py-4
+                     text-sm sm:text-base md:text-lg font-medium
+                     text-white bg-hotel-primary
+                     overflow-hidden  transition-all duration-300
+                     hover:bg-hotel-primary/90 hover:scale-105
+                     focus:outline-none focus:ring-2 focus:ring-hotel-primary focus:ring-offset-2"
+                 >
+                   <span className="relative">
+                     BOOK NOW
+                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform scale-x-0 
+                       transition-transform duration-300 group-hover:scale-x-100"
+                     />
+                   </span>
+                 </button>
+               </motion.div>
+     
+               {/* Single Image Design */}
+               <div className="w-full lg:w-1/2 relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] mt-10 lg:mt-0">
+                 <motion.div 
+                   whileHover={{ scale: 1.05 }}
+                   transition={{ duration: 0.3 }}
+                   className="w-full h-full  relative"
+                 >
+                   <div className="relative w-full h-full transform transition-transform duration-300 hover:scale-105">
+                     <Image
+                       src="/contact/3.png"
+                       alt="JRV Mahal Venue"
+                       fill
+                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
+                       className="object-cover"
+                       priority
+                     />
+                   </div>
+                 </motion.div>
+                 
+                 {/* Decorative elements */}
+                 <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-hotel-primary/10 rounded-full z-[-1] hidden sm:block"></div>
+                 <div className="absolute -right-4 -top-4 w-32 h-32 bg-hotel-primary/10 rounded-full z-[-1] hidden sm:block"></div>
+               </div>
+             </div>
+           </div>
+     
+           <BookingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+         </motion.div>
     </div>
   );
 }

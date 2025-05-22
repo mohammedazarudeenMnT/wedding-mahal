@@ -90,7 +90,7 @@ const DashboardHeader = ({ headerName }) => {
                   {session?.user?.name || 'User'}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {session?.user?.isEmployee ? session.user.role : "Hotel Admin"}
+                  {session?.user?.isEmployee ? session.user.role : "Mahal Admin"}
                 </p>
               </div>
               <Link href="/dashboard/profile">

@@ -3,7 +3,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { usePagePermission } from "../../hooks/usePagePermission";
-import { Button, Input, Select, SelectItem, Textarea } from "@nextui-org/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
+import { Textarea } from "../../Components/ui/textarea"
 
 export default function AddOrEditInventory({ itemId }) {
   const hasAddPermission = usePagePermission("Inventory", "add");

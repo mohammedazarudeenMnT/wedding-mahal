@@ -1,93 +1,100 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfMonth, addDays, isSameDay } from "date-fns"
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addDays, isSameDay, startOfWeek, endOfWeek } from "date-fns"
 
-export default function WeeklySchedule({ currentDate, category }) {
-  const [weeks, setWeeks] = useState([])
+export default function WeeklySchedule({ currentDate, category, bookings }) {
+  const [days, setDays] = useState([])
 
   useEffect(() => {
     const monthStart = startOfMonth(currentDate)
-    const weeks = []
-
-    for (let i = 0; i < 5; i++) {
-      const week = []
-      for (let j = 0; j < 7; j++) {
-        const day = addDays(monthStart, i * 7 + j)
-        week.push(day)
-      }
-      weeks.push(week)
-    }
-
-    setWeeks(weeks)
+    const monthEnd = endOfMonth(currentDate)
+    
+    // Get all days in the month
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+    
+    // Get the first week's start and last week's end
+    const firstWeekStart = startOfWeek(monthStart)
+    const lastWeekEnd = endOfWeek(monthEnd)
+    
+    // Get all days including those from previous/next months to fill the calendar
+    const allDays = eachDayOfInterval({ start: firstWeekStart, end: lastWeekEnd })
+    
+    setDays(allDays)
   }, [currentDate])
 
-  const events = [
-    // Hall Events
-    { id: "1", hallId: "HALL01", title: "Occupied", date: new Date(2025, 3, 1), type: "Full day", subtitle: "Marriage", color: "bg-yellow-200" },
-    { id: "2", hallId: "HALL01", title: "Occupied", date: new Date(2025, 3, 2), type: "Full day", subtitle: "Marriage", color: "bg-yellow-200" },
-    { id: "3", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 6), type: "Evening", subtitle: "Naming Ceremony", color: "bg-orange-300" },
-    { id: "4", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 7), type: "Evening", subtitle: "Reception", color: "bg-orange-300" },
-    { id: "5", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 8), type: "Full Day", color: "bg-orange-300" },
-    { id: "6", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 9), type: "Full Day", subtitle: "Engagement", color: "bg-orange-300" },
-    { id: "7", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 12), type: "Morning", subtitle: "Puberty Ceremony", color: "bg-orange-300" },
-    { id: "8", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 15), type: "Full Day", subtitle: "Marriage", color: "bg-orange-300" },
-    { id: "9", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 18), type: "Full Day", subtitle: "Product Expo", color: "bg-orange-300" },
-    { id: "10", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 19), type: "Full Day", subtitle: "Product Expo", color: "bg-orange-300" },
-    { id: "11", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 20), type: "Full Day", subtitle: "Product Expo", color: "bg-orange-300" },
-    { id: "12", hallId: "HALL02", title: "Booked", date: new Date(2025, 3, 23), type: "Full Day", subtitle: "", color: "bg-orange-300" },
-    { id: "13", hallId: "HALL02", title: "Booked", date: new Date(2025, 3, 24), type: "Full Day", subtitle: "", color: "bg-orange-300" },
-    { id: "14", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 29), type: "Full Day", subtitle: "Marriage", color: "bg-orange-300" },
-    { id: "15", hallId: "HALL01", title: "Booked", date: new Date(2025, 3, 30), type: "Full Day", subtitle: "Reception", color: "bg-orange-300" },
+  const getBookingsForDay = (day) => {
+    // Don't show bookings for past dates
+    const today = new Date()
+    if (day < today && !isSameDay(day, today)) return []
 
-    // Room Events
-    { id: "16", roomId: "ROOM101", title: "Booked", date: new Date(2025, 3, 1), type: "Full Day", subtitle: "Family Stay", color: "bg-blue-200" },
-    { id: "17", roomId: "ROOM102", title: "Occupied", date: new Date(2025, 3, 2), type: "Full Day", subtitle: "Business Stay", color: "bg-blue-300" },
-    { id: "18", roomId: "ROOM103", title: "Booked", date: new Date(2025, 3, 5), type: "Evening", subtitle: "Guest Stay", color: "bg-blue-200" },
-    { id: "19", roomId: "ROOM101", title: "Booked", date: new Date(2025, 3, 8), type: "Full Day", subtitle: "Wedding Guest", color: "bg-blue-200" },
-    { id: "20", roomId: "ROOM104", title: "Occupied", date: new Date(2025, 3, 10), type: "Full Day", subtitle: "Family Stay", color: "bg-blue-300" }
-  ]
-
-  const getEventsForDay = (day) => {
-    return events.filter((event) => {
-      const isSameDate = isSameDay(event.date, day)
+    return bookings.filter((booking) => {
+      const isSameDate = isSameDay(booking.date, day)
       if (category === 'all') return isSameDate
-      if (category === 'hall') return isSameDate && event.hallId?.startsWith('HALL')
-      if (category === 'room') return isSameDate && event.roomId?.startsWith('ROOM')
+      if (category === 'hall') return isSameDate && booking.propertyType === 'hall'
+      if (category === 'room') return isSameDate && booking.propertyType === 'room'
       return false
     })
   }
 
+  const isPastDate = (day) => {
+    const today = new Date()
+    return day < today && !isSameDay(day, today)
+  }
+
+  const isCurrentMonth = (day) => {
+    return day.getMonth() === currentDate.getMonth()
+  }
+
   return (
     <div className="grid grid-cols-7 gap-2">
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Sunday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Monday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Tuesday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Wednesday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Thursday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Friday</div>
-      <div className="text-center text-sm font-bold py-2 text-gray-600">Saturday</div>
+      {/* Week day headers */}
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Sun</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Mon</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Tue</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Wed</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Thu</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Fri</div>
+      <div className="text-center text-sm font-bold py-2 text-gray-600">Sat</div>
 
-      {weeks.map((week, weekIndex) =>
-        week.map((day, dayIndex) => (
-          <div key={`${weekIndex}-${dayIndex}`} className="min-h-[120px] border border-gray-100 p-1">
-            <div className="text-xs text-gray-500 mb-1">{format(day, "d")}</div>
+      {/* Calendar days */}
+      {days.map((day, index) => {
+        const isDatePast = isPastDate(day)
+        const isInCurrentMonth = isCurrentMonth(day)
+        
+        return (
+          <div 
+            key={index} 
+            className={`min-h-[120px] border border-gray-100 p-1 ${
+              isDatePast ? 'bg-gray-50' : ''
+            } ${!isInCurrentMonth ? 'opacity-50' : ''}`}
+          >
+            <div className={`text-xs ${
+              isDatePast ? 'text-gray-400' : 'text-gray-500'
+            } mb-1`}>
+              {format(day, "d")}
+            </div>
             <div className="space-y-1">
-              {getEventsForDay(day).map((event, eventIndex) => (
-                <div key={eventIndex} className={`${event.color} p-2 rounded text-xs`}>
+              {getBookingsForDay(day).map((booking, index) => (
+                <div 
+                  key={`${booking.id}-${index}`} 
+                  className={`${booking.color} p-2 rounded text-xs`}
+                >
                   <div className="text-[10px] text-gray-600">
-                    {event.hallId || event.roomId}
+                    {booking.propertyId}
                   </div>
                   <div className="font-medium">
-                    {event.title} - {event.type}
+                    {booking.title} - {booking.type}
                   </div>
-                  {event.subtitle && <div className="text-[10px] mt-1">{event.subtitle}</div>}
+                  {booking.subtitle && (
+                    <div className="text-[10px] mt-1">{booking.subtitle}</div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        ))
-      )}
+        )
+      })}
     </div>
   )
 }
