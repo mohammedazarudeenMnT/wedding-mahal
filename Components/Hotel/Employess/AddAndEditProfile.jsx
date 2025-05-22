@@ -1,6 +1,10 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Button, Input, Select, SelectItem, Avatar } from "@nextui-org/react";
+import { Select, SelectItem } from "@heroui/select";
+import { Input } from "@heroui/input";
+import { Avatar } from "@heroui/avatar";
+import { Button } from "@heroui/button";
+
 import { Camera } from "lucide-react";
 import Image from "next/image";
 import EditProfileSkeleton from "./EditProfileSkeleton";

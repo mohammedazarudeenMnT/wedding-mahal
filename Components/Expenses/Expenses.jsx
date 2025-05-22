@@ -87,6 +87,7 @@ export default function Expenses() {
   const [categories, setCategories] = useState([]);
   const [expenseTypes, setExpenseTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Add date state
   const [date, setDate] = useState({
@@ -368,225 +369,6 @@ export default function Expenses() {
     setPage(1);
   }, []);
 
-  // Update topContent with new filter handlers
-  const topContent = useMemo(() => {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between gap-2 items-end">
-          <Input
-            isClearable
-            className="w-full sm:max-w-[20%] date-btn"
-            classNames={{
-              base: "w-full sm:max-w-[44%] ",
-              inputWrapper: "bg-hotel-secondary ",
-              input: "text-hotel-primary-text",
-            }}
-            placeholder="Search by category..."
-            startContent={<SearchIcon />}
-            value={filterValue}
-            onClear={() => onClear()}
-            onValueChange={onSearchChange}
-          />
-          <div className="flex gap-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Buttons
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, "LLL dd, y")} -{" "}
-                        {format(date.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(date.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Buttons>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={handleDateSelect}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  className=" min-w-28 bg-hotel-secondary "
-                  startContent={<CiFilter />}
-                  variant="flat"
-                >
-                  {categoryFilter.has(ALL_OPTION)
-                    ? "All Categories"
-                    : categoryFilter.size
-                    ? `${categoryFilter.size} Selected`
-                    : "Category"}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                disallowEmptySelection
-                aria-label="Filter by category"
-                closeOnSelect={false}
-                selectedKeys={categoryFilter}
-                selectionMode="multiple"
-                onSelectionChange={handleCategoryChange}
-              >
-                <DropdownItem key={ALL_OPTION}>All </DropdownItem>
-                {categories.map((category) => (
-                  <DropdownItem
-                    key={category.name.toLowerCase()}
-                    className="capitalize"
-                  >
-                    {capitalize(category.name)}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  className=" min-w-28 bg-hotel-secondary "
-                  startContent={<CiFilter />}
-                  variant="flat"
-                >
-                  {expenseTypeFilter.has(ALL_OPTION)
-                    ? "All Expense Types"
-                    : expenseTypeFilter.size
-                    ? `${expenseTypeFilter.size} Selected`
-                    : "Expense Type"}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                disallowEmptySelection
-                aria-label="Filter by expense type"
-                closeOnSelect={false}
-                selectedKeys={expenseTypeFilter}
-                selectionMode="multiple"
-                onSelectionChange={handleExpenseTypeChange}
-              >
-                <DropdownItem key={ALL_OPTION}>All </DropdownItem>
-                {expenseTypes.map((type) => (
-                  <DropdownItem
-                    key={type.name.toLowerCase()}
-                    className="capitalize"
-                  >
-                    {capitalize(type.name)}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
-
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button className="min-w-12 bg-hotel-secondary text-hotel-primary-text">
-                  <PiFadersHorizontal />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                disallowEmptySelection
-                aria-label="Table Columns"
-                closeOnSelect={false}
-                selectedKeys={visibleColumns}
-                selectionMode="multiple"
-                onSelectionChange={setVisibleColumns}
-              >
-                {columns.map((column) => (
-                  <DropdownItem key={column.uid} className="capitalize">
-                    {capitalize(column.name)}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
-            {hasAddPermission && (
-              <Link href={`/dashboard/financials/expenses/add-expense`}>
-                <Button
-                  className="min-w-44 bg-hotel-primary-yellow text-hotel-primary-text"
-                  endContent={<PlusIcon />}
-                >
-                  Add Expenses
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-default-400 text-small">
-            Total {filteredItems.length} Expenses
-          </span>
-          <label className="flex items-center text-default-400 text-small">
-            Rows per page:
-            <select
-              className="bg-transparent outline-none text-default-400 text-small"
-              onChange={onRowsPerPageChange}
-            >
-              <option value={rowsPerPage}>{rowsPerPage}</option>
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="15">15</option>
-            </select>
-          </label>
-        </div>
-      </div>
-    );
-  }, [
-    filterValue,
-    categoryFilter,
-    expenseTypeFilter,
-    visibleColumns,
-    categories,
-    expenseTypes,
-    filteredItems.length,
-    onRowsPerPageChange,
-    onSearchChange,
-    date,
-    handleCategoryChange,
-    handleExpenseTypeChange,
-    hasAddPermission,
-  ]);
-
-  const bottomContent = useMemo(() => {
-    const start = (page - 1) * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage, filteredItems.length);
-
-    return (
-      <div className="py-2 px-2 flex justify-between items-center">
-        <span className="text-small text-default-400">
-          {`Showing ${start}-${end} of ${filteredItems.length}`}
-        </span>
-        <div className="hidden sm:flex justify-end gap-2">
-          <div className="custom-pagination">
-            <Pagination
-              isCompact
-              showControls
-              showShadow
-              page={page}
-              total={pages}
-              onChange={setPage}
-              className="custom-pagination"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }, [selectedKeys, filteredItems.length, page, pages, rowsPerPage]);
-
-  const [isExporting, setIsExporting] = useState(false);
-
   // Format currency for exports
   const formatCurrency = (amount) => {
     if (!amount || isNaN(amount)) return "₹0.00";
@@ -613,16 +395,14 @@ export default function Expenses() {
 
   // Get export data
   const getExportData = useCallback(() => {
-    return filteredItems.map((expense) => {
-      return {
-        Date: expense.date ? format(new Date(expense.date), "dd/MM/yyyy") : "-",
-        Category: expense.category || "-",
-        "Expense Type": expense.expense || "-",
-        Amount: formatCurrency(expense.amount) || "-",
-        Description: expense.description || "-",
-        "Payment Method": expense.paymentMode || "-",
-      };
-    });
+    return filteredItems.map((expense) => ({
+      Date: expense.date ? format(new Date(expense.date), "dd/MM/yyyy") : "-",
+      Category: expense.category || "-",
+      "Expense Type": expense.expense || "-",
+      Amount: formatCurrency(expense.amount) || "-",
+      Description: expense.description || "-",
+      "Payment Method": expense.paymentMode || "-",
+    }));
   }, [filteredItems]);
 
   // PDF Export function
@@ -803,6 +583,265 @@ export default function Expenses() {
     }
   }, [getExportData]);
 
+  const topContent = useMemo(() => {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between gap-2 items-end">
+          <Input
+            isClearable
+            className="w-full sm:max-w-[20%] date-btn"
+            classNames={{
+              base: "w-full sm:max-w-[44%] ",
+              inputWrapper: "bg-hotel-secondary ",
+              input: "text-hotel-primary-text",
+            }}
+            placeholder="Search by category..."
+            startContent={<SearchIcon />}
+            value={filterValue}
+            onClear={() => onClear()}
+            onValueChange={onSearchChange}
+          />
+          <div className="flex gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Buttons
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[280px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Buttons>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={handleDateSelect}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button
+                  className=" min-w-28 bg-hotel-secondary "
+                  startContent={<CiFilter />}
+                  variant="flat"
+                >
+                  {categoryFilter.has(ALL_OPTION)
+                    ? "All Categories"
+                    : categoryFilter.size
+                    ? `${categoryFilter.size} Selected`
+                    : "Category"}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                disallowEmptySelection
+                aria-label="Filter by category"
+                closeOnSelect={false}
+                selectedKeys={categoryFilter}
+                selectionMode="multiple"
+                onSelectionChange={handleCategoryChange}
+              >
+                <DropdownItem key={ALL_OPTION}>All </DropdownItem>
+                {categories.map((category) => (
+                  <DropdownItem
+                    key={category.name.toLowerCase()}
+                    className="capitalize"
+                  >
+                    {capitalize(category.name)}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button
+                  className=" min-w-28 bg-hotel-secondary "
+                  startContent={<CiFilter />}
+                  variant="flat"
+                >
+                  {expenseTypeFilter.has(ALL_OPTION)
+                    ? "All Expense Types"
+                    : expenseTypeFilter.size
+                    ? `${expenseTypeFilter.size} Selected`
+                    : "Expense Type"}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                disallowEmptySelection
+                aria-label="Filter by expense type"
+                closeOnSelect={false}
+                selectedKeys={expenseTypeFilter}
+                selectionMode="multiple"
+                onSelectionChange={handleExpenseTypeChange}
+              >
+                <DropdownItem key={ALL_OPTION}>All </DropdownItem>
+                {expenseTypes.map((type) => (
+                  <DropdownItem
+                    key={type.name.toLowerCase()}
+                    className="capitalize"
+                  >
+                    {capitalize(type.name)}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button className="min-w-12 bg-hotel-secondary text-hotel-primary-text">
+                  <PiFadersHorizontal />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                disallowEmptySelection
+                aria-label="Table Columns"
+                closeOnSelect={false}
+                selectedKeys={visibleColumns}
+                selectionMode="multiple"
+                onSelectionChange={setVisibleColumns}
+              >
+                {columns.map((column) => (
+                  <DropdownItem key={column.uid} className="capitalize">
+                    {capitalize(column.name)}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  variant="flat"
+                  className="bg-hotel-secondary text-hotel-primary-text"
+                  isLoading={isExporting}
+                >
+                  {isExporting ? <Spinner size="sm" /> : <Download size={18} />}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="Download Options">
+                <DropdownItem
+                  key="pdf"
+                  startContent={<FileText size={16} />}
+                  onPress={handleDownloadPDF}
+                  isDisabled={isExporting}
+                >
+                  PDF
+                </DropdownItem>
+                <DropdownItem
+                  key="excel"
+                  startContent={<FileSpreadsheet size={16} />}
+                  onPress={handleDownloadExcel}
+                >
+                  Excel
+                </DropdownItem>
+                <DropdownItem
+                  key="csv"
+                  startContent={<FileText size={16} />}
+                  onPress={handleDownloadCSV}
+                >
+                  CSV
+                </DropdownItem>
+                <DropdownItem
+                  key="json"
+                  startContent={<FileJson size={16} />}
+                  onPress={handleDownloadJSON}
+                >
+                  JSON
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+            {hasAddPermission && (
+              <Link href={`/dashboard/financials/expenses/add-expense`}>
+                <Button
+                  className="min-w-44 bg-hotel-primary-yellow text-hotel-primary-text"
+                  endContent={<PlusIcon />}
+                >
+                  Add Expenses
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-default-400 text-small">
+            Total {filteredItems.length} Expenses
+          </span>
+          <label className="flex items-center text-default-400 text-small">
+            Rows per page:
+            <select
+              className="bg-transparent outline-none text-default-400 text-small"
+              onChange={onRowsPerPageChange}
+            >
+              <option value={rowsPerPage}>{rowsPerPage}</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    );
+  }, [
+    filterValue,
+    categoryFilter,
+    expenseTypeFilter,
+    visibleColumns,
+    categories,
+    expenseTypes,
+    filteredItems.length,
+    onRowsPerPageChange,
+    onSearchChange,
+    date,
+    handleCategoryChange,
+    handleExpenseTypeChange,
+    hasAddPermission,
+  ]);
+
+  const bottomContent = useMemo(() => {
+    const start = (page - 1) * rowsPerPage + 1;
+    const end = Math.min(page * rowsPerPage, filteredItems.length);
+
+    return (
+      <div className="py-2 px-2 flex justify-between items-center">
+        <span className="text-small text-default-400">
+          {`Showing ${start}-${end} of ${filteredItems.length}`}
+        </span>
+        <div className="hidden sm:flex justify-end gap-2">
+          <div className="custom-pagination">
+            <Pagination
+              isCompact
+              showControls
+              showShadow
+              page={page}
+              total={pages}
+              onChange={setPage}
+              className="custom-pagination"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }, [selectedKeys, filteredItems.length, page, pages, rowsPerPage]);
+
   if (!hasViewPermission) {
     return (
       <div className="p-4 text-center">
@@ -866,78 +905,6 @@ export default function Expenses() {
         description="Are you sure you want to delete this expense? This action cannot be undone."
         confirmText="Delete"
       />
-      <div className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-bold">Expenses</span>
-            <div className="flex gap-2">
-              {/* Add export dropdown */}
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button
-                    isIconOnly
-                    variant="flat"
-                    className="bg-default-100"
-                    isLoading={isExporting}
-                  >
-                    {isExporting ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <Download size={18} />
-                    )}
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu aria-label="Download Options">
-                  <DropdownItem
-                    key="pdf"
-                    startContent={<FileText size={16} />}
-                    onPress={handleDownloadPDF}
-                    isDisabled={isExporting}
-                  >
-                    PDF
-                  </DropdownItem>
-                  <DropdownItem
-                    key="excel"
-                    startContent={<FileSpreadsheet size={16} />}
-                    onPress={handleDownloadExcel}
-                  >
-                    Excel
-                  </DropdownItem>
-                  <DropdownItem
-                    key="csv"
-                    startContent={<FileText size={16} />}
-                    onPress={handleDownloadCSV}
-                  >
-                    CSV
-                  </DropdownItem>
-                  <DropdownItem
-                    key="json"
-                    startContent={<FileJson size={16} />}
-                    onPress={handleDownloadJSON}
-                  >
-                    JSON
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-
-              <Button
-                size="sm"
-                color="primary"
-                isIconOnly
-                onClick={() => window.print()}
-              >
-                <Printer size={18} />
-              </Button>
-
-              {/* Keep existing buttons */}
-              {/* ... */}
-            </div>
-          </div>
-
-          {/* Rest of the component */}
-          {/* ... */}
-        </div>
-      </div>
     </>
   );
 }

@@ -436,7 +436,7 @@ const ComplimentarySettings = () => {
                     />
                     {index === formRows.length - 1 && (
                       <Button
-                        onClick={addNewRow}
+                        onPress={addNewRow}
                         isIconOnly
                         className="bg-hotel-primary text-white h-11 w-11"
                         radius="sm"
@@ -459,7 +459,7 @@ const ComplimentarySettings = () => {
               className="h-11 px-6 font-medium border-[#E5E7EB] text-[#4B5563]"
               isDisabled={loading}
               aria-label="Reset form"
-              onClick={resetForm}
+              onPress={resetForm}
             >
               {editMode ? "Cancel" : "Reset"}
             </Button>
@@ -469,7 +469,7 @@ const ComplimentarySettings = () => {
               radius="full"
               isLoading={loading}
               aria-label="Save changes"
-              onClick={handleSave}
+              onPress={handleSave}
             >
               {editMode ? "Update" : "Save Changes"}
             </Button>
@@ -532,7 +532,7 @@ const ComplimentarySettings = () => {
                           variant="light"
                           className="text-red-500 hover:text-red-600"
                           aria-label={`Delete ${item.brandName} from ${item.roomCategory?.name}`}
-                          onClick={() => handleDelete(item._id)}
+                          onPress={() => handleDelete(item._id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -541,7 +541,7 @@ const ComplimentarySettings = () => {
                           variant="light"
                           className="text-[#00529C] hover:text-[#0063BC]"
                           aria-label={`Edit ${item.brandName} from ${item.roomCategory?.name}`}
-                          onClick={() => handleEditClick(item)}
+                          onPress={() => handleEditClick(item)}
                         >
                           <PenSquare className="w-4 h-4" />
                         </Button>

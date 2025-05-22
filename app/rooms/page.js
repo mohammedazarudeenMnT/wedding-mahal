@@ -7,10 +7,10 @@ import QuoteRequest from "../../Components/home/QuoteRequest";
 
 
 export const metadata = {
-  title: "Hotel Rooms - Book Your Stay",
+  title: "Mahaal Rooms - Book Your Stay",
   description:
-    "Browse and book our luxurious hotel rooms. Find the perfect accommodation for your stay.",
-  keywords: "hotel rooms, booking, accommodation, luxury rooms",
+    "Browse and book our luxurious mahaal rooms. Find the perfect accommodation for your stay.",
+  keywords: "mahaal rooms, booking, accommodation, luxury rooms",
 };
 
 async function getRoomData() {

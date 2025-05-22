@@ -40,6 +40,7 @@ const RecordPaymentPage = () => {
 
   // Get booking data from URL parameters
   const bookingData = searchParams.get("bookingData");
+  const customerSearch = searchParams.get("customerSearch");
   const [decodedBookingData, setDecodedBookingData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -129,6 +130,19 @@ const RecordPaymentPage = () => {
   useEffect(() => {
     if (!hasPermission) return;
 
+    const params = new URLSearchParams(window.location.search);
+    const bookingData = params.get("bookingData");
+    const customerSearch = params.get("customerSearch");
+
+    if (customerSearch && customerSearch !== "undefined undefined") {
+      setShowCustomerSearch(true);
+      setCustomerNameSearch(decodeURIComponent(customerSearch));
+      // Automatically trigger search
+      searchTransactionsByCustomerName(decodeURIComponent(customerSearch));
+      setIsLoading(false);
+      return;
+    }
+
     // If no booking data is provided, show customer search
     if (!bookingData) {
       setShowCustomerSearch(true);
@@ -170,8 +184,9 @@ const RecordPaymentPage = () => {
   }
 
   // Function to search transactions by customer name
-  const searchTransactionsByCustomerName = async () => {
-    if (!customerNameSearch.trim()) {
+  const searchTransactionsByCustomerName = async (searchValue = null) => {
+    const searchTerm = searchValue || customerNameSearch;
+    if (!searchTerm.trim()) {
       toast.error("Please enter a customer name");
       return;
     }
@@ -180,7 +195,7 @@ const RecordPaymentPage = () => {
     try {
       const response = await axios.get(
         `/api/financials/transactions/search?customerName=${encodeURIComponent(
-          customerNameSearch
+          searchTerm
         )}`
       );
 

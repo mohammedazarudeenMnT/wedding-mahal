@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { saveFile } from "../../../utils/helpers/fileUpload";
 import { getModel } from "../../../utils/helpers/getModel";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // Remove allowedMethods export and add method validation in handlers
@@ -19,7 +19,7 @@ async function validateMethod(request, allowedMethods) {
 }
 
 export async function GET(request) {
-  const methodError = await validateMethod(request, ['GET']);
+  const methodError = await validateMethod(request, ["GET"]);
   if (methodError) return methodError;
 
   try {
@@ -28,11 +28,11 @@ export async function GET(request) {
     // Will always have data since getHotelDatabase creates default if missing
     return NextResponse.json({ success: true, hotelData: hotelData });
   } catch (err) {
-    console.error("Error fetching hotel data:", err);
+    console.error("Error fetching mahaal data:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Error fetching hotel details",
+        message: "Error fetching mahaal details",
         error: err.message,
       },
       { status: 500 }
@@ -41,7 +41,7 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  const methodError = await validateMethod(request, ['PUT']);
+  const methodError = await validateMethod(request, ["PUT"]);
   if (methodError) return methodError;
 
   try {
@@ -52,18 +52,18 @@ export async function PUT(request) {
     const HotelModel = getModel("Hotel", SuperAdminHotel);
 
     // Handle logo update
-    if (cleanUpdateData.logo && cleanUpdateData.logo.startsWith('data:image')) {
+    if (cleanUpdateData.logo && cleanUpdateData.logo.startsWith("data:image")) {
       try {
         const oldHotel = await HotelModel.findOne();
         const newLogoPath = await saveFile(
-          cleanUpdateData.logo, 
-          'hotel', 
+          cleanUpdateData.logo,
+          "hotel",
           oldHotel?.logo
         );
         cleanUpdateData.logo = newLogoPath;
       } catch (error) {
-        console.error('Error handling logo:', error);
-        throw new Error('Failed to process logo');
+        console.error("Error handling logo:", error);
+        throw new Error("Failed to process logo");
       }
     }
 
@@ -75,20 +75,20 @@ export async function PUT(request) {
     );
 
     if (!updatedHotel) {
-      throw new Error("Failed to update hotel data");
+      throw new Error("Failed to update mahaal data");
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Hotel details updated successfully",
-      hotelData: updatedHotel 
+    return NextResponse.json({
+      success: true,
+      message: "Mahaal details updated successfully",
+      hotelData: updatedHotel,
     });
   } catch (err) {
-    console.error("Error updating hotel data:", err);
+    console.error("Error updating mahaal data:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Error updating hotel details",
+        message: "Error updating mahaal details",
         error: err.message,
       },
       { status: 500 }

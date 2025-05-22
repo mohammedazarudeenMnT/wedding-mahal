@@ -432,16 +432,24 @@ export default function AddExpenses({ params }) {
                 variant="bordered"
                 isInvalid={!!errors.paymentType}
                 errorMessage={errors.paymentType}
+                aria-label="Select payment type"
+                labelPlacement="outside"
+                label="Payment Type"
               >
                 <SelectItem
                   key="paymentType-header-bank"
                   className="text-primary font-bold"
                   isDisabled
+                  aria-label="Bank Accounts Header"
                 >
                   Bank Accounts
                 </SelectItem>
                 {bankListAccounts.map((account) => (
-                  <SelectItem key={account._id} value={account._id}>
+                  <SelectItem 
+                    key={account._id} 
+                    value={account._id}
+                    aria-label={account.name || account.bankName}
+                  >
                     {account.name || account.bankName}
                   </SelectItem>
                 ))}
@@ -450,17 +458,22 @@ export default function AddExpenses({ params }) {
                   key="paymentType-header-cash"
                   className="text-primary font-bold"
                   isDisabled
+                  aria-label="Cash Accounts Header"
                 >
                   Cash Accounts
                 </SelectItem>
                 {cashAccounts.map((account) => (
-                  <SelectItem key={account._id} value={account._id}>
+                  <SelectItem 
+                    key={account._id} 
+                    value={account._id}
+                    aria-label={account.name}
+                  >
                     {account.name}
                   </SelectItem>
                 ))}
               </Select>
               {errors.paymentType && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-red-500 mt-1" role="alert">
                   {errors.paymentType}
                 </p>
               )}

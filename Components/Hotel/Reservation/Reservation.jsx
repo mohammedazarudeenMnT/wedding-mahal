@@ -17,16 +17,7 @@ import {
   Download,
 } from "lucide-react";
 import { Buttons } from "../../ui/button.tsx";
-import { Calendar } from "../../ui/calendar.tsx";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.tsx";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@heroui/table";
+import { DateRangePicker } from "@heroui/date-picker";
 import { Button } from "@heroui/button";
 import { Dropdown, DropdownTrigger } from "@heroui/dropdown";
 import { DropdownMenu, DropdownItem } from "@heroui/dropdown";
@@ -35,6 +26,14 @@ import { Chip } from "@heroui/chip";
 import { User } from "@heroui/user";
 import { Pagination } from "@heroui/pagination";
 import { Spinner } from "@heroui/spinner";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@heroui/table";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -665,6 +664,7 @@ export default function ReservationList({}) {
               "Client Requests": "",
             }
           ),
+          Object.values(exportData[0] || {}),
         ],
         body: exportData.map(Object.values),
         startY: 45,
@@ -840,6 +840,32 @@ export default function ReservationList({}) {
     ]
   );
 
+  const handleDateRangeChange = useCallback((range) => {
+    if (!range || !range.start || !range.end) {
+      setDate({
+        from: new Date(),
+        to: addDays(new Date(), 1),
+      });
+      return;
+    }
+
+    const startDate = new Date(
+      range.start.year,
+      range.start.month - 1,
+      range.start.day
+    );
+    const endDate = new Date(
+      range.end.year,
+      range.end.month - 1,
+      range.end.day
+    );
+
+    setDate({
+      from: startDate,
+      to: endDate,
+    });
+  }, []);
+
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -863,16 +889,37 @@ export default function ReservationList({}) {
               onValueChange={onSearchChange}
             />
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Buttons
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
+            <DateRangePicker
+              className="min-w-[280px]"
+              classNames={{
+                base: "bg-white rounded-lg", // Changed from bg-hotel-secondary
+                trigger: "h-10 min-h-10",
+                triggerContent:
+                  "flex h-full items-center gap-2 text-hotel-primary-text",
+                dropdown: "bg-white rounded-lg shadow-lg",
+                monthHeader: "text-hotel-primary-text",
+                calendar: "bg-white",
+                weekDays: "text-hotel-primary-text",
+                dayButton: {
+                  base: "text-hotel-primary-text hover:bg-hotel-secondary-hover",
+                  today: "text-hotel-primary",
+                  selected:
+                    "bg-hotel-primary text-white hover:!bg-hotel-primary",
+                  rangeStart: "rounded-l-lg",
+                  rangeEnd: "rounded-r-lg",
+                  rangeMiddle: "bg-hotel-primary/20",
+                },
+              }}
+              placeholder="Select date range"
+              onChange={handleDateRangeChange}
+              popoverProps={{
+                placement: "bottom",
+                offset: 5,
+                radius: "lg",
+                backdrop: "opaque",
+              }}
+              triggerContent={(value) => (
+                <div className="flex items-center">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date?.from ? (
                     date.to ? (
@@ -886,19 +933,9 @@ export default function ReservationList({}) {
                   ) : (
                     <span>Pick a date</span>
                   )}
-                </Buttons>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                </div>
+              )}
+            />
 
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
@@ -907,9 +944,7 @@ export default function ReservationList({}) {
                   variant="flat"
                   className="bg-hotel-secondary text-hotel-primary-text"
                 >
-                  {Array.from(statusFilter).length
-                    ? `${Array.from(statusFilter).length} Status selected`
-                    : "Status"}
+                  All Status
                 </Button>
               </DropdownTrigger>
               <DropdownMenu
@@ -989,6 +1024,7 @@ export default function ReservationList({}) {
     visibleColumns,
     downloadButton,
     date,
+    handleDateRangeChange,
     hasAddPermission,
     bookings.length,
     rowsPerPage,

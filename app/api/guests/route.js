@@ -163,6 +163,8 @@ export async function GET(request) {
 
       guest.stayHistory.push({
         bookingId: booking.bookingNumber,
+        propertyType: booking.propertyType,
+        eventType: booking.eventType,
         checkInDate: booking.checkInDate,
         checkOutDate: booking.checkOutDate,
         roomCategory: booking.rooms[0]?.type || "N/A",

@@ -685,11 +685,10 @@ export default function Inventory() {
   };
 
   const renderSupplierSection = () => (
-    <div>
+    <div ref={supplierInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Supplier Name</label>
       <div className="relative">
         <Input
-          ref={supplierInputRef}
           placeholder="Search or create supplier"
           value={supplierInput}
           onChange={(e) => handleSupplierInputChange(e.target.value)}
@@ -793,7 +792,11 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
+<<<<<<< HEAD
+                      onPress={(e) => {
+=======
                       onPress={() => {
+>>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
                         handleEditCategory(category);
                       }}
                     >
@@ -803,7 +806,11 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
+<<<<<<< HEAD
+                      onPress={(e) => {
+=======
                       onPress={() => {
+>>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
                         handleDeleteCategory(category._id);
                       }}
                     >
@@ -831,7 +838,11 @@ export default function Inventory() {
       <label className="block text-sm text-[#4B5563] mb-2">
         Sub category Name
       </label>
+<<<<<<< HEAD
+      <div className="relative">
+=======
       <div className="relative" >
+>>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
         <Input
           placeholder="Search or select subcategory"
           value={subCategoryInput}
@@ -910,7 +921,11 @@ export default function Inventory() {
   const renderBrandSection = () => (
     <div ref={brandInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Brand Name</label>
+<<<<<<< HEAD
+      <div className="relative">
+=======
       <div className="relative" >
+>>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
         <Input
           placeholder="Search or create brand"
           value={brandInput}

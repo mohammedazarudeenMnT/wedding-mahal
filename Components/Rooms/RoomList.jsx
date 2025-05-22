@@ -477,10 +477,7 @@ export default function RoomList() {
                               <Button
                                 size="sm"
                                 className="bg-red-500 text-white h-8 w-8 min-w-0 p-0 rounded-md"
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(room._id);
-                                }}
+                                onPress={() => handleDelete(room._id)} // Keep onPress for the actual action
                               >
                                 <IoTrashBinOutline className="w-4 h-4" />
                               </Button>

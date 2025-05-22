@@ -200,12 +200,12 @@ const General = ({ initialHotelData }) => {
 
   return (
     <section
-      aria-label="General Hotel Settings"
+      aria-label="General Mahaal Settings"
       className=" mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm"
     >
-      <h2 className="text-2xl font-bold mb-6">Hotel Details</h2>
+      <h2 className="text-2xl font-bold mb-6">Mahaal Details</h2>
       <form
-        aria-label="Hotel Details Form"
+        aria-label="Mahaal Details Form"
         className="space-y-6"
         onSubmit={handleSubmit}
       >
@@ -217,13 +217,14 @@ const General = ({ initialHotelData }) => {
         </div>
         <div aria-label="Hotel Information" className="flex space-x-4">
           <div className="w-1/2">
+            {" "}
             <label htmlFor="hotelName" className="block mb-2">
-              Hotel Name
+              Mahaal Name
             </label>
             <Input
               id="hotelName"
               name="hotelName"
-              placeholder="Hotel name"
+              placeholder="Mahaal name"
               value={hotelData.hotelName}
               onChange={handleInputChange}
             />

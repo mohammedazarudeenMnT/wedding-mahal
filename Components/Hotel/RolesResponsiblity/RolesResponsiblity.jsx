@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Trash2, Edit, Check } from "lucide-react";
-import { Input, Button } from "@nextui-org/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
 import axios from "axios";
 import { toast } from "react-toastify";
 import RolesResponsibilitySkeleton from "./RolesResponsibilitySkeleton";
@@ -12,7 +13,6 @@ import ConfirmationDialog from "../../../Components/ui/ConfirmationDialog";
 const permissions = [
   "Rooms",
   "Dashboard",
-  "House-keeping",
   "Inventory",
   "Employees",
   "Employees/roles-responsibility",

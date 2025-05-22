@@ -374,9 +374,7 @@ export const bookingConfirmationTemplate = `
 
             <div class="notice">
                 <p><strong>Important:</strong> If you need to modify or cancel your reservation, please contact us at least 24 hours before your check-in date.</p>
-            </div>
-
-            <p>We're excited to welcome you to {{hotelDisplayName}}. If you have any questions or need to make changes to your reservation, please don't hesitate to reach out to us.</p>
+            </div>            <p>We're excited to welcome you to {{hotelDisplayName}}. If you have any questions or need to make changes to your reservation, please don't hesitate to reach out to us.</p>
 
             <a href="{{hotelWebsite}}" class="btn">Visit Our Website</a>
 
@@ -389,7 +387,7 @@ export const bookingConfirmationTemplate = `
 
             <div class="contact-info">
                 <p><strong>Need assistance?</strong></p>
-                <p>Contact our guest services team:</p>
+                <p>Contact our team:</p>
                 <p>📞 Phone: {{hotelPhone}}</p>
                 <p>✉️ Email: {{hotelEmail}}</p>
                 <p>📍 Address: {{hotelAddress}}</p>

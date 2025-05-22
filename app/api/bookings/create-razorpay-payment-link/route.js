@@ -33,7 +33,7 @@ export async function POST(request) {
       accept_partial: false,
       expire_by: Math.floor(Date.now() / 1000) + 3600,
       reference_id: "booking_" + Date.now(),
-      description: "Hotel Booking Payment",
+      description: "Mahaal Booking Payment",
       customer: {
         name: customer.name,
         email: customer.email,
