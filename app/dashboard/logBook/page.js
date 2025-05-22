@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader";
 import LogBook from "../../../Components/logBook/logBook";
 import { usePagePermission } from "../../../hooks/usePagePermission";
+import LogBookSkeleton from "../../../Components/logBook/LogBookSkeleton";
 
 const LogBookPage = () => {
-  const hasPermission = usePagePermission("Calendar", "view");
+  const hasPermission = usePagePermission("LogBook", "view");
   const router = useRouter();
 
   if (hasPermission === null) {
-    return null;
+    return <LogBookSkeleton />;
   }
 
   if (hasPermission === false) {
@@ -20,12 +21,12 @@ const LogBookPage = () => {
   }
 
   return (
-    <div>
+    <section>
       <div className="bgclrrr pt-3">
-        <DashboardHeader headerName={"Log Book"} />
+        <DashboardHeader headerName="Log Book" />
       </div>
       <LogBook />
-    </div>
+    </section>
   );
 };
 

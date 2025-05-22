@@ -1,38 +1,18 @@
-// "use client"
-
-// import React from 'react'
-// import AddLogForm from '../../../../../Components/logBook/AddLogForm'
-// import DashboardHeader from "../../../../../Components/dashboardHeader/DashboardHeader"
-
-// const EditLogPage = ({ params }) => {
-//   const { logId } = params;
-
-//   return (
-//     <section>
-//       <div className="bgclrrr pt-3">
-//         <DashboardHeader headerName="Edit Log Entry" />
-//       </div>
-//       <AddLogForm logId={logId} />
-//     </section>
-//   )
-// }
-
-// export default EditLogPage
-
 "use client"
 
-import React from 'react'
+import React from "react"
 import { useRouter } from "next/navigation"
-import { usePagePermission } from "../../../../../hooks/usePagePermission"
-import AddLogForm from '../../../../../Components/logBook/AddLogForm'
 import DashboardHeader from "../../../../../Components/dashboardHeader/DashboardHeader"
+import AddLogForm from "../../../../../Components/logBook/AddLogForm"
+import { usePagePermission } from "../../../../../hooks/usePagePermission"
+import EditLogFormSkeleton from "../../../../../Components/logBook/EditLogFormSkeleton"
 
 const EditLogPage = ({ params }) => {
   const hasPermission = usePagePermission("LogBook", "edit")
   const router = useRouter()
 
   if (hasPermission === null) {
-    return null
+    return <EditLogFormSkeleton />
   }
 
   if (hasPermission === false) {

@@ -13,8 +13,10 @@ const UnauthorizedPage = () => {
   const [firstAccessiblePage, setFirstAccessiblePage] = useState<string | null>(null)
 
   const pages = useMemo(() => [
+    { path: "/dashboard/calendarView", permission: "CalendarView" },
     { path: "/dashboard/bookings", permission: "Bookings" },
     { path: "/dashboard/rooms", permission: "Rooms" },
+    {path: "/dashboard/logBook", permission: "LogBook"},
     { path: "/dashboard/inventory", permission: "Inventory" },
     { path: "/dashboard/employees", permission: "Employees" },
     { path: "/dashboard/financials", permission: "Financials" },
