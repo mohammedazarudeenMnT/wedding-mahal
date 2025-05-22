@@ -443,6 +443,60 @@ export default function LogBook() {
     }
   }, [logEntries])
 
+  const handleDownload = () => {
+    try {
+      // Define the headers for the CSV
+      const headers = [
+        "Customer Name",
+        "Booking ID",
+        "Property Type",
+        "Event Type",
+        "Date From",
+        "Date To",
+        "Check-in Time",
+        "Items Issued",
+        "Status",
+        "Notes"
+      ];
+
+      // Format the data for CSV
+      const csvData = filteredData.map(entry => [
+        entry.customerName,
+        entry.bookingId,
+        entry.propertyType,
+        entry.eventType || "N/A",
+        format(new Date(entry.dateRange.from), "dd/MM/yyyy"),
+        format(new Date(entry.dateRange.to), "dd/MM/yyyy"),
+        entry.checkInTime || "N/A",
+        entry.itemsIssued.length,
+        entry.status,
+        entry.notes || "N/A"
+      ]);
+
+      // Combine headers and data
+      const csvContent = [
+        headers.join(","),
+        ...csvData.map(row => row.join(","))
+      ].join("\n");
+
+      // Create a Blob and download link
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", `logbook_export_${format(new Date(), "dd-MM-yyyy")}.csv`);
+      link.style.visibility = "hidden";
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      toast.error("Failed to download data");
+    }
+  };
+
   const sortedItems = useMemo(() => {
     const items = [...filteredData];
     
@@ -611,6 +665,7 @@ export default function LogBook() {
               className="min-w-[40px] bg-hotel-secondary text-hotel-primary-text"
               isIconOnly
               variant="flat"
+              onPress={handleDownload}
             >
               <Download className="h-4 w-4" />
             </Button>

@@ -106,7 +106,7 @@ export default function ViewLogBookDetails({ isOpen, onClose, logData }) {
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-hotel-primary-text">
             <span className="h-5 w-1 bg-hotel-primary rounded-full"></span>
-            Items Issued
+            {logData.status === 'Verified' ? 'Items Returned' : 'Items Issued'}
           </h3>
           <div className="overflow-x-auto rounded-lg border border-gray-200 mb-3">
             <Table aria-label="Items issued table" className="w-full">
