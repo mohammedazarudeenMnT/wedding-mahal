@@ -13,21 +13,20 @@ const UnauthorizedPage = () => {
   const [firstAccessiblePage, setFirstAccessiblePage] = useState<string | null>(null)
 
   const pages = useMemo(() => [
-    { path: "/dashboard/calendarView", permission: "CalendarView" },
-    { path: "/dashboard/bookings", permission: "Bookings" },
+    { path: "/dashboard", permission: "Dashboard" },
+    { path: "/dashboard/calendarView", permission: "Calendar" },
+    { path: "/dashboard/bookings", permission: "bookings" },
     { path: "/dashboard/rooms", permission: "Rooms" },
-    {path: "/dashboard/logBook", permission: "LogBook"},
+    { path: "/dashboard/logBook", permission: "LogBook" },
     { path: "/dashboard/inventory", permission: "Inventory" },
     { path: "/dashboard/employees", permission: "Employees" },
-    { path: "/dashboard/financials", permission: "Financials" },
-    { path: "/dashboard/financials/invoices", permission: "Financials/Invoices" },
-    // { path: "/dashboard/house-keeping", permission: "House-keeping" },
-   
-    // { path:  "/dashboard/subscriptions", permission: "Subscriptions" },
-    // { path:  "/dashboard/subscriptions/update-plans", permission: "Subscriptions/Update-Plans" },
-    // { path:  "/dashboard/subscriptions/payment-history", permission: "Subscriptions/Payment-History" },
-   
-   
+    { path: "/dashboard/employees/roles-responsibility", permission: "Employees/roles-responsibility" },
+    { path: "/dashboard/crm", permission: "crm" },
+    { path: "/dashboard/crm/add-contact", permission: "crm/add-contact" },
+    { path: "/dashboard/contacts/guest", permission: "contacts/guest" },
+    { path: "/dashboard/financials", permission: "financials" },
+    { path: "/dashboard/financials/invoices", permission: "financials/invoices" },
+    { path: "/dashboard/financials/expenses", permission: "financials/expenses" },
   ], [])
 
   const permissions = pages.map((_, index) => {
@@ -44,7 +43,7 @@ const UnauthorizedPage = () => {
         }
       }
     })
-  }, [permissions,  pages]) // Added pages to dependencies
+  }, [permissions, pages])
 
   const handleGoBack = () => {
     router.push("/login")
