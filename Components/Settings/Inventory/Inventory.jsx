@@ -88,7 +88,8 @@ export default function Inventory() {
   const [electricityTypeInput, setElectricityTypeInput] = useState("");
   const [electricityTypes, setElectricityTypes] = useState([]);
   const [showElectricityTypes, setShowElectricityTypes] = useState(false);
-  const [isCreatingElectricityType, setIsCreatingElectricityType] = useState(false);
+  const [isCreatingElectricityType, setIsCreatingElectricityType] =
+    useState(false);
   const [editingElectricityType, setEditingElectricityType] = useState(null);
   const electricityTypeInputRef = useRef(null);
 
@@ -792,11 +793,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-<<<<<<< HEAD
-                      onPress={(e) => {
-=======
                       onPress={() => {
->>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
                         handleEditCategory(category);
                       }}
                     >
@@ -806,11 +803,7 @@ export default function Inventory() {
                       size="sm"
                       isIconOnly
                       className="bg-transparent hover:bg-gray-200"
-<<<<<<< HEAD
-                      onPress={(e) => {
-=======
                       onPress={() => {
->>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
                         handleDeleteCategory(category._id);
                       }}
                     >
@@ -838,11 +831,7 @@ export default function Inventory() {
       <label className="block text-sm text-[#4B5563] mb-2">
         Sub category Name
       </label>
-<<<<<<< HEAD
       <div className="relative">
-=======
-      <div className="relative" >
->>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
         <Input
           placeholder="Search or select subcategory"
           value={subCategoryInput}
@@ -921,11 +910,7 @@ export default function Inventory() {
   const renderBrandSection = () => (
     <div ref={brandInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Brand Name</label>
-<<<<<<< HEAD
       <div className="relative">
-=======
-      <div className="relative" >
->>>>>>> b29a9c7fb95b5491fac9f255083d9f1fa5986d46
         <Input
           placeholder="Search or create brand"
           value={brandInput}
@@ -1015,17 +1000,22 @@ export default function Inventory() {
 
   const renderElectricityTypeSection = () => (
     <div ref={electricityTypeInputRef}>
-      <label className="block text-sm text-[#4B5563] mb-2">Electricity / Generator Type</label>
+      <label className="block text-sm text-[#4B5563] mb-2">
+        Electricity / Generator Type
+      </label>
       <div className="relative">
         <Input
           placeholder="Create Type"
           value={electricityTypeInput}
-          onChange={e => {
+          onChange={(e) => {
             setElectricityTypeInput(e.target.value);
             setIsCreatingElectricityType(
-              e.target.value.trim() !== "" && 
-              !electricityTypes.some(type => type.name.toLowerCase() === e.target.value.toLowerCase()) && 
-              !editingElectricityType
+              e.target.value.trim() !== "" &&
+                !electricityTypes.some(
+                  (type) =>
+                    type.name.toLowerCase() === e.target.value.toLowerCase()
+                ) &&
+                !editingElectricityType
             );
             if (e.target.value.trim() !== "") {
               setShowElectricityTypes(true);
@@ -1035,7 +1025,10 @@ export default function Inventory() {
             }
           }}
           onClick={() => {
-            if (electricityTypeInput.trim() !== "" || electricityTypes.length > 0) {
+            if (
+              electricityTypeInput.trim() !== "" ||
+              electricityTypes.length > 0
+            ) {
               setShowElectricityTypes(true);
             }
           }}
@@ -1045,7 +1038,7 @@ export default function Inventory() {
             }
           }}
           endContent={
-            <ChevronDown 
+            <ChevronDown
               className="w-4 h-4 text-[#70707B] cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -1061,16 +1054,25 @@ export default function Inventory() {
         {showElectricityTypes && !editingElectricityType && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
             {electricityTypes
-              .filter(type => type.name.toLowerCase().includes(electricityTypeInput.toLowerCase()))
+              .filter((type) =>
+                type.name
+                  .toLowerCase()
+                  .includes(electricityTypeInput.toLowerCase())
+              )
               .map((type) => (
                 <div
                   key={type._id}
                   className="flex justify-between items-center p-2 hover:bg-gray-100 cursor-pointer"
                 >
-                  <span className="flex-1 px-2" onClick={() => {
-                    setElectricityTypeInput(type.name);
-                    setShowElectricityTypes(false);
-                  }}>{type.name}</span>
+                  <span
+                    className="flex-1 px-2"
+                    onClick={() => {
+                      setElectricityTypeInput(type.name);
+                      setShowElectricityTypes(false);
+                    }}
+                  >
+                    {type.name}
+                  </span>
                   <div className="flex items-center gap-1">
                     <Button
                       size="sm"
@@ -1091,22 +1093,26 @@ export default function Inventory() {
                   </div>
                 </div>
               ))}
-            {electricityTypes.filter(type => type.name.toLowerCase().includes(electricityTypeInput.toLowerCase())).length === 0 && electricityTypeInput.trim() !== "" && (
-              <div className="p-2 text-gray-500">
-                No matching types found
-              </div>
-            )}
+            {electricityTypes.filter((type) =>
+              type.name
+                .toLowerCase()
+                .includes(electricityTypeInput.toLowerCase())
+            ).length === 0 &&
+              electricityTypeInput.trim() !== "" && (
+                <div className="p-2 text-gray-500">No matching types found</div>
+              )}
           </div>
         )}
       </div>
-      {(isCreatingElectricityType || editingElectricityType) && electricityTypeInput.trim() !== "" && (
-        <Button
-          className="mt-2 bg-[#00529C] text-white"
-          onPress={handleSaveElectricityType}
-        >
-          {editingElectricityType ? "Update Type" : "Create Type"}
-        </Button>
-      )}
+      {(isCreatingElectricityType || editingElectricityType) &&
+        electricityTypeInput.trim() !== "" && (
+          <Button
+            className="mt-2 bg-[#00529C] text-white"
+            onPress={handleSaveElectricityType}
+          >
+            {editingElectricityType ? "Update Type" : "Create Type"}
+          </Button>
+        )}
       {editingElectricityType && (
         <Button
           className="mt-2 ml-2 bg-gray-300 text-gray-800"

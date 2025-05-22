@@ -64,7 +64,7 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
     <>
       <motion.div
         className={cn(
-          "h-screen px-4 py-4 hidden md:flex md:flex-col bg-[#404040] dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
+          "h-screen px-4 py-4 hidden md:flex md:flex-col bg-white dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
           className
         )}
         animate={{
@@ -73,15 +73,15 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
         }}
         {...props}
       >
-          <div className="flex-1 overflow-hidden">{children}</div>
-         {/* <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <div className="flex-1 overflow-hidden">{children}</div>
+        {/* <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
            {children}
          </div> */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setOpen(!open)}
-          className="bg-hotel-primary text-[#404040] shadow-lg dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-hotel-primary/90 transition-all duration-200 mt-4"
+          className="bg-gray-100 text-gray-700 shadow-sm dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-gray-200 transition-all duration-200 mt-4"
         >
           {open ? (
             <IconChevronLeft className="h-5 w-5" />
@@ -122,13 +122,13 @@ export const MobileSidebar = ({ className, children, ...props }) => {
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-screen w-[280px] top-0 left-0 bg-[#404040] dark:bg-neutral-900 z-[100] flex flex-col",
+                "fixed h-screen w-[280px] top-0 left-0 bg-white dark:bg-neutral-900 z-[100] flex flex-col",
                 className
               )}
             >
               <div className="flex justify-end p-4">
                 <IconX
-                  className="text-white dark:text-neutral-200 h-6 w-6"
+                  className="text-gray-700 dark:text-neutral-200 h-6 w-6"
                   onClick={() => setOpen(false)}
                 />
               </div>
@@ -156,6 +156,7 @@ export const SidebarLink = ({ link, className, ...props }) => {
   const { open, animate } = useSidebar();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const isActive = link?.href && pathname === link.href;
+  const hasActiveSublink = link?.subLinks?.some(subLink => pathname === subLink.href);
 
   const handleClick = (e) => {
     if (link.subLinks) {
@@ -173,8 +174,8 @@ export const SidebarLink = ({ link, className, ...props }) => {
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
         className={cn(
-          "text-white dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0",
-          isActive && "text-[#404040]"
+          "text-gray-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0",
+          (isActive || hasActiveSublink) && "text-white"
         )}
       >
         {link.label}
@@ -182,9 +183,9 @@ export const SidebarLink = ({ link, className, ...props }) => {
       {link.subLinks && (
         <IconChevronDown
           className={cn(
-            "text-white dark:text-neutral-200 h-5 w-5 transition-transform",
+            "text-gray-700 dark:text-neutral-200 h-5 w-5 transition-transform",
             isDropdownOpen && "rotate-180",
-            isActive && "!text-[#404040]"
+            (isActive || hasActiveSublink) && "!text-white"
           )}
         />
       )}
@@ -202,11 +203,11 @@ export const SidebarLink = ({ link, className, ...props }) => {
           href={link.href}
           className={cn(
             "flex items-center justify-start gap-2 group/sidebar py-2 px-1 cursor-pointer rounded transition-colors duration-200 w-full",
-            isActive
-              ? "bg-hotel-primary rounded-md p-3 text-[#404040] [&_*]:text-[#404040]"
+            isActive || hasActiveSublink
+              ? "bg-hotel-primary rounded-md p-3 text-white [&_*]:text-white"
               : open
-              ? "hover:bg-hotel-primary dark:hover:bg-neutral-700"
-              : "hover:bg-hotel-primary/10 rounded-full p-3",
+              ? "hover:bg-gray-100 dark:hover:bg-neutral-700"
+              : "hover:bg-gray-100/80 rounded-full p-3",
             !open && "justify-center",
             className
           )}
@@ -219,9 +220,11 @@ export const SidebarLink = ({ link, className, ...props }) => {
         <div
           className={cn(
             "flex items-center gap-2 group/sidebar py-2 px-1 cursor-pointer rounded transition-colors duration-200",
-            open
-              ? "hover:bg-hotel-primary dark:hover:bg-neutral-700 justify-start"
-              : "hover:bg-hotel-primary/10 rounded-full p-3 justify-center", // New style for closed state
+            hasActiveSublink
+              ? "bg-hotel-primary rounded-md p-3 text-white [&_*]:text-white"
+              : open
+              ? "hover:bg-gray-100 dark:hover:bg-neutral-700 justify-start"
+              : "hover:bg-gray-100/80 rounded-full p-3 justify-center",
             className
           )}
           onClick={handleClick}
@@ -250,7 +253,12 @@ export const SidebarLink = ({ link, className, ...props }) => {
                 >
                   <Link
                     href={subLink.href}
-                    className="block py-1 text-sm text-white dark:text-neutral-300 hover:text-hotel-primary dark:hover:text-hotel-primary transition-colors duration-200"
+                    className={cn(
+                      "block py-1 text-sm transition-colors duration-200",
+                      pathname === subLink.href
+                        ? "text-hotel-primary font-medium"
+                        : "text-gray-700 dark:text-neutral-300 hover:text-hotel-primary dark:hover:text-hotel-primary"
+                    )}
                   >
                     {subLink.label}
                   </Link>

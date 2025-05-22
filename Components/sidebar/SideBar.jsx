@@ -5,7 +5,7 @@ import {
   IconLayoutDashboard, // Dashboard
   IconClipboardCheck, // Reservation
   IconHome, // Rooms
-/*   IconSpray, // Housekeeping */
+  /*   IconSpray, // Housekeeping */
   IconPackage, // Inventory
   IconCash, // Financials
   IconUserCircle, // Concierge
@@ -52,36 +52,36 @@ export function SidebarDemo() {
       label: `Dashboard`,
       href: `/dashboard`,
       icon: (
-        <IconLayoutDashboard className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconLayoutDashboard className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Calendar View",
       href: `/dashboard/calendarView`,
       icon: (
-        <IconCalendar className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconCalendar className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Bookings",
       href: `/dashboard/bookings`,
       icon: (
-        <IconClipboardCheck className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconClipboardCheck className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
-      label: "Property Management",
+      label: "Rooms",
       href: `/dashboard/rooms`,
       icon: (
-        <IconHome className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconHome className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Log Book",
       href: `/dashboard/logBook`,
       icon: (
-        <IconNotebook className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),  
+        <IconNotebook className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),
     },
     // {
     //   label: "Messages",
@@ -90,7 +90,7 @@ export function SidebarDemo() {
     //     <IconMessage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
     //   ),
     // },
-   /*  {
+    /*  {
       label: "Housekeeping",
       href: `/dashboard/house-keeping`,
       icon: (
@@ -101,7 +101,7 @@ export function SidebarDemo() {
       label: "Inventory",
       href: `/dashboard/inventory`,
       icon: (
-        <IconPackage className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconPackage className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
 
@@ -109,7 +109,7 @@ export function SidebarDemo() {
       label: "Staff Management",
 
       icon: (
-        <IconUserCircle className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUserCircle className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Employee Details", href: `/dashboard/employees` },
@@ -124,7 +124,7 @@ export function SidebarDemo() {
       label: "Financials",
 
       icon: (
-        <IconCash className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconCash className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Invoice", href: `/dashboard/financials/invoices` },
@@ -146,7 +146,7 @@ export function SidebarDemo() {
       label: "Contacts",
 
       icon: (
-        <IconUser className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUser className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
         { label: "Guest", href: `/dashboard/contacts/guest` },
@@ -161,21 +161,21 @@ export function SidebarDemo() {
       label: "CRM",
       href: `/dashboard/crm`,
       icon: (
-        <IconUsersGroup className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUsersGroup className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Web Settings",
       href: `/dashboard/web-settings`,
       icon: (
-        <BiBookContent className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <BiBookContent className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
       label: "Settings",
       href: `/dashboard/settings`,
       icon: (
-        <MdOutlineSettings className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <MdOutlineSettings className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     // {
