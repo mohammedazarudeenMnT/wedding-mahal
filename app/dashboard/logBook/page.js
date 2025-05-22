@@ -1,13 +1,13 @@
 'use client'
 
 import React from "react";
-// import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader";
 import LogBook from "../../../Components/logBook/logBook";
-// import { usePagePermission } from "../../../hooks/usePagePermission";
+import { usePagePermission } from "../../../hooks/usePagePermission";
 
 const LogBookPage = () => {
- /*  const hasPermission = usePagePermission("Calendar", "view");
+  const hasPermission = usePagePermission("Calendar", "view");
   const router = useRouter();
 
   if (hasPermission === null) {
@@ -18,7 +18,7 @@ const LogBookPage = () => {
     router.push("/dashboard/unauthorized");
     return null;
   }
- */
+
   return (
     <div>
       <div className="bgclrrr pt-3">

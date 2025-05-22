@@ -13,16 +13,19 @@ const UnauthorizedPage = () => {
   const [firstAccessiblePage, setFirstAccessiblePage] = useState<string | null>(null)
 
   const pages = useMemo(() => [
-    { path: "/dashboard/employees", permission: "Employees" },
-    { path: "/dashboard/rooms", permission: "Rooms" },
     { path: "/dashboard/bookings", permission: "Bookings" },
-    { path: "/dashboard/house-keeping", permission: "House-keeping" },
+    { path: "/dashboard/rooms", permission: "Rooms" },
     { path: "/dashboard/inventory", permission: "Inventory" },
-    { path:  "/dashboard/subscriptions", permission: "Subscriptions" },
-    { path:  "/dashboard/subscriptions/update-plans", permission: "Subscriptions/Update-Plans" },
-    { path:  "/dashboard/subscriptions/payment-history", permission: "Subscriptions/Payment-History" },
+    { path: "/dashboard/employees", permission: "Employees" },
     { path: "/dashboard/financials", permission: "Financials" },
     { path: "/dashboard/financials/invoices", permission: "Financials/Invoices" },
+    // { path: "/dashboard/house-keeping", permission: "House-keeping" },
+   
+    // { path:  "/dashboard/subscriptions", permission: "Subscriptions" },
+    // { path:  "/dashboard/subscriptions/update-plans", permission: "Subscriptions/Update-Plans" },
+    // { path:  "/dashboard/subscriptions/payment-history", permission: "Subscriptions/Payment-History" },
+   
+   
   ], [])
 
   const permissions = pages.map((_, index) => {

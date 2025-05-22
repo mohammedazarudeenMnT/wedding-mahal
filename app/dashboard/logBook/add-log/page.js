@@ -3,21 +3,21 @@
 import React from "react"
 import DashboardHeader from "../../../../Components/dashboardHeader/DashboardHeader"
 import AddLogForm from "../../../../Components/logBook/AddLogForm"
-// import { useRouter } from "next/navigation"
-// import { usePagePermission } from "@/hooks/usePagePermission"
+import { useRouter } from "next/navigation"
+import { usePagePermission } from "@/hooks/usePagePermission"
 
 export default function AddLogPage() {
-//   const hasPermission = usePagePermission("LogBook", "add")
-//   const router = useRouter()
+  const hasPermission = usePagePermission("LogBook", "add")
+  const router = useRouter()
 
-//   if (hasPermission === null) {
-//     return null
-//   }
+  if (hasPermission === null) {
+    return null
+  }
 
-//   if (hasPermission === false) {
-//     router.push("/dashboard/unauthorized")
-//     return null
-//   }
+  if (hasPermission === false) {
+    router.push("/dashboard/unauthorized")
+    return null
+  }
 
   return (
     <>

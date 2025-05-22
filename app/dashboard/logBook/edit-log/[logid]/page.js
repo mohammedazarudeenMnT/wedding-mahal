@@ -28,17 +28,17 @@ import AddLogForm from '../../../../../Components/logBook/AddLogForm'
 import DashboardHeader from "../../../../../Components/dashboardHeader/DashboardHeader"
 
 const EditLogPage = ({ params }) => {
-  // const hasPermission = usePagePermission("LogBook", "edit")
-  // const router = useRouter()
+  const hasPermission = usePagePermission("LogBook", "edit")
+  const router = useRouter()
 
-  // if (hasPermission === null) {
-  //   return null
-  // }
+  if (hasPermission === null) {
+    return null
+  }
 
-  // if (hasPermission === false) {
-  //   router.push("/dashboard/unauthorized")
-  //   return null
-  // }
+  if (hasPermission === false) {
+    router.push("/dashboard/unauthorized")
+    return null
+  }
 
   return (
     <section>

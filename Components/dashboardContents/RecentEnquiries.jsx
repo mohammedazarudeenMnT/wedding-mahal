@@ -13,7 +13,7 @@ import {
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/Components/ui/card";
 import { useRouter } from "next/navigation";
-import DashboardTableSkeleton from "../DashboardTableSkeleton";
+import DashboardTableSkeleton from "./DashboardTableSkeleton"
 
 const columns = [
   {
