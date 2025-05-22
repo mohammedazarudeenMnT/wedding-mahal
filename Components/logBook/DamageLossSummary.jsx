@@ -16,7 +16,21 @@ export default function DamageLossSummary({
 }) {
   const handleChange = (index, field, value) => {
     const newRows = [...damageLossSummary];
-    newRows[index] = { ...newRows[index], [field]: value };
+    
+    // If changing quantity, validate against available stock
+    if (field === 'quantity') {
+      const row = newRows[index];
+      const availableQuantity = getAvailableQuantity(row.category, row.subCategory, row.brand, row.model);
+      const newQuantity = Math.min(parseInt(value) || 0, availableQuantity);
+      newRows[index] = { ...row, quantity: newQuantity };
+    } else {
+      newRows[index] = { ...newRows[index], [field]: value };
+      // Reset quantity when changing item selection
+      if (['category', 'subCategory', 'brand', 'model'].includes(field)) {
+        newRows[index].quantity = '';
+      }
+    }
+    
     setDamageLossSummary(newRows);
   };
 
@@ -47,6 +61,16 @@ export default function DamageLossSummary({
         item.brandName === brand
       )
       .map(item => item.model))];
+  };
+
+  const getAvailableQuantity = (category, subCategory, brand, model) => {
+    const item = inventory.find(item => 
+      item.category === category && 
+      item.subCategory === subCategory && 
+      item.brandName === brand && 
+      item.model === model
+    );
+    return item ? item.quantityInStock : 0;
   };
 
   return (
@@ -91,7 +115,18 @@ export default function DamageLossSummary({
                 </Select>
               </TableCell>
               <TableCell>
-                <Input type="number" className="text-xs h-9" min="1" value={row.quantity || ''} onChange={e => handleChange(index, 'quantity', e.target.value)} disabled={!row.category || !row.subCategory || !row.brand || !row.model} />
+                <Input 
+                  type="number" 
+                  className="text-xs h-9" 
+                  min="1" 
+                  max={getAvailableQuantity(row.category, row.subCategory, row.brand, row.model)}
+                  placeholder={row.category && row.subCategory && row.brand && row.model 
+                    ? `Max: ${getAvailableQuantity(row.category, row.subCategory, row.brand, row.model)}`
+                    : "Enter quantity"}
+                  value={row.quantity || ''} 
+                  onChange={e => handleChange(index, 'quantity', e.target.value)} 
+                  disabled={!row.category || !row.subCategory || !row.brand || !row.model} 
+                />
               </TableCell>
               <TableCell>
                 <Select value={row.condition} onValueChange={v => handleChange(index, 'condition', v)}>

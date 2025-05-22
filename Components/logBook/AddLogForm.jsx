@@ -551,7 +551,8 @@ export default function AddLogForm({ logId }) {
           model: row.model,
           quantity: parseInt(row.quantity) || 0,
           condition: row.condition,
-          remarks: row.remarks
+          remarks: row.remarks,
+          amount: row.amount !== undefined ? parseFloat(row.amount) || 0 : 0
         })),
         totalAmount: parseFloat(totalAmount) || 0,
         totalRecoveryAmount: parseFloat(totalRecoveryAmount) || 0,

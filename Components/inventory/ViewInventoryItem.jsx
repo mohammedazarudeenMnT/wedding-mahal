@@ -4,6 +4,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { usePagePermission } from "../../hooks/usePagePermission";
 import { motion } from "framer-motion";
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@heroui/table";
+import { format } from "date-fns";
 
 const SkeletonLoader = () => (
   <div className="animate-pulse">
@@ -23,14 +25,40 @@ export default function ViewInventoryItem({ itemId }) {
   const hasViewPermission = usePagePermission("Inventory", "view");
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [damageHistory, setDamageHistory] = useState([]);
 
   useEffect(() => {
-    const fetchItem = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/inventory/${itemId}`);
-        if (response.data.success) {
-          setItem(response.data.data);
+        const [itemResponse, damageResponse] = await Promise.all([
+          axios.get(`/api/inventory/${itemId}`),
+          axios.get(`/api/logBook?category=${encodeURIComponent(item?.category || '')}&subCategory=${encodeURIComponent(item?.subCategory || '')}&brand=${encodeURIComponent(item?.brandName || '')}&model=${encodeURIComponent(item?.model || '')}`)
+        ]);
+
+        if (itemResponse.data.success) {
+          setItem(itemResponse.data.data);
+        }
+
+        if (damageResponse.data.success) {
+          // Filter and format damage history
+          const damageEntries = damageResponse.data.data
+            .filter(log => log.damageLossSummary && log.damageLossSummary.length > 0)
+            .flatMap(log => log.damageLossSummary
+              .filter(damage => 
+                damage.category === item?.category &&
+                damage.subCategory === item?.subCategory &&
+                damage.brand === item?.brandName &&
+                damage.model === item?.model
+              )
+              .map(damage => ({
+                ...damage,
+                bookingId: log.bookingId,
+                customerName: log.customerName,
+                date: log.dateRange.from,
+              }))
+            );
+          setDamageHistory(damageEntries);
         }
       } catch (error) {
         toast.error("Failed to load item details");
@@ -40,9 +68,9 @@ export default function ViewInventoryItem({ itemId }) {
     };
 
     if (itemId) {
-      fetchItem();
+      fetchData();
     }
-  }, [itemId]);
+  }, [itemId, item?.category, item?.subCategory, item?.brandName, item?.model]);
 
   if (!hasViewPermission) {
     return (
@@ -147,6 +175,66 @@ export default function ViewInventoryItem({ itemId }) {
           {item.description || "No description available"}
         </p>
       </motion.div>
+
+      {/* Damage/Loss History Section */}
+      {damageHistory.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mt-8"
+        >
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-hotel-primary-text">
+            <span className="h-5 w-1 bg-hotel-primary rounded-full"></span>
+            Damage/Loss History
+          </h2>
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <Table aria-label="Damage/Loss history table">
+              <TableHeader>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Date</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Booking ID</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Customer Name</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Quantity</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Condition</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Remarks</TableColumn>
+                <TableColumn className="bg-hotel-primary text-white text-sm font-medium">Amount</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {damageHistory.map((entry, idx) => (
+                  <TableRow key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{entry.bookingId}</TableCell>
+                    <TableCell>{entry.customerName}</TableCell>
+                    <TableCell>{entry.quantity}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        entry.condition === 'Broken' ? 'bg-red-100 text-red-800' : 
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {entry.condition}
+                      </span>
+                    </TableCell>
+                    <TableCell>{entry.remarks || '-'}</TableCell>
+                    <TableCell>₹{entry.amount || 0}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end gap-3 mt-3">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-col items-end min-w-[90px] shadow-sm">
+              <span className="text-xs text-gray-500 font-medium">Total Incidents</span>
+              <span className="text-base font-bold text-hotel-primary-text">{damageHistory.length}</span>
+            </div>
+            <div className="bg-hotel-primary/10 border border-hotel-primary/20 rounded-lg px-3 py-2 flex flex-col items-end min-w-[120px] shadow-sm">
+              <span className="text-xs text-hotel-primary font-medium">Total Amount</span>
+              <span className="text-base font-bold text-hotel-primary">
+                ₹{damageHistory.reduce((sum, entry) => sum + (entry.amount || 0), 0)}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </motion.section>
   );
 }
