@@ -1,10 +1,12 @@
 "use client";
 
+// Update imports
+import { DateRangePicker } from "@heroui/date-picker";
+import { format } from "date-fns";
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { FaEye } from "react-icons/fa";
 import { CiFilter } from "react-icons/ci";
 import axios from "axios";
-import { format, isWithinInterval, parseISO } from "date-fns";
 import {
   CalendarIcon,
   FileText,
@@ -20,7 +22,6 @@ import * as XLSX from "xlsx";
 import { Parser } from "json2csv";
 import { Spinner } from "@heroui/spinner";
 
-import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Buttons } from "../ui/button";
 import { cn } from "@/lib/utils";
@@ -231,45 +232,45 @@ export default function Invoices() {
         const searchFields = [
           invoice.invoiceNumber,
           invoice.bookingNumber,
-          invoice.customerDetails.name,
-          invoice.paymentDetails.method,
-          invoice.customerDetails.phone,
-          invoice.customerDetails.email,
-        ].map((field) => field?.toLowerCase() || "");
+          invoice.customerDetails?.name,
+          invoice.paymentDetails?.method,
+          invoice.paymentDetails?.status,
+        ];
 
-        if (
-          !searchFields.some((field) =>
-            field.includes(state.filterValue.toLowerCase())
-          )
-        ) {
-          return false;
-        }
+        const searchTerm = state.filterValue.toLowerCase();
+        return searchFields.some(
+          (field) => field && field.toLowerCase().includes(searchTerm)
+        );
       }
 
       // Payment method filter
       if (paymentMethodFilter.size > 0) {
-        if (
-          !paymentMethodFilter.has(invoice.paymentDetails.method?.toLowerCase())
-        ) {
+        const method = invoice.paymentDetails?.method?.toLowerCase();
+        if (!method || !Array.from(paymentMethodFilter).some(key => key.toLowerCase() === method)) {
           return false;
         }
       }
 
-      // Date range filter with null check
+      // Date range filter - only apply if date range is selected
       if (date?.from && date?.to) {
         try {
-          const bookingDate = parseISO(invoice.createdAt);
-          return isWithinInterval(bookingDate, {
-            start: date.from,
-            end: date.to,
-          });
+          const invoiceDate = new Date(invoice.createdAt);
+          invoiceDate.setHours(0, 0, 0, 0);
+          
+          const startDate = new Date(date.from);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const endDate = new Date(date.to);
+          endDate.setHours(23, 59, 59, 999);
+
+          return invoiceDate >= startDate && invoiceDate <= endDate;
         } catch (error) {
-          console.error("Date filtering error:", error);
-          return true; // Include the booking if date parsing fails
+          console.error('Error filtering by date:', error);
+          return true; // Include the invoice if there's an error parsing dates
         }
       }
 
-      return true;
+      return true; // Include all items when no filters are applied
     });
   }, [state.invoices, state.filterValue, paymentMethodFilter, date]);
 
@@ -385,6 +386,17 @@ export default function Invoices() {
       doc.autoTable({
         head: [
           Object.keys(
+            exportData[0] || {
+              "Invoice No": "",
+              "Booking ID": "",
+              "Customer Name": "",
+              "Stay Period": "",
+              "Payment Method": "",
+              "Payment Status": "",
+              Amount: "",
+            }
+          ),
+          Object.values(
             exportData[0] || {
               "Invoice No": "",
               "Booking ID": "",
@@ -640,7 +652,34 @@ export default function Invoices() {
     setState((prev) => ({ ...prev, filterValue: "", page: 1 }));
   }, []);
 
-  // Update topContent to show only payment method filter and calendar
+  // Update handleDateChange handler
+  const handleDateChange = useCallback((range) => {
+    if (!range || !range.start || !range.end) {
+      setDate({
+        from: null,
+        to: null,
+      });
+      return;
+    }
+
+    const startDate = new Date(
+      range.start.year,
+      range.start.month - 1,
+      range.start.day
+    );
+    const endDate = new Date(
+      range.end.year,
+      range.end.month - 1,
+      range.end.day
+    );
+
+    setDate({
+      from: startDate,
+      to: endDate,
+    });
+  }, []);
+
+  // Update topContent to use DateRangePicker
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -660,16 +699,37 @@ export default function Invoices() {
             onValueChange={onSearchChange}
           />
           <div className="flex gap-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Buttons
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
+            <DateRangePicker
+              className="min-w-[280px]"
+              classNames={{
+                base: "bg-white rounded-lg",
+                trigger: "h-10 min-h-10",
+                triggerContent:
+                  "flex h-full items-center gap-2 text-hotel-primary-text",
+                dropdown: "bg-white rounded-lg shadow-lg",
+                monthHeader: "text-hotel-primary-text",
+                calendar: "bg-white",
+                weekDays: "text-hotel-primary-text",
+                dayButton: {
+                  base: "text-hotel-primary-text hover:bg-hotel-secondary-hover",
+                  today: "text-hotel-primary",
+                  selected:
+                    "bg-hotel-primary text-white hover:!bg-hotel-primary",
+                  rangeStart: "rounded-l-lg",
+                  rangeEnd: "rounded-r-lg",
+                  rangeMiddle: "bg-hotel-primary/20",
+                },
+              }}
+              placeholder="Select date range"
+              onChange={handleDateChange}
+              popoverProps={{
+                placement: "bottom",
+                offset: 5,
+                radius: "lg",
+                backdrop: "opaque",
+              }}
+              triggerContent={(value) => (
+                <div className="flex items-center">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date?.from ? (
                     date.to ? (
@@ -683,19 +743,9 @@ export default function Invoices() {
                   ) : (
                     <span>Pick a date</span>
                   )}
-                </Buttons>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={handleDateSelect}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                </div>
+              )}
+            />
 
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
@@ -771,14 +821,12 @@ export default function Invoices() {
     );
   }, [
     state.filterValue,
-    state.rowsPerPage,
     paymentMethodFilter,
     visibleColumns,
     date,
-    onRowsPerPageChange,
     onSearchChange,
     onClear,
-    openModal,
+    handleDateChange,
   ]);
 
   const bottomContent = useMemo(() => {

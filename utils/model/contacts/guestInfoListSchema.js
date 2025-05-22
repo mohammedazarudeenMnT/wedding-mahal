@@ -28,6 +28,8 @@ const guestInfoSchema = new mongoose.Schema(
         bookingId: { type: String, required: true },
         checkInDate: { type: Date, required: true },
         checkOutDate: { type: Date, required: true },
+        propertyType: { type: String, default: "N/A" },
+        eventType: { type: String, default: "N/A" },
         roomCategory: { type: String, default: "N/A" },
         roomNumber: { type: String, default: "N/A" },
         numberOfGuest: { type: Number, default: 0 },

@@ -20,6 +20,7 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Pagination } from "@heroui/pagination";
 import { Card, CardBody } from "@heroui/card";
+import { DateRangePicker } from "@heroui/date-picker";
 import {
   Modal,
   ModalContent,
@@ -31,15 +32,14 @@ import { Spinner } from "@heroui/spinner";
 import { useDisclosure } from "@heroui/use-disclosure";
 
 import {
-  Calendar,
   Download,
   FileEdit,
   Upload,
   IndianRupee,
+  Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Buttons } from "../../ui/button";
-import { Calendar as CalendarComponent } from "../../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { cn } from "@/lib/utils";
 import { PiFadersHorizontal } from "react-icons/pi";
@@ -106,10 +106,7 @@ const formatDataForExport = (bookings) => {
   });
 };
 
-const getDateFromString = (dateString) => {
-  const [day, month, year] = dateString.split("/");
-  return new Date(year, month - 1, day);
-};
+// Remove getDateFromString function as it won't be needed
 
 // Add this helper function after the existing utility functions
 const formatCurrency = (amount) => {
@@ -131,12 +128,15 @@ export default function GuestProfile({ guestId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [date, setDate] = useState({ from: null, to: null });
-  const [tempDate, setTempDate] = useState({ from: null, to: null });
+  const [transactionDate, setTransactionDate] = useState({
+    from: null,
+    to: null,
+  });
   const [isExporting, setIsExporting] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState(
     new Set([
       "stayPeriod",
-      "roomCategory",
+      "propertyType",
       "roomNumber",
       "numberOfGuest",
       "paymentMethod",
@@ -158,10 +158,14 @@ export default function GuestProfile({ guestId }) {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [transactionPage, setTransactionPage] = useState(1);
   const [transactionRowsPerPage, setTransactionRowsPerPage] = useState(5);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
 
   const columns = useMemo(
     () => [
       { name: "STAY PERIOD", uid: "stayPeriod" },
+      { name: "PROPERTY TYPE", uid: "propertyType" },
+      { name: "EVENT TYPE", uid: "eventType" },
+
       { name: "ROOM CATEGORY", uid: "roomCategory" },
       { name: "ROOM NUMBER", uid: "roomNumber" },
       { name: "NUMBER OF GUEST", uid: "numberOfGuest" },
@@ -427,40 +431,131 @@ export default function GuestProfile({ guestId }) {
     [isValidDate]
   );
 
-  const handleDateChange = useCallback(
-    (newDate) => {
-      setTempDate(newDate);
+  const handleDateChange = useCallback((range) => {
+    if (!range || !range.start || !range.end) {
+      setDate({
+        from: null,
+        to: null,
+      });
+      return;
+    }
 
-      if (!newDate) {
-        setDate({ from: null, to: null });
+    const startDate = new Date(
+      range.start.year,
+      range.start.month - 1,
+      range.start.day
+    );
+    const endDate = new Date(
+      range.end.year,
+      range.end.month - 1,
+      range.end.day
+    );
+
+    setDate({
+      from: startDate,
+      to: endDate,
+    });
+  }, []);
+
+  // Update handleTransactionDateChange
+  const handleTransactionDateChange = useCallback((range) => {
+    if (!range || !range.start || !range.end) {
+      setTransactionDate({
+        from: null,
+        to: null,
+      });
+      return;
+    }
+
+    try {
+      const startDate = new Date(
+        range.start.year,
+        range.start.month - 1,
+        range.start.day
+      );
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(
+        range.end.year,
+        range.end.month - 1,
+        range.end.day
+      );
+      endDate.setHours(23, 59, 59, 999);
+
+      setTransactionDate({
+        from: startDate,
+        to: endDate,
+      });
+    } catch (error) {
+      console.error("Error setting transaction date range:", error);
+      setTransactionDate({ from: null, to: null });
+    }
+  }, []);
+
+  const filterBookingsByDateRange = useCallback((bookings, dateRange) => {
+    // Show all bookings if no date range is selected
+    if (!dateRange.from || !dateRange.to) return bookings;
+
+    const rangeStart = new Date(dateRange.from);
+    rangeStart.setHours(0, 0, 0, 0);
+
+    const rangeEnd = new Date(dateRange.to);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    return bookings.filter((booking) => {
+      // Parse the dates from DD/MM/YYYY format
+      const [checkIn, checkOut] = booking.stayPeriod.split(" - ");
+      const [dayIn, monthIn, yearIn] = checkIn.split("/");
+      const [dayOut, monthOut, yearOut] = checkOut.split("/");
+
+      const bookingStart = new Date(yearIn, monthIn - 1, dayIn);
+      bookingStart.setHours(0, 0, 0, 0);
+
+      const bookingEnd = new Date(yearOut, monthOut - 1, dayOut);
+      bookingEnd.setHours(23, 59, 59, 999);
+
+      // Check if the dates overlap
+      return (
+        (bookingStart <= rangeEnd && bookingEnd >= rangeStart) ||
+        (rangeStart <= bookingEnd && rangeEnd >= bookingStart)
+      );
+    });
+  }, []);
+
+  // Update transaction date filtering
+  useEffect(() => {
+    try {
+      if (!transactionHistory) {
+        setFilteredTransactions([]);
         return;
       }
 
-      if (newDate?.from && newDate?.to) {
-        const validatedDate = {
-          from: parseDateSafely(newDate.from),
-          to: parseDateSafely(newDate.to),
-        };
-
-        if (validatedDate.from && validatedDate.to) {
-          setDate(validatedDate);
-        }
+      if (!transactionDate.from || !transactionDate.to) {
+        setFilteredTransactions(transactionHistory);
+        return;
       }
-    },
-    [parseDateSafely]
-  );
 
-  const filterBookingsByDateRange = useCallback((bookings, dateRange) => {
-    if (!dateRange.from || !dateRange.to) return bookings;
+      const rangeStart = new Date(transactionDate.from);
+      rangeStart.setHours(0, 0, 0, 0);
 
-    return bookings.filter((booking) => {
-      const [checkIn, checkOut] = booking.stayPeriod.split(" - ");
-      const bookingStart = getDateFromString(checkIn);
-      const bookingEnd = getDateFromString(checkOut);
+      const rangeEnd = new Date(transactionDate.to);
+      rangeEnd.setHours(23, 59, 59, 999);
 
-      return bookingStart >= dateRange.from && bookingEnd <= dateRange.to;
-    });
-  }, []);
+      const filtered = transactionHistory.filter((transaction) => {
+        if (!transaction.payments?.[0]?.paymentDate) return false;
+
+        const paymentDate = new Date(transaction.payments[0].paymentDate);
+        paymentDate.setHours(0, 0, 0, 0); // Normalize time to start of day
+
+        return paymentDate >= rangeStart && paymentDate <= rangeEnd;
+      });
+
+      setFilteredTransactions(filtered);
+    } catch (error) {
+      console.error("Error filtering transactions:", error);
+      setFilteredTransactions(transactionHistory); // Fallback to showing all
+    }
+  }, [transactionDate, transactionHistory]);
 
   const fetchGuestData = useCallback(async () => {
     try {
@@ -496,6 +591,8 @@ export default function GuestProfile({ guestId }) {
           stay.checkOutDate
         ).toLocaleDateString()}`,
         roomCategory: stay.roomCategory || "N/A",
+        propertyType: stay.propertyType || "N/A",
+        eventType: stay.eventType || "N/A",
         roomNumber: stay.roomNumber || "N/A",
         numberOfGuest:
           typeof stay.numberOfGuest === "number" ? stay.numberOfGuest : "N/A",
@@ -558,6 +655,40 @@ export default function GuestProfile({ guestId }) {
     setPage(1); // Reset to first page when filter changes
   }, [date, bookings, filterBookingsByDateRange]);
 
+  useEffect(() => {
+    try {
+      if (!transactionHistory) {
+        setFilteredTransactions([]);
+        return;
+      }
+
+      if (!transactionDate.from || !transactionDate.to) {
+        setFilteredTransactions(transactionHistory);
+        return;
+      }
+
+      const rangeStart = new Date(transactionDate.from);
+      rangeStart.setHours(0, 0, 0, 0);
+
+      const rangeEnd = new Date(transactionDate.to);
+      rangeEnd.setHours(23, 59, 59, 999);
+
+      const filtered = transactionHistory.filter((transaction) => {
+        if (!transaction.payments?.[0]?.paymentDate) return false;
+
+        const paymentDate = new Date(transaction.payments[0].paymentDate);
+        paymentDate.setHours(0, 0, 0, 0); // Normalize time to start of day
+
+        return paymentDate >= rangeStart && paymentDate <= rangeEnd;
+      });
+
+      setFilteredTransactions(filtered);
+    } catch (error) {
+      console.error("Error filtering transactions:", error);
+      setFilteredTransactions(transactionHistory); // Fallback to showing all
+    }
+  }, [transactionDate, transactionHistory]);
+
   // Add a cleanup effect
   useEffect(() => {
     return () => {
@@ -572,11 +703,16 @@ export default function GuestProfile({ guestId }) {
     return filteredBookings.slice(start, end);
   }, [page, rowsPerPage, filteredBookings]);
 
+  const transactionPages = useMemo(
+    () => Math.ceil(filteredTransactions.length / transactionRowsPerPage),
+    [filteredTransactions.length, transactionRowsPerPage]
+  );
+
   const paginatedTransactions = useMemo(() => {
     const start = (transactionPage - 1) * transactionRowsPerPage;
     const end = start + transactionRowsPerPage;
-    return transactionHistory.slice(start, end);
-  }, [transactionPage, transactionRowsPerPage, transactionHistory]);
+    return filteredTransactions.slice(start, end);
+  }, [transactionPage, transactionRowsPerPage, filteredTransactions]);
 
   const pages = Math.ceil(filteredBookings.length / rowsPerPage);
 
@@ -1183,7 +1319,7 @@ export default function GuestProfile({ guestId }) {
                   variant="light"
                   className="text-black bg-hotel-secondary"
                 >
-                  <Calendar />
+                  <IndianRupee size={18} />{" "}
                 </Button>
               </CardBody>
             </Card>
@@ -1256,78 +1392,124 @@ export default function GuestProfile({ guestId }) {
               {/* Action buttons - only show filter controls for bookings tab */}
               <div className="flex gap-2">
                 {selectedTab === "bookings" && (
-                  <>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Buttons
-                          variant="outline"
-                          className={cn(
-                            "w-[240px] justify-start text-left font-normal bg-hotel-secondary",
-                            !(date?.from && date?.to) && "text-muted-foreground"
-                          )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <DateRangePicker
+                        className="min-w-[40px]"
+                        classNames={{
+                          base: "bg-white rounded-lg", // Changed from bg-hotel-secondary
+                          trigger: "h-9 w-9 min-h-9 min-w-9 p-0",
+                          triggerContent:
+                            "flex h-full items-center justify-center",
+                          dropdown: "bg-white rounded-lg shadow-lg",
+                          monthHeader: "text-hotel-primary-text",
+                          calendar: "bg-white",
+                          weekDays: "text-hotel-primary-text",
+                          dayButton: {
+                            base: "text-hotel-primary-text hover:bg-hotel-secondary-hover",
+                            today: "text-hotel-primary",
+                            selected:
+                              "bg-hotel-primary text-white hover:!bg-hotel-primary",
+                            rangeStart: "rounded-l-lg",
+                            rangeEnd: "rounded-r-lg",
+                            rangeMiddle: "bg-hotel-primary/20",
+                          },
+                        }}
+                        placeholder=""
+                        onChange={handleDateChange}
+                        popoverProps={{
+                          placement: "bottom-start",
+                          offset: 5,
+                          radius: "lg",
+                          backdrop: "opaque",
+                        }}
+                        triggerContent={<Calendar size={18} />}
+                      />
+
+                      <Dropdown>
+                        <DropdownTrigger>
+                          <Button className="bg-hotel-secondary">
+                            <PiFadersHorizontal />
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu
+                          disallowEmptySelection
+                          aria-label="Table Columns"
+                          closeOnSelect={false}
+                          selectedKeys={visibleColumns}
+                          selectionMode="multiple"
+                          onSelectionChange={setVisibleColumns}
                         >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {date?.from && date?.to ? (
-                            <>
-                              {format(date.from, "LLL dd, y")} -{" "}
-                              {format(date.to, "LLL dd, y")}
-                            </>
-                          ) : (
-                            <span>Pick a date range</span>
-                          )}
-                        </Buttons>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          initialFocus
-                          mode="range"
-                          selected={tempDate}
-                          onSelect={handleDateChange}
-                          numberOfMonths={2}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                          {columns.map((column) => (
+                            <DropdownItem
+                              key={column.uid}
+                              className="capitalize"
+                            >
+                              {column.name}
+                            </DropdownItem>
+                          ))}
+                        </DropdownMenu>
+                      </Dropdown>
 
-                    <Dropdown>
-                      <DropdownTrigger>
-                        <Button className="bg-hotel-secondary">
-                          <PiFadersHorizontal />
-                        </Button>
-                      </DropdownTrigger>
-                      <DropdownMenu
-                        disallowEmptySelection
-                        aria-label="Table Columns"
-                        closeOnSelect={false}
-                        selectedKeys={visibleColumns}
-                        selectionMode="multiple"
-                        onSelectionChange={setVisibleColumns}
+                      {downloadButton}
+                      <Link
+                        href={`/dashboard/bookings/add-booking?email=${guestData.email}`}
                       >
-                        {columns.map((column) => (
-                          <DropdownItem key={column.uid} className="capitalize">
-                            {column.name}
-                          </DropdownItem>
-                        ))}
-                      </DropdownMenu>
-                    </Dropdown>
-
-                    {downloadButton}
-                  </>
+                        <Button className="bg-yellow-400 text-black">
+                          Add Booking
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 )}
 
-                <Link
-                  href={
-                    selectedTab === "bookings"
-                      ? `/dashboard/bookings/add-booking?email=${guestData.email}`
-                      : "/dashboard/financials/invoices/record-payement"
-                  }
-                >
-                  {" "}
-                  <Button className="bg-yellow-400 text-black">
-                    {selectedTab === "bookings"
-                      ? "Add Booking"
-                      : "Record Payment"}
-                  </Button>
-                </Link>
+                {selectedTab === "transactions" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <DateRangePicker
+                        className="min-w-[40px]"
+                        classNames={{
+                          base: "bg-white rounded-lg", // Changed from bg-hotel-secondary
+                          trigger: "h-9 w-9 min-h-9 min-w-9 p-0",
+                          triggerContent:
+                            "flex h-full items-center justify-center",
+                          dropdown: "bg-white rounded-lg shadow-lg",
+                          monthHeader: "text-hotel-primary-text",
+                          calendar: "bg-white",
+                          weekDays: "text-hotel-primary-text",
+                          dayButton: {
+                            base: "text-hotel-primary-text hover:bg-hotel-secondary-hover",
+                            today: "text-hotel-primary",
+                            selected:
+                              "bg-hotel-primary text-white hover:!bg-hotel-primary",
+                            rangeStart: "rounded-l-lg",
+                            rangeEnd: "rounded-r-lg",
+                            rangeMiddle: "bg-hotel-primary/20",
+                          },
+                        }}
+                        placeholder=""
+                        onChange={handleTransactionDateChange}
+                        popoverProps={{
+                          placement: "bottom-start",
+                          offset: 5,
+                          radius: "lg",
+                          backdrop: "opaque",
+                        }}
+                        triggerContent={<Calendar size={18} />}
+                      />
+
+                      <Link
+                        href={`/dashboard/financials/invoices/record-payement?customerSearch=${encodeURIComponent(
+                          guestData.name
+                        )}`}
+                      >
+                        <Button className="bg-yellow-400 text-black">
+                          Record Payment
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>{" "}
@@ -1429,34 +1611,33 @@ export default function GuestProfile({ guestId }) {
                             </select>
                           </span>
                           <span className="text-sm text-gray-500">
-                            Showing{" "}
-                            {Math.min(
-                              (transactionPage - 1) * transactionRowsPerPage +
-                                1,
-                              transactionHistory.length
-                            )}
-                            -
-                            {Math.min(
-                              transactionPage * transactionRowsPerPage,
-                              transactionHistory.length
-                            )}{" "}
-                            of {transactionHistory.length}
+                            {filteredTransactions.length > 0
+                              ? `Showing ${Math.min(
+                                  (transactionPage - 1) *
+                                    transactionRowsPerPage +
+                                    1,
+                                  filteredTransactions.length
+                                )}-${Math.min(
+                                  transactionPage * transactionRowsPerPage,
+                                  filteredTransactions.length
+                                )} of ${filteredTransactions.length}`
+                              : "No results"}
                           </span>
                         </div>
-                        <Pagination
-                          showControls
-                          classNames={{
-                            cursor: "bg-hotel-primary",
-                            item: "text-gray-600 hover:text-hotel-primary",
-                            next: "text-hotel-primary",
-                            prev: "text-hotel-primary",
-                          }}
-                          page={transactionPage}
-                          total={Math.ceil(
-                            transactionHistory.length / transactionRowsPerPage
-                          )}
-                          onChange={setTransactionPage}
-                        />
+                        {transactionPages > 0 && (
+                          <Pagination
+                            showControls
+                            classNames={{
+                              cursor: "bg-hotel-primary",
+                              item: "text-gray-600 hover:text-hotel-primary",
+                              next: "text-hotel-primary",
+                              prev: "text-hotel-primary",
+                            }}
+                            page={transactionPage}
+                            total={transactionPages}
+                            onChange={setTransactionPage}
+                          />
+                        )}
                       </div>
                     }
                   >

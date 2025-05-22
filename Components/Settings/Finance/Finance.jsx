@@ -949,7 +949,6 @@ export default function FinanceSettings() {
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
                                 onPress={(e) => {
-                                  e.stopPropagation();
                                   handleEditMode(category, "category");
                                 }}
                               >
@@ -960,7 +959,6 @@ export default function FinanceSettings() {
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
                                 onPress={(e) => {
-                                  e.stopPropagation();
                                   handleDeleteCategory(category.name);
                                 }}
                               >
@@ -1024,7 +1022,6 @@ export default function FinanceSettings() {
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
                                 onPress={(e) => {
-                                  e.stopPropagation();
                                   handleEditMode(expense, "expense");
                                 }}
                               >
@@ -1035,7 +1032,6 @@ export default function FinanceSettings() {
                                 isIconOnly
                                 className="bg-transparent hover:bg-gray-200"
                                 onPress={(e) => {
-                                  e.stopPropagation();
                                   handleDeleteExpense(expense.name);
                                 }}
                               >
