@@ -13,10 +13,10 @@ import { GiCakeSlice } from "react-icons/gi";
 import Link from "next/link";
 
 const statusColors = {
-  available: "bg-hotel-primary-green text-white", // Green for available
-  booked: "bg-hotel-secondary-grey text-hotel-primary-text",
-  checkin: "bg-hotel-primary text-white", // Blue for checked in
-  checkout: "bg-hotel-primary-red text-white", // Red for checked out
+  available: "bg-[#A3A3A3] text-white", // Green for available
+  booked: "bg-[#FFC933] text-hotel-primary-text",
+  checkin: "bg-[#FF7300] text-white", // Blue for checked in
+  checkout: "bg-[#404040] text-white", // Red for checked out
   maintenance: "bg-hotel-secondary-light-grey text-hotel-primary-text", // Gray for maintenance
   housekeeping: "bg-hotel-primary-red text-white", // Add housekeeping color
 };
