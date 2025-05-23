@@ -1,7 +1,6 @@
 // app/api/[hotelDb]/bookings/[bookingNumber]/route.js
 import { NextResponse } from "next/server";
 import Guest from "../../../../utils/model/booking/bookingSchema";
-import RoomSettings from "../../../../utils/model/settings/room/roomSettingsSchema";
 import { getHotelDatabase } from "../../../../utils/config/hotelConnection";
 import { getModel } from "../../../../utils/helpers/getModel";
 import { updateComplementaryInventory } from "../../../../utils/helpers/inventoryHelpers";
@@ -49,9 +48,27 @@ export async function PUT(request, { params }) {
 
   try {
     const formData = await request.formData();
+
+    // Create updated data object
+    const updatedData = {};
+
+    // Basic fields
+    for (const [key, value] of formData.entries()) {
+      if (key === "existingFiles") {
+        updatedData.uploadedFiles = JSON.parse(value);
+      } else if (key === "groomDetails") {
+        updatedData.groomDetails = JSON.parse(value);
+      } else if (key === "brideDetails") {
+        updatedData.brideDetails = JSON.parse(value);
+      } else if (key === "timeSlot") {
+        updatedData.timeSlot = JSON.parse(value);
+      } else if (!["newFiles", "uploadedFiles"].includes(key)) {
+        updatedData[key] = value;
+      }
+    }
+
     await getHotelDatabase();
     const GuestModel = getModel("Guest", Guest);
-    const RoomSettingsModel = getModel("RoomSettings", RoomSettings);
     const RoomModel = getModel("Room", Room);
     const RoomAvailabilityModel = getModel(
       "RoomAvailability",
@@ -229,26 +246,9 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Create updated data object
-    const updatedData = {};
     // Update status timestamp if status is changing
     if (newStatus && newStatus !== existingBooking.status) {
       updatedData[`statusTimestamps.${newStatus}`] = new Date();
-    }
-    // Handle basic fields
-    for (const [key, value] of formData.entries()) {
-      if (key === "rooms") {
-        updatedData.rooms = JSON.parse(value);
-      } else if (key === "guests") {
-        updatedData.guests = JSON.parse(value);
-      } else if (key === "checkInDate" || key === "checkOutDate") {
-        updatedData[key] = new Date(value);
-      } else if (key === "existingFiles") {
-        // Set existing files as the base for uploadedFiles array
-        updatedData.uploadedFiles = JSON.parse(value);
-      } else if (!["newFiles", "uploadedFiles"].includes(key)) {
-        updatedData[key] = value;
-      }
     }
 
     // Handle verification fields

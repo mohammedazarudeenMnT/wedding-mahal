@@ -3,33 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import {
-  Row,
-  Col,
-  Form,
-  Card,
-  Modal,
-  ProgressBar,
-  Dropdown,
-  Badge,
-} from "react-bootstrap";
+import { Row, Col, Form, Card, ProgressBar } from "react-bootstrap";
 import { Button } from "@heroui/button";
 
 import { FaCalendarAlt, FaTimes, FaUpload } from "react-icons/fa";
-import { DateRange } from "react-date-range";
-import {
-  addDays,
-  isWithinInterval,
-  parseISO,
-  setHours,
-  setMinutes,
-  format,
-} from "date-fns";
+
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { toast } from "react-toastify";
-import Image from "next/image";
 import { countries } from "countries-list";
 import ClientSelect from "../addBooking/ClientSelect"; // Import the ClientSelect component
 import AddBookingSkeleton from "../addBooking/AddBookingSkeleton.jsx"; // Import the skeleton component
@@ -44,37 +26,13 @@ export default function EditGuestBooking({ params }) {
 
   const { bookingNumber } = params;
   const router = useRouter();
-  const [numberOfRooms, setNumberOfRooms] = useState(1);
-  const [rooms, setRooms] = useState([]);
-  const [selectedRooms, setSelectedRooms] = useState([
-    { type: "", number: "", price: "", mainImage: "" },
-  ]);
+
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
-  const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
+
   const [verificationType, setVerificationType] = useState("");
-  const [dateRange, setDateRange] = useState([
-    {
-      startDate: new Date(),
-      endDate: new Date(),
-      key: "selection",
-    },
-  ]);
-  const [checkInTime, setCheckInTime] = useState("09:00");
-  const [checkOutTime, setCheckOutTime] = useState("09:00");
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [unavailableDateRanges, setUnavailableDateRanges] = useState([]);
-  const [showAvailableDatesModal, setShowAvailableDatesModal] = useState(false);
-  const [availableDates, setAvailableDates] = useState([]);
-  const [availableRooms, setAvailableRooms] = useState([]);
-  const [originalDateRange, setOriginalDateRange] = useState({
-    startDate: new Date(),
-    endDate: new Date(),
-  });
-  const [originalSelectedRooms, setOriginalSelectedRooms] = useState([]);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -98,6 +56,37 @@ export default function EditGuestBooking({ params }) {
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const [propertyType, setPropertyType] = useState("room"); // Add property type state
+  // Add state variables for hall-specific details
+  const [groomDetails, setGroomDetails] = useState({
+    name: "",
+    mobileNo: "",
+    email: "",
+    address: "",
+    dob: "",
+    gender: "",
+    verificationId: "",
+  });
+  const [brideDetails, setBrideDetails] = useState({
+    name: "",
+    mobileNo: "",
+    email: "",
+    address: "",
+    dob: "",
+    gender: "",
+    verificationId: "",
+  });
+  const [eventType, setEventType] = useState("");
+  const [timeSlot, setTimeSlot] = useState({
+    name: "",
+    fromTime: "",
+    toTime: "",
+  });
+  const [eventTypes, setEventTypes] = useState([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [services, setServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
+
   useEffect(() => {
     const options = Object.entries(countries).map(([code, country]) => ({
       value: code,
@@ -111,11 +100,7 @@ export default function EditGuestBooking({ params }) {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        await Promise.all([
-          fetchRooms(),
-          fetchRoomSettings(),
-          fetchBookingData(),
-        ]);
+        await Promise.all([fetchBookingData()]);
       } catch (error) {
         console.error("Error loading booking data:", error);
         toast.error("Failed to load booking data");
@@ -127,37 +112,28 @@ export default function EditGuestBooking({ params }) {
     fetchAllData();
   }, [bookingNumber]);
 
-  const fetchRoomSettings = async () => {
-    try {
-      const response = await axios.get(`/api/settings/rooms`);
-      const data = response.data.settings;
-      setCheckInTime(data.checkIn);
-      setCheckOutTime(data.checkOut);
-    } catch (error) {
-      console.error("Error fetching room settings:", error);
-    }
-  };
-
-  const fetchRooms = async () => {
-    try {
-      const response = await axios.get(`/api/rooms`);
-      const data = await response.data;
-      if (data.success) {
-        setRooms(data.rooms);
-      } else {
-        console.error("Failed to fetch rooms");
-      }
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
-    }
-  };
-
+  // Update fetchBookingData to include new fields
   const fetchBookingData = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/bookings/${bookingNumber}`);
       if (response.data.success) {
         const bookingData = response.data.booking;
+
+        // Set property type
+        setPropertyType(bookingData.propertyType || "room");
+
+        // Set hall-specific details if present
+        if (bookingData.propertyType === "hall") {
+          setGroomDetails(bookingData.groomDetails || {});
+          setBrideDetails(bookingData.brideDetails || {});
+          setEventType(bookingData.eventType || "");
+          setTimeSlot(
+            bookingData.timeSlot || { name: "", fromTime: "", toTime: "" }
+          );
+          setSelectedServices(bookingData.selectedServices || []);
+        }
+
         const mobileNo = bookingData.mobileNo || "";
 
         // Extract country code and phone number
@@ -198,22 +174,7 @@ export default function EditGuestBooking({ params }) {
               : "",
           verificationId: bookingData.verificationId || "",
         });
-        const newDateRange = [
-          {
-            startDate: new Date(bookingData.checkInDate),
-            endDate: new Date(bookingData.checkOutDate),
-            key: "selection",
-          },
-        ];
-        setDateRange(newDateRange);
-        setOriginalDateRange({
-          startDate: new Date(bookingData.checkInDate),
-          endDate: new Date(bookingData.checkOutDate),
-        });
-        setAdults(bookingData.guests.adults);
-        setChildren(bookingData.guests.children);
-        setSelectedRooms(bookingData.rooms);
-        setOriginalSelectedRooms(bookingData.rooms);
+
         setVerificationType(bookingData.verificationType);
         setUploadedFiles(
           bookingData.uploadedFiles.map((file) => ({
@@ -221,128 +182,12 @@ export default function EditGuestBooking({ params }) {
             preview: file.filePath,
           }))
         );
-        setNumberOfRooms(bookingData.rooms.length);
-        filterAvailableRooms(bookingData.rooms);
       }
     } catch (error) {
       console.error("Error fetching booking data:", error);
       toast.error("Failed to fetch booking data");
     }
   };
-
-  const isRoomAvailableForDateRange = (roomNumber, startDate, endDate) => {
-    if (
-      !roomNumber ||
-      !roomNumber.unavailableDates ||
-      !Array.isArray(roomNumber.unavailableDates)
-    ) {
-      return true; // If room data is not available or invalid, assume it's available
-    }
-
-    // Ensure the unavailableDates array has an even number of elements
-    const validUnavailableDates = roomNumber.unavailableDates.filter(
-      (_, index) => index % 2 === 0
-    );
-
-    return !validUnavailableDates.some((unavailableStartDate, index) => {
-      const unavailableEndDate = roomNumber.unavailableDates[index * 2 + 1];
-
-      // If there's no corresponding end date, skip this iteration
-      if (!unavailableEndDate) return false;
-
-      const unavailableStart = parseISO(unavailableStartDate);
-      const unavailableEnd = parseISO(unavailableEndDate);
-
-      return (
-        isWithinInterval(startDate, {
-          start: unavailableStart,
-          end: unavailableEnd,
-        }) ||
-        isWithinInterval(endDate, {
-          start: unavailableStart,
-          end: unavailableEnd,
-        }) ||
-        (startDate <= unavailableStart && endDate >= unavailableEnd)
-      );
-    });
-  };
-
-  const findAvailableDates = (roomType, roomNumber) => {
-    const room = rooms.find((r) => r.name === roomType);
-    if (!room) return [];
-
-    const roomData = room.roomNumbers.find((r) => r.number === roomNumber);
-    if (!roomData) return [];
-
-    const availableDates = [];
-    let currentDate = new Date();
-    const endDate = addDays(currentDate, 90); // Check availability for the next 90 days
-
-    while (currentDate <= endDate) {
-      const nextDay = addDays(currentDate, 1);
-      if (isRoomAvailableForDateRange(roomData, currentDate, nextDay)) {
-        availableDates.push(new Date(currentDate));
-      }
-      currentDate = nextDay;
-    }
-
-    return availableDates;
-  };
-
-  const filterAvailableRooms = (bookedRooms = []) => {
-    const startDate = dateRange[0].startDate;
-    const endDate = dateRange[0].endDate;
-
-    const available = rooms.reduce((acc, room) => {
-      const availableRoomNumbers = room.roomNumbers.filter((rn) =>
-        isRoomAvailableForDateRange(rn, startDate, endDate)
-      );
-
-      if (availableRoomNumbers.length > 0) {
-        acc.push({
-          ...room,
-          roomNumbers: availableRoomNumbers,
-        });
-      }
-
-      return acc;
-    }, []);
-
-    bookedRooms.forEach((bookedRoom) => {
-      const roomType = available.find((r) => r.name === bookedRoom.type);
-      if (roomType) {
-        const roomNumber = roomType.roomNumbers.find(
-          (rn) => rn.number === bookedRoom.number
-        );
-        if (!roomNumber) {
-          roomType.roomNumbers.push({
-            number: bookedRoom.number,
-            unavailableDates: [],
-          });
-        }
-      } else {
-        available.push({
-          name: bookedRoom.type,
-          roomNumbers: [{ number: bookedRoom.number, unavailableDates: [] }],
-          price: bookedRoom.price,
-          mainImage: bookedRoom.mainImage,
-        });
-      }
-    });
-
-    setAvailableRooms(available);
-    setSelectedRooms(
-      bookedRooms.length > 0
-        ? bookedRooms
-        : [{ type: "", number: "", price: "" }]
-    );
-  };
-
-  useEffect(() => {
-    if (dateRange[0].startDate && dateRange[0].endDate) {
-      filterAvailableRooms(selectedRooms);
-    }
-  }, [dateRange, rooms, checkInTime, checkOutTime]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -383,14 +228,6 @@ export default function EditGuestBooking({ params }) {
     }
   };
 
-  const handleAdultIncrease = () => setAdults(adults + 1);
-  const handleAdultDecrease = () => adults > 1 && setAdults(adults - 1);
-  const handleChildrenIncrease = () => setChildren(children + 1);
-  const handleChildrenDecrease = () =>
-    children > 0 && setChildren(children - 1);
-
-  const totalGuests = adults + children;
-
   const handleSelectChange = (e) => {
     setVerificationType(e.target.value || "");
     // Don't clear verification values when changing type
@@ -401,7 +238,7 @@ export default function EditGuestBooking({ params }) {
     }));
   };
 
-  const handleSelectCountryChange = (selectedOption, { name }) => {
+  const handleSelectCountryChange = (selectedOption, {}) => {
     setFormData((prevData) => ({
       ...prevData,
       nationality: selectedOption ? selectedOption.label : "", // Store the country name, not the code
@@ -422,43 +259,6 @@ export default function EditGuestBooking({ params }) {
       }, 300);
     });
   };
-
-  const handleDateChange = (item) => {
-    const startDate = new Date(item.selection.startDate);
-    const endDate = new Date(item.selection.endDate);
-
-    const [checkInHours, checkInMinutes] = checkInTime.split(":").map(Number);
-    const [checkOutHours, checkOutMinutes] = checkOutTime
-      .split(":")
-      .map(Number);
-
-    const adjustedStartDate = setMinutes(
-      setHours(startDate, checkInHours),
-      checkInMinutes
-    );
-    const adjustedEndDate = setMinutes(
-      setHours(endDate, checkOutHours),
-      checkOutMinutes
-    );
-
-    setDateRange([
-      {
-        startDate: adjustedStartDate,
-        endDate:
-          adjustedStartDate >= adjustedEndDate
-            ? adjustedStartDate
-            : adjustedEndDate,
-        key: "selection",
-      },
-    ]);
-    setModifiedFields((prev) => ({
-      ...prev,
-      checkInDate: true,
-      checkOutDate: true,
-    }));
-  };
-
-  const toggleCalendar = () => setShowCalendar((prev) => !prev);
 
   const handleFileUpload = (event) => {
     const files = event.target.files || event.dataTransfer.files;
@@ -507,59 +307,6 @@ export default function EditGuestBooking({ params }) {
     event.preventDefault();
     setIsDragging(false);
     handleFileUpload(event);
-  };
-
-  const handleRoomChange = async (index, field, value) => {
-    const newSelectedRooms = [...selectedRooms];
-    newSelectedRooms[index] = { ...newSelectedRooms[index], [field]: value };
-    if (field === "type") {
-      const selectedRoom = rooms.find((r) => r.name === value);
-      if (selectedRoom) {
-        newSelectedRooms[index].price = selectedRoom.price;
-        newSelectedRooms[index]._id = selectedRoom._id;
-        newSelectedRooms[index].mainImage =
-          selectedRoom.mainImage || "/assets/img/rooms/rooms.png";
-      }
-    }
-    setSelectedRooms(newSelectedRooms);
-
-    if (field === "number") {
-      updateUnavailableDateRanges(newSelectedRooms[index].type, value);
-    }
-    setModifiedFields((prev) => ({ ...prev, [field]: true }));
-  };
-
-  const updateUnavailableDateRanges = (roomType, roomNumber) => {
-    const selectedRoom = rooms.find((r) => r.name === roomType);
-    if (selectedRoom) {
-      const selectedRoomNumber = selectedRoom.roomNumbers.find(
-        (rn) => rn.number === roomNumber
-      );
-      if (selectedRoomNumber && selectedRoomNumber.unavailableDates) {
-        const dateRanges = [];
-        for (
-          let i = 0;
-          i < selectedRoomNumber.unavailableDates.length;
-          i += 2
-        ) {
-          if (i + 1 < selectedRoomNumber.unavailableDates.length) {
-            dateRanges.push({
-              start: new Date(selectedRoomNumber.unavailableDates[i]),
-              end: new Date(selectedRoomNumber.unavailableDates[i + 1]),
-            });
-          }
-        }
-        setUnavailableDateRanges(dateRanges);
-      } else {
-        setUnavailableDateRanges([]);
-      }
-    }
-  };
-
-  const isDateDisabled = (date) => {
-    return unavailableDateRanges.some((range) =>
-      isWithinInterval(date, { start: range.start, end: range.end })
-    );
   };
 
   const validateForm = () => {
@@ -611,73 +358,6 @@ export default function EditGuestBooking({ params }) {
       return;
     }
 
-    const hasDateChanged =
-      originalDateRange.startDate.getTime() !==
-        dateRange[0].startDate.getTime() ||
-      originalDateRange.endDate.getTime() !== dateRange[0].endDate.getTime();
-
-    const hasRoomChanged = !selectedRooms.every(
-      (room, index) =>
-        room.type === originalSelectedRooms[index]?.type &&
-        room.number === originalSelectedRooms[index]?.number
-    );
-
-    if (!hasDateChanged && !hasRoomChanged) {
-      await updateBooking();
-      return;
-    }
-
-    const allRoomsAvailable = selectedRooms.every((room) => {
-      const roomData = rooms
-        .find((r) => r.name === room.type)
-        ?.roomNumbers.find((rn) => rn.number === room.number);
-      return isRoomAvailableForDateRange(
-        roomData,
-        dateRange[0].startDate,
-        dateRange[0].endDate
-      );
-    });
-
-    if (!allRoomsAvailable) {
-      const unavailableRooms = selectedRooms.filter((room) => {
-        const roomData = rooms
-          .find((r) => r.name === room.type)
-          ?.roomNumbers.find((rn) => rn.number === room.number);
-        return !isRoomAvailableForDateRange(
-          roomData,
-          dateRange[0].startDate,
-          dateRange[0].endDate
-        );
-      });
-
-      // Check if the unavailable dates are only after the original end date
-      const onlyExtendingStay = unavailableRooms.every((room) => {
-        const roomData = rooms
-          .find((r) => r.name === room.type)
-          ?.roomNumbers.find((rn) => rn.number === room.number);
-        return isRoomAvailableForDateRange(
-          roomData,
-          originalDateRange.startDate,
-          originalDateRange.endDate
-        );
-      });
-
-      if (onlyExtendingStay) {
-        // If only extending the stay, proceed with the booking update
-        await updateBooking();
-        return;
-      }
-
-      const availableDatesForRooms = unavailableRooms.map((room) => ({
-        ...room,
-        availableDates: findAvailableDates(room.type, room.number),
-      }));
-
-      setAvailableDates(availableDatesForRooms);
-      setShowAvailableDatesModal(true);
-      return;
-    }
-
     await updateBooking();
   };
 
@@ -704,20 +384,6 @@ export default function EditGuestBooking({ params }) {
       }
     });
 
-    // Handle check-in/out dates if modified
-    if (modifiedFields.checkInDate) {
-      bookingFormData.append(
-        "checkInDate",
-        dateRange[0].startDate.toISOString()
-      );
-    }
-    if (modifiedFields.checkOutDate) {
-      bookingFormData.append(
-        "checkOutDate",
-        dateRange[0].endDate.toISOString()
-      );
-    }
-
     // Handle file uploads if any
     if (uploadedFiles.length > 0) {
       // Handle existing files
@@ -739,15 +405,29 @@ export default function EditGuestBooking({ params }) {
       newFiles.forEach((fileObj) => {
         bookingFormData.append("newFiles", fileObj.file);
       });
-    }
-
-    // Add verification details to form data
+    } // Add verification details to form data
     if (verificationType) {
       bookingFormData.append("verificationType", verificationType);
       if (verificationType === "aadhar") {
         bookingFormData.append("verificationId", formData.aadharNumber);
       } else if (verificationType === "passport") {
         bookingFormData.append("verificationId", formData.passportNumber);
+      }
+    }
+
+    // Add hall-specific details if property type is hall
+    if (propertyType === "hall") {
+      if (groomDetails) {
+        bookingFormData.append("groomDetails", JSON.stringify(groomDetails));
+      }
+      if (brideDetails) {
+        bookingFormData.append("brideDetails", JSON.stringify(brideDetails));
+      }
+      if (eventType) {
+        bookingFormData.append("eventType", eventType);
+      }
+      if (timeSlot) {
+        bookingFormData.append("timeSlot", JSON.stringify(timeSlot));
       }
     }
 
@@ -768,6 +448,7 @@ export default function EditGuestBooking({ params }) {
       .forEach((fileObj) => {
         bookingFormData.append("uploadedFiles", fileObj.file);
       });
+    // Append groom and bride details if property type is hall
 
     try {
       const response = await axios.put(
@@ -780,21 +461,7 @@ export default function EditGuestBooking({ params }) {
 
       if (result.success) {
         toast.success(result.message);
-        const hasDateChanged =
-          originalDateRange.startDate.getTime() !==
-            dateRange[0].startDate.getTime() ||
-          originalDateRange.endDate.getTime() !==
-            dateRange[0].endDate.getTime();
 
-        const hasRoomChanged = !selectedRooms.every(
-          (room, index) =>
-            room.type === originalSelectedRooms[index]?.type &&
-            room.number === originalSelectedRooms[index]?.number
-        );
-
-        if (hasDateChanged || hasRoomChanged) {
-          await updateRoomAvailability(selectedRooms, dateRange[0]);
-        }
         router.push(`/dashboard/bookings/${bookingNumber}`);
       } else {
         toast.error("Booking update failed: " + result.message);
@@ -802,51 +469,6 @@ export default function EditGuestBooking({ params }) {
     } catch (error) {
       console.error("Error updating booking:", error);
       toast.error("An error occurred while updating the booking.");
-    }
-  };
-
-  const updateRoomAvailability = async (bookedRooms, dateRange) => {
-    for (const room of bookedRooms) {
-      try {
-        const roomData = rooms.find((r) => r.name === room.type);
-        if (!roomData) {
-          console.error(`Room type ${room.type} not found`);
-          continue;
-        }
-        const roomId = roomData._id;
-        const formData = new FormData();
-        formData.append("roomNumber", room.number);
-        formData.append(
-          "unavailableDates",
-          JSON.stringify([
-            dateRange.startDate.toISOString(),
-            dateRange.endDate.toISOString(),
-          ])
-        );
-
-        const response = await axios.put(`/api/rooms/${roomId}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        if (!response.data.success) {
-          console.error(
-            `Failed to update room availability for ${room.type} ${room.number}: ${response.data.message}`
-          );
-          toast.error(`Failed to update availability for room ${room.number}`);
-        } else {
-          console.log(
-            `Room ${room.number} marked as booked for the selected dates`
-          );
-        }
-      } catch (error) {
-        console.error(
-          `Error updating room availability for ${room.type} ${room.number}:`,
-          error
-        );
-        toast.error(
-          `Error updating availability for room ${room.number}: ${error.message}`
-        );
-      }
     }
   };
 
@@ -1120,213 +742,7 @@ export default function EditGuestBooking({ params }) {
                 </Form.Group>
               </Col>
               <hr className="h-px my-8 border-dashed border-gray-900 dark:border-gray-900" />
-              {/* <Col md={6}>
-                <label className="text-lg font-semibold mb-2 block">
-                  Check In
-                </label>
-                <div className="d-flex align-items-center">
-                  <div
-                    className="border rounded-lg py-3 px-4 cursor-pointer hover:shadow-lg transition-all flex-grow-1 me-2"
-                    onClick={toggleCalendar}
-                  >
-                    {dateRange[0].startDate.toDateString()}{" "}
-                    <FaCalendarAlt className="float-right text-muted" />
-                  </div>
-                </div>
-              </Col>
-              <Col md={6}>
-                <label className="text-lg font-semibold mb-2 block">
-                  Check Out
-                </label>
-                <div className="d-flex align-items-center">
-                  <div
-                    className="border rounded-lg py-3 px-4 cursor-pointer hover:shadow-lg transition-all flex-grow-1 me-2"
-                    onClick={toggleCalendar}
-                  >
-                    {dateRange[0].endDate.toDateString()}{" "}
-                    <FaCalendarAlt className="float-right text-muted" />
-                  </div>
-                </div>
-              </Col> */}
-              {/* {showCalendar && (
-                <div className="mt-6">
-                  <DateRange
-                    ranges={dateRange}
-                    onChange={handleDateChange}
-                    minDate={new Date()}
-                    rangeColors={["#4F46E5"]}
-                    className="w-full"
-                    disabledDates={unavailableDateRanges.flatMap((range) =>
-                      Array.from(
-                        {
-                          length:
-                            (range.end - range.start) / (24 * 60 * 60 * 1000) +
-                            1,
-                        },
-                        (_, i) => addDays(range.start, i)
-                      )
-                    )}
-                    isDayBlocked={isDateDisabled}
-                  />
-                </div>
-              )}
-              <Col md={6}>
-                <Form.Group controlId="numberOfRooms">
-                  <Form.Label>Number of Rooms</Form.Label>
-                  <Form.Select
-                    value={formData.numberOfRooms}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      setFormData((prev) => ({
-                        ...prev,
-                        numberOfRooms: value,
-                      }));
-                      setNumberOfRooms(value);
-                    }}
-                  >
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <option key={num} value={num}>
-                        {num}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Label>Number of Guests</Form.Label>
-                <Dropdown>
-                  <Dropdown.Toggle
-                    variant="outline-secondary"
-                    id="dropdown-basic"
-                    className="w-100"
-                  >
-                    <span role="img" aria-label="guest-icon">
-                      👩‍👩‍👦‍👦
-                    </span>{" "}
-                    {totalGuests} guests
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu style={{ padding: "10px" }}>
-                    <Row className="align-items-center mb-2">
-                      <Col>Adults</Col>
-                      <Col xs="auto">
-                        <Button
-                          variant="outline-secondary"
-                          onClick={handleAdultDecrease}
-                        >
-                          -
-                        </Button>
-                      </Col>
-                      <Col xs="auto">
-                        <span>{adults}</span>
-                      </Col>
-                      <Col xs="auto">
-                        <Button
-                          variant="outline-secondary"
-                          onClick={handleAdultIncrease}
-                        >
-                          +
-                        </Button>
-                      </Col>
-                    </Row>
-                    <Row className="align-items-center mb-2">
-                      <Col>Children</Col>
-                      <Col xs="auto">
-                        <Button
-                          variant="outline-secondary"
-                          onClick={handleChildrenDecrease}
-                        >
-                          -
-                        </Button>
-                      </Col>
-                      <Col xs="auto">
-                        <span>{children}</span>
-                      </Col>
-                      <Col xs="auto">
-                        <Button
-                          variant="outline-secondary"
-                          onClick={handleChildrenIncrease}
-                        >
-                          +
-                        </Button>
-                      </Col>
-                    </Row>
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Col> */}
             </Row>
-            {/* {selectedRooms.map((room, index) => (
-              <Card key={index} className="mt-3 bg-light">
-                <Card.Body>
-                  <Row className="g-3">
-                    <Col md={3}>
-                      <Image
-                        src={room.mainImage || "/assets/img/rooms/rooms.png"}
-                        alt={`${room.type} room`}
-                        width={100}
-                        height={100}
-                        style={{ objectFit: 'cover' }} // Replace objectFit prop with style
-                        className="rounded"
-                      />
-                    </Col>
-                    <Col md={3}>
-                      <Form.Group controlId={`roomType${index}`}>
-                        <Form.Label>Room Type {index + 1}</Form.Label>
-                        <Form.Select
-                          value={room.type || ''}  // Add fallback empty string
-                          onChange={(e) =>
-                            handleRoomChange(index, "type", e.target.value)
-                          }
-                        >
-                          <option value="" key="empty-room">Select room type</option>
-                          {availableRooms.map((r) => (
-                            <option key={`${r._id}-${r.name}`} value={r.name}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={3}>
-                      <Form.Group controlId={`roomNo${index}`}>
-                        <Form.Label>Room No {index + 1}</Form.Label>
-                        <Form.Select
-                          value={room.number || ''} // Add fallback empty string
-                          onChange={(e) =>
-                            handleRoomChange(index, "number", e.target.value)
-                          }
-                        >
-                          <option value="" key="empty-number">Select room number</option>
-                          {availableRooms
-                            .find((r) => r.name === room.type)
-                            ?.roomNumbers.map((rn) => (
-                              <option key={`${room.type}-${rn.number}`} value={rn.number}>
-                                {rn.number}
-                              </option>
-                            ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={3}>
-                      <Form.Group controlId={`price${index}`}>
-                        <Form.Label>Price</Form.Label>
-                        <div className="input-group">
-                          <span className="input-group-text">₹</span>
-                          <Form.Control
-                            type="number"
-                            placeholder="Enter price"
-                            value={room.price}
-                            onChange={(e) =>
-                              handleRoomChange(index, "price", e.target.value)
-                            }
-                            readOnly
-                          />
-                        </div>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            ))} */}
 
             <Row className="mt-3">
               <Col md={6}>
@@ -1436,57 +852,216 @@ export default function EditGuestBooking({ params }) {
                 )}
               </Col>
             </Row>
-            <div className="d-flex justify-content-end mt-4">
-              <Button
-                type="submit"
-                className="me-2 bg-hotel-primary text-white"
-              >
-                Update Booking
-              </Button>
-              <Button
-                className="bg-hotel-secondary-grey text-white"
-                type="button"
-                onClick={() => router.back()}
-              >
-                Cancel
-              </Button>
-            </div>
+            <Row className="g-3">
+              <Col md={12}>
+                <Form.Group controlId="propertyType">
+                  <Form.Label>Property Type *</Form.Label>
+                  <Form.Select
+                    name="propertyType"
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
+                    required
+                  >
+                    <option value="room">Room</option>
+                    <option value="hall">Hall</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              {propertyType === "hall" && (
+                <>
+                  <Row className="g-3">
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Body>
+                          <h5>Groom Details</h5>
+                          <Form.Group className="mb-3">
+                            <Form.Label>Full Name</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={groomDetails.name}
+                              onChange={(e) =>
+                                setGroomDetails({
+                                  ...groomDetails,
+                                  name: e.target.value,
+                                })
+                              }
+                              placeholder="Enter groom's name"
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>DOB</Form.Label>
+                            <Form.Control
+                              type="date"
+                              value={groomDetails.dob || ""}
+                              onChange={(e) =>
+                                setGroomDetails({
+                                  ...groomDetails,
+                                  dob: e.target.value,
+                                })
+                              }
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Gender</Form.Label>
+                            <Form.Select
+                              value={groomDetails.gender || ""}
+                              onChange={(e) =>
+                                setGroomDetails({
+                                  ...groomDetails,
+                                  gender: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">Select Gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </Form.Select>
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Full Address</Form.Label>
+                            <Form.Control
+                              as="textarea"
+                              rows={3}
+                              value={groomDetails.address || ""}
+                              onChange={(e) =>
+                                setGroomDetails({
+                                  ...groomDetails,
+                                  address: e.target.value,
+                                })
+                              }
+                              placeholder="Enter address"
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Verification Id</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={groomDetails.verificationId || ""}
+                              onChange={(e) =>
+                                setGroomDetails({
+                                  ...groomDetails,
+                                  verificationId: e.target.value,
+                                })
+                              }
+                              placeholder="Enter verification ID"
+                            />
+                          </Form.Group>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Body>
+                          <h5>Bride Details</h5>
+                          <Form.Group className="mb-3">
+                            <Form.Label>Full Name</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={brideDetails.name}
+                              onChange={(e) =>
+                                setBrideDetails({
+                                  ...brideDetails,
+                                  name: e.target.value,
+                                })
+                              }
+                              placeholder="Enter bride's name"
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>DOB</Form.Label>
+                            <Form.Control
+                              type="date"
+                              value={brideDetails.dob || ""}
+                              onChange={(e) =>
+                                setBrideDetails({
+                                  ...brideDetails,
+                                  dob: e.target.value,
+                                })
+                              }
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Gender</Form.Label>
+                            <Form.Select
+                              value={brideDetails.gender || ""}
+                              onChange={(e) =>
+                                setBrideDetails({
+                                  ...brideDetails,
+                                  gender: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">Select Gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </Form.Select>
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Full Address</Form.Label>
+                            <Form.Control
+                              as="textarea"
+                              rows={3}
+                              value={brideDetails.address || ""}
+                              onChange={(e) =>
+                                setBrideDetails({
+                                  ...brideDetails,
+                                  address: e.target.value,
+                                })
+                              }
+                              placeholder="Enter address"
+                            />
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Label>Verification Id</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={brideDetails.verificationId || ""}
+                              onChange={(e) =>
+                                setBrideDetails({
+                                  ...brideDetails,
+                                  verificationId: e.target.value,
+                                })
+                              }
+                              placeholder="Enter verification ID"
+                            />
+                          </Form.Group>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+                </>
+              )}
+              <div className="d-flex justify-content-end mt-4">
+                <Button
+                  type="submit"
+                  className="me-2 bg-hotel-primary text-white"
+                >
+                  Update Booking
+                </Button>
+                <Button
+                  className="bg-hotel-secondary-grey text-white"
+                  type="button"
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Row>
           </Form>
         </Card.Body>
       </Card>
-      <Modal
-        show={showAvailableDatesModal}
-        onHide={() => setShowAvailableDatesModal(false)}
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Available Dates</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {availableDates.map((room, index) => (
-            <div key={index} className="mb-4">
-              <h5>
-                {room.type} - Room {room.number}
-              </h5>
-              <div className="d-flex flex-wrap">
-                {room.availableDates.map((date, dateIndex) => (
-                  <Badge key={dateIndex} bg="success" className="m-1">
-                    {format(date, "yyyy-MM-dd")}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          ))}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            className="bg-hotel-secondary-grey"
-            onClick={() => setShowAvailableDatesModal(false)}
-          >
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </section>
   );
 }
