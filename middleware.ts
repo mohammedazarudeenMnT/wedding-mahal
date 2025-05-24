@@ -173,7 +173,7 @@ export async function middleware(request: NextRequest) {
         const lastActivity = Number(token.lastActivity ?? 0)
         const inactiveTime = now - lastActivity
         const isExpired = now >= expireTime
-        const isInactive = inactiveTime > 2 * 60 * 60 * 1000 // 2 hours
+        const isInactive = inactiveTime > 5 * 60 * 60 * 1000 // 5 hours
 
         if (isExpired || isInactive) {
           const response = NextResponse.redirect(new URL('/login', request.url))
