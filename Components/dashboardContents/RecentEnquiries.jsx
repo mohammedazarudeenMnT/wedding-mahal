@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Table,
@@ -101,13 +101,13 @@ export default function RecentEnquiries() {
   const formatEventDates = (dates) => {
     if (!dates) return "";
     try {
-      if (typeof dates === 'string') {
+      if (typeof dates === "string") {
         // If it's already a string, return as is
         return dates;
       }
       if (Array.isArray(dates)) {
         // If it's an array of dates, join with ' - '
-        return dates.join(' - ');
+        return dates.join(" - ");
       }
       // If it's a date object, format it
       if (dates instanceof Date) {
@@ -134,8 +134,12 @@ export default function RecentEnquiries() {
       case "propertyType":
         return item.propertyType?.toLowerCase() || "hall";
       case "eventDates":
-        const startDate = item.eventStartDate ? new Date(item.eventStartDate).toLocaleDateString() : "";
-        const endDate = item.eventEndDate ? new Date(item.eventEndDate).toLocaleDateString() : "";
+        const startDate = item.eventStartDate
+          ? new Date(item.eventStartDate).toLocaleDateString()
+          : "";
+        const endDate = item.eventEndDate
+          ? new Date(item.eventEndDate).toLocaleDateString()
+          : "";
         return startDate && endDate ? `${startDate} - ${endDate}` : "";
       case "eventType":
         return item.eventType?.toLowerCase() || "marriage";
@@ -172,13 +176,10 @@ export default function RecentEnquiries() {
         <CardTitle>Recent Enquiries</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table
-          aria-label="Recent enquiries table"
-          className="min-h-[400px]"
-        >
+        <Table aria-label="Recent enquiries table" className="min-h-[400px]">
           <TableHeader>
             {columns.map((column) => (
-              <TableColumn 
+              <TableColumn
                 key={column.key}
                 align={column.key === "actions" ? "center" : "start"}
                 allowsSorting={column.allowsSorting}
@@ -188,16 +189,11 @@ export default function RecentEnquiries() {
               </TableColumn>
             ))}
           </TableHeader>
-          <TableBody 
-            items={enquiries}
-            emptyContent={"No enquiries found"}
-          >
+          <TableBody items={enquiries} emptyContent={"No enquiries found"}>
             {(item) => (
               <TableRow key={item._id}>
                 {(columnKey) => (
-                  <TableCell>
-                    {renderCell(item, columnKey)}
-                  </TableCell>
+                  <TableCell>{renderCell(item, columnKey)}</TableCell>
                 )}
               </TableRow>
             )}
@@ -206,4 +202,4 @@ export default function RecentEnquiries() {
       </CardContent>
     </Card>
   );
-} 
+}

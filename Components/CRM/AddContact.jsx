@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Input, Button, Textarea } from "@nextui-org/react";
+import { Card } from "@heroui/card";
+import { Input, Textarea } from "@heroui/input";
+import { Button } from "@heroui/button";
+
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import "@/styles/phoneInput.css";

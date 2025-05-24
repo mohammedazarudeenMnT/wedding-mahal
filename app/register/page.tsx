@@ -161,7 +161,7 @@ export default function Register() {
               <div className="relative w-28 h-28">
                 <Image
                   src={hotelLogo}
-                  alt="Hotel Logo"
+                  alt="Mahaal Logo"
                   fill
                   sizes="(max-width: 768px) 96px, 112px"
                   priority
@@ -171,7 +171,7 @@ export default function Register() {
             </div>
           )}
           <div className="mb-8">
-            <h1 className="text-2xl font-semibold">Hotel Management</h1>
+            <h1 className="text-2xl font-semibold">Mahaal Management</h1>
           </div>
           <h2 className="mb-6 text-4xl font-bold">Get Started with Us</h2>
           <p className="mb-12 text-lg">Complete these easy steps to register your account.</p>
@@ -209,7 +209,7 @@ export default function Register() {
               <div className="relative w-24 h-24">
                 <Image
                   src={hotelLogo}
-                  alt="Hotel Logo"
+                  alt="Mahaal Logo"
                   fill
                   sizes="96px"
                   priority
