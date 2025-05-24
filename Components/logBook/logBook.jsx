@@ -37,6 +37,7 @@ import { Modal } from "@heroui/modal"
 import ViewLogBookDetails from "@/Components/logBook/ViewLogBookDetails"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/Components/ui/select"
 import LogBookSkeleton from "./LogBookSkeleton"
+import { usePagePermission } from "@/hooks/usePagePermission"
 
 const INITIAL_VISIBLE_COLUMNS = [
   "customerName",
@@ -55,6 +56,11 @@ const statusColorMap = {
 };
 
 export default function LogBook() {
+  // Add permission checks
+  const hasAddPermission = usePagePermission("LogBook", "add");
+  const hasEditPermission = usePagePermission("LogBook", "edit");
+  const hasDeletePermission = usePagePermission("LogBook", "delete");
+
   const [filterValue, setFilterValue] = useState("")
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -98,6 +104,10 @@ export default function LogBook() {
   }, [page, rowsPerPage])
 
   const handleDeleteClick = (item) => {
+    if (!hasDeletePermission) {
+      toast.error("You don't have permission to delete log entries");
+      return;
+    }
     setItemToDelete(item)
     setIsDeleteDialogOpen(true)
   }
@@ -360,8 +370,8 @@ export default function LogBook() {
               </Button>
             </Tooltip>
             
-            {/* Only show edit button if status is not Verified */}
-            {item.status !== 'Verified' && (
+            {/* Only show edit button if status is not Verified and user has edit permission */}
+            {item.status !== 'Verified' && hasEditPermission && (
               <Tooltip content="Edit">
                 <Link href={`/dashboard/logBook/edit-log/${item._id}`}>
                   <Button 
@@ -375,16 +385,18 @@ export default function LogBook() {
               </Tooltip>
             )}
 
-            <Tooltip content="Delete">
-              <Button 
-                isIconOnly 
-                variant="light" 
-                className="text-danger cursor-pointer active:opacity-50"
-                onPress={() => handleDeleteClick(item)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </Tooltip>
+            {hasDeletePermission && (
+              <Tooltip content="Delete">
+                <Button 
+                  isIconOnly 
+                  variant="light" 
+                  className="text-danger cursor-pointer active:opacity-50"
+                  onPress={() => handleDeleteClick(item)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         )
       default:
@@ -695,14 +707,16 @@ export default function LogBook() {
               </DropdownMenu>
             </Dropdown>
 
-            <Link href="/dashboard/logBook/add-log">
-              <Button
-                className="min-w-44 bg-hotel-primary text-hotel-primary-text"
-                endContent={<PlusIcon />}
-              >
-                Add Item
-              </Button>
-            </Link>
+            {hasAddPermission && (
+              <Link href="/dashboard/logBook/add-log">
+                <Button
+                  className="min-w-44 bg-hotel-primary text-hotel-primary-text"
+                  endContent={<PlusIcon />}
+                >
+                  Add Item
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -773,7 +787,50 @@ export default function LogBook() {
               <TableRow key={item._id}>
                 {headerColumns.map((column) => (
                   <TableCell key={column.uid}>
-                    {renderCell(item, column)}
+                    {column.uid === "actions" ? (
+                      <div className="relative flex items-center justify-center gap-2">
+                        <Tooltip content="View Details">
+                          <Button 
+                            isIconOnly 
+                            variant="light" 
+                            className="text-default-400 cursor-pointer active:opacity-50" 
+                            onPress={() => handleViewDetails(item)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Tooltip>
+                        
+                        {/* Only show edit button if status is not Verified and user has edit permission */}
+                        {item.status !== 'Verified' && hasEditPermission && (
+                          <Tooltip content="Edit">
+                            <Link href={`/dashboard/logBook/edit-log/${item._id}`}>
+                              <Button 
+                                isIconOnly 
+                                variant="light" 
+                                className="text-default-400 cursor-pointer active:opacity-50"
+                              >
+                                <FileEdit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </Tooltip>
+                        )}
+
+                        {hasDeletePermission && (
+                          <Tooltip content="Delete">
+                            <Button 
+                              isIconOnly 
+                              variant="light" 
+                              className="text-danger cursor-pointer active:opacity-50"
+                              onPress={() => handleDeleteClick(item)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </div>
+                    ) : (
+                      renderCell(item, column)
+                    )}
                   </TableCell>
                 ))}
               </TableRow>

@@ -15,6 +15,7 @@ import { toast } from "react-toastify"
 import DamageLossSummary from "./DamageLossSummary"
 import GrandTotalSummary from "./GrandTotalSummary"
 import { useRouter } from 'next/navigation'
+import EditLogFormSkeleton from "./EditLogFormSkeleton"
 
 export default function AddLogForm({ logId }) {
   const isEditMode = !!logId;
@@ -594,6 +595,10 @@ export default function AddLogForm({ logId }) {
       checkInTime: "",
       notes: ""
     })
+  }
+
+  if (isLoading && isEditMode) {
+    return <EditLogFormSkeleton />;
   }
 
   return (

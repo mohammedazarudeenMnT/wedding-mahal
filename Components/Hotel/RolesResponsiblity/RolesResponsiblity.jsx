@@ -11,18 +11,29 @@ import { usePagePermission } from "../../../hooks/usePagePermission";
 import ConfirmationDialog from "../../../Components/ui/ConfirmationDialog";
 
 const permissions = [
-  "Rooms",
+ 
+  "Calendar-View",
   "Dashboard",
+  "bookings",
+  "Rooms",
+  "LogBook",
   "Inventory",
   "Employees",
   "Employees/roles-responsibility",
-  "crm",
-  "crm/add-contact",
-  "contacts/guest",
-  "financials",
+
+  // "crm/add-contact",
+
+ /*  "financials", */
   "financials/invoices",
   "financials/expenses",
-  "bookings",
+  "financials/Bank",
+  "financials/LedgerBook",
+  "contacts/guest",
+  "crm",
+  "web-settings"
+/*   "Settings",
+  "Settings/Inventory",
+  "Settings/Complimentary" */
 ];
 const actions = ["View", "Create", "Edit", "Delete"];
 

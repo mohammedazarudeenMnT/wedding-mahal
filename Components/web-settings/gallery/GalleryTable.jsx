@@ -3,8 +3,10 @@ import { FiTrash2 } from 'react-icons/fi';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { usePagePermission } from '../../../hooks/usePagePermission';
 
 const GalleryTable = () => {
+  const hasDeletePermission = usePagePermission('web-settings', 'delete');
   const [galleryImages, setGalleryImages] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,6 +26,10 @@ const GalleryTable = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!hasDeletePermission) {
+      toast.error('You don\'t have permission to delete gallery images');
+      return;
+    }
     try {
       await axios.delete(`/api/web-settings/gallery?id=${id}`); // Fixed endpoint path
       await fetchGalleryImages();
@@ -64,15 +70,17 @@ const GalleryTable = () => {
                   }}
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-                  <button
-                    onClick={() => handleDelete(image._id)}
-                    className="p-2 bg-white rounded-full text-red-500 hover:text-red-700 transform hover:scale-110 transition-transform duration-200"
-                    title="Delete image"
-                  >
-                    <FiTrash2 className="h-5 w-5" />
-                  </button>
-                </div>
+                {hasDeletePermission && (
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
+                    <button
+                      onClick={() => handleDelete(image._id)}
+                      className="p-2 bg-white rounded-full text-red-500 hover:text-red-700 transform hover:scale-110 transition-transform duration-200"
+                      title="Delete image"
+                    >
+                      <FiTrash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="p-3 border-t">
                 <p className="text-sm text-gray-600 truncate" title={image.name}>

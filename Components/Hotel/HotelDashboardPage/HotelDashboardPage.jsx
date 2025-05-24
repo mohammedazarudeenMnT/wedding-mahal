@@ -7,9 +7,9 @@ import DashboardHeader from "../../dashboardHeader/DashboardHeader";
 // import ReservationList from "../../checkIn/CheckIn.jsx";
 import { usePagePermission } from "../../../hooks/usePagePermission";
 import Charts from "../../../Components/chart/Charts";
-import RecentEnquiries from "../../../Components/RecentEnquiries/RecentEnquiries";
-import PendingPayments from "../../../Components/PendingPayments/PendingPayments";
-import DashboardCards from "../../../Components/DashboardCards/DashboardCards";
+import RecentEnquiries from "@/Components/dashboardContents/RecentEnquiries"
+import PendingPayments from "@/Components/dashboardContents/PendingPayments"
+import DashboardCards from "@/Components/dashboardContents/DashboardCards"
 
 const HotelDashboardPage = ({ params }) => {
   const router = useRouter();

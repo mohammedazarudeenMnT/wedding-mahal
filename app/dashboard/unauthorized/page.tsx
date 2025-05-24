@@ -13,16 +13,25 @@ const UnauthorizedPage = () => {
   const [firstAccessiblePage, setFirstAccessiblePage] = useState<string | null>(null)
 
   const pages = useMemo(() => [
-    { path: "/dashboard/employees", permission: "Employees" },
+    { path: "/dashboard", permission: "Dashboard" },
+    { path: "/dashboard/calendar-view", permission: "CalendarView" },
+    { path: "/dashboard/bookings", permission: "bookings" },
     { path: "/dashboard/rooms", permission: "Rooms" },
-    { path: "/dashboard/bookings", permission: "Bookings" },
-    { path: "/dashboard/house-keeping", permission: "House-keeping" },
+    { path: "/dashboard/logBook", permission: "LogBook" },
     { path: "/dashboard/inventory", permission: "Inventory" },
-    { path:  "/dashboard/subscriptions", permission: "Subscriptions" },
-    { path:  "/dashboard/subscriptions/update-plans", permission: "Subscriptions/Update-Plans" },
-    { path:  "/dashboard/subscriptions/payment-history", permission: "Subscriptions/Payment-History" },
-    { path: "/dashboard/financials", permission: "Financials" },
-    { path: "/dashboard/financials/invoices", permission: "Financials/Invoices" },
+    { path: "/dashboard/employees", permission: "Employees" },
+    { path: "/dashboard/employees/roles-responsibility", permission: "Employees/roles-responsibility" },
+    { path: "/dashboard/financials/invoices", permission: "financials/Invoices" },
+    { path: "/dashboard/financials/expenses", permission: "financials/Expenses" },
+    { path: "/dashboard/financials/Bank", permission: "financials/Bank" },
+    { path: "/dashboard/financials/ledger-book", permission: "financials/LedgerBook" },
+    { path: "/dashboard/contacts/guest", permission: "contacts/guest" },
+    { path: "/dashboard/crm", permission: "crm" },
+    { path: "/dashboard/web-settings", permission: "web-settings" },
+    /* { path: "/dashboard/crm/add-contact", permission: "crm/add-contact" }, */
+    
+/*     { path: "/dashboard/financials", permission: "financials" }, */
+    
   ], [])
 
   const permissions = pages.map((_, index) => {
@@ -39,7 +48,7 @@ const UnauthorizedPage = () => {
         }
       }
     })
-  }, [permissions,  pages]) // Added pages to dependencies
+  }, [permissions, pages])
 
   const handleGoBack = () => {
     router.push("/login")

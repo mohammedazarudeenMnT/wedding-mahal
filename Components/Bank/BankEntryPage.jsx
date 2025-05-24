@@ -13,8 +13,14 @@ import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { usePagePermission } from "@/hooks/usePagePermission";
+// import TableSkeleton from "@/Components/ui/TableSkeleton";
 
 const BankEntryPage = () => {
+  // const hasViewPermission = usePagePermission("Financials/Bank", "view");
+  const hasAddPermission = usePagePermission("Financials/Bank", "add");
+  // const hasEditPermission = usePagePermission("Financials/Bank", "edit");
+
   const [activeTab, setActiveTab] = useState("entry");
   const [bankEntries, setBankEntries] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
@@ -29,6 +35,7 @@ const BankEntryPage = () => {
     reference: "",
   });
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch bank accounts
   const fetchBankAccounts = async () => {
@@ -103,6 +110,12 @@ const BankEntryPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!hasAddPermission) {
+      toast.error("You don't have permission to add bank entries");
+      return;
+    }
+
     setLoading(true);
 
     // Validate form
@@ -172,16 +185,17 @@ const BankEntryPage = () => {
 
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Add Entries</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                type="date"
-                label="Date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
+          {hasAddPermission ? (
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  type="date"
+                  label="Date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required
+                />
 
               <Select
                 label="Transaction Type"
@@ -292,9 +306,14 @@ const BankEntryPage = () => {
               </Button>
             </div>
           </form>
+             ) : (
+          <div className="text-center p-4 text-gray-500">
+            You don't have permission to add bank entries
+          </div>
+        )}
         </div>
       </div>
-
+      {/* Show entries table if user has view permission */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">Recent Entries</h2>
         <Table aria-label="Bank Entries">

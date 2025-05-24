@@ -697,7 +697,7 @@ export default function App() {
                 className="min-w-44 bg-hotel-primary-yellow text-hotel-primary-text"
                 endContent={<PlusIcon />}
                 as={Link}
-                href="/dashboard/inventory/add-new-item"
+                href="/dashboard/inventory/add-item"
               >
                 Add Item
               </Button>

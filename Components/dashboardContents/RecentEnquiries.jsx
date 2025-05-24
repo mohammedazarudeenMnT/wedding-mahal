@@ -13,7 +13,8 @@ import {
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/Components/ui/card";
 import { useRouter } from "next/navigation";
-import DashboardTableSkeleton from "../DashboardTableSkeleton";
+import DashboardTableSkeleton from "./DashboardTableSkeleton"
+import { usePagePermission } from "../../hooks/usePagePermission";
 
 const columns = [
   {
@@ -60,6 +61,7 @@ const columns = [
 
 export default function RecentEnquiries() {
   const router = useRouter();
+  const hasDashboardAddPermission = usePagePermission('Dashboard', 'add');
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -149,7 +151,7 @@ export default function RecentEnquiries() {
           </div>
         );
       case "actions":
-        return (
+        return hasDashboardAddPermission ? (
           <Button
             size="sm"
             variant="flat"
@@ -158,7 +160,7 @@ export default function RecentEnquiries() {
           >
             MoveTo
           </Button>
-        );
+        ) : null;
       default:
         return null;
     }

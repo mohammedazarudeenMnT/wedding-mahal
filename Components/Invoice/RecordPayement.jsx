@@ -31,12 +31,13 @@ import { Divider } from "@heroui/divider";
 import { Badge } from "@heroui/badge";
 
 const RecordPaymentPage = () => {
-  const hasPermission = usePagePermission(
-    "Financials/Invoices/record-payement",
-    "view"
-  );
+  const hasFinancialsPermission = usePagePermission('Financials/Invoices/record-payement', 'view');
+  const hasBookingsAddPermission = usePagePermission('bookings', 'add');
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Check if user has either permission
+  const hasPermission = hasFinancialsPermission || hasBookingsAddPermission;
 
   // Get booking data from URL parameters
   const bookingData = searchParams.get("bookingData");
