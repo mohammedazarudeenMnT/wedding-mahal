@@ -890,6 +890,7 @@ export default function ReservationList({}) {
             />
 
             <DateRangePicker
+              aria-label="Filter bookings by date range"
               className="min-w-[280px]"
               classNames={{
                 base: "bg-white rounded-lg", // Changed from bg-hotel-secondary
