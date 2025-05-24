@@ -30,7 +30,7 @@ export default function Footer({ logoUrl }) {
     { name: "Rooms", href: "/rooms" },
     { name: "Hall", href: "/hall" },
     { name: "Contact", href: "/contact" },
-   
+    { name: "Gallery", href: "/gallery" },
   ];
 
   return (
@@ -48,7 +48,10 @@ export default function Footer({ logoUrl }) {
             </div>
           </Link>
           <p className="text-gray-400 mb-6 mt-5">
-          RV Mahal blends modern comforts with traditional elegance to deliver unforgettable experiences. With spacious halls, well-furnished rooms, and top-tier amenities, your dream event starts right here.          </p>
+            RV Mahal blends modern comforts with traditional elegance to deliver
+            unforgettable experiences. With spacious halls, well-furnished
+            rooms, and top-tier amenities, your dream event starts right here.{" "}
+          </p>
           <div className="flex space-x-4 pt-4">
             <a href="#" className="hover:text-hotel-primary">
               <Facebook size={20} />
@@ -99,22 +102,30 @@ export default function Footer({ logoUrl }) {
 
       <div className="max-w-7xl mx-auto px-4 mt-16 pt-8 border-t border-gray-800">
         <div className="flex justify-evenly  mb-4">
-        <p className="text-start text-gray-400">
-          © {new Date().getFullYear()} JRV Mahaal. All Rights Reserved.
-        </p>
-          <Link href="/privacy-policy" className="text-gray-400 hover:text-hotel-primary">
+          <p className="text-start text-gray-400">
+            © {new Date().getFullYear()} JRV Mahal. All Rights Reserved.
+          </p>
+          <Link
+            href="/privacy-policy"
+            className="text-gray-400 hover:text-hotel-primary"
+          >
             Privacy Policy
           </Link>
           <span className="text-gray-400">|</span>
-          <Link href="/payment-policy" className="text-gray-400 hover:text-hotel-primary">
+          <Link
+            href="/payment-policy"
+            className="text-gray-400 hover:text-hotel-primary"
+          >
             Payment Policy
           </Link>
           <span className="text-gray-400">|</span>
-          <Link href="/terms-and-conditions" className="text-gray-400 hover:text-hotel-primary">
+          <Link
+            href="/terms-and-conditions"
+            className="text-gray-400 hover:text-hotel-primary"
+          >
             Terms & Conditions
           </Link>
         </div>
-       
       </div>
     </footer>
   );

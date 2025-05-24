@@ -28,11 +28,11 @@ export async function GET(request) {
     // Will always have data since getHotelDatabase creates default if missing
     return NextResponse.json({ success: true, hotelData: hotelData });
   } catch (err) {
-    console.error("Error fetching mahaal data:", err);
+    console.error("Error fetching mahal data:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Error fetching mahaal details",
+        message: "Error fetching mahal details",
         error: err.message,
       },
       { status: 500 }
@@ -75,20 +75,20 @@ export async function PUT(request) {
     );
 
     if (!updatedHotel) {
-      throw new Error("Failed to update mahaal data");
+      throw new Error("Failed to update mahal data");
     }
 
     return NextResponse.json({
       success: true,
-      message: "Mahaal details updated successfully",
+      message: "Mahal details updated successfully",
       hotelData: updatedHotel,
     });
   } catch (err) {
-    console.error("Error updating mahaal data:", err);
+    console.error("Error updating mahal data:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Error updating mahaal details",
+        message: "Error updating mahal details",
         error: err.message,
       },
       { status: 500 }

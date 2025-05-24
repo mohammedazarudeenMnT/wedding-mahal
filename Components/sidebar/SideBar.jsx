@@ -63,6 +63,20 @@ export function SidebarDemo() {
       ),
     },
     {
+      label: "Contacts",
+
+      icon: (
+        <IconUser className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),
+      subLinks: [
+        { label: "Guest", href: `/dashboard/contacts/guest` },
+        // {
+        //   label: "Expenses",
+        //   href: `/dashboard/financials/expenses`,
+        // },
+      ],
+    },
+    {
       label: "Bookings",
       href: `/dashboard/bookings`,
       icon: (
@@ -104,22 +118,6 @@ export function SidebarDemo() {
         <IconPackage className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
-
-    {
-      label: "Staff Management",
-
-      icon: (
-        <IconUserCircle className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-      subLinks: [
-        { label: "Employee Details", href: `/dashboard/employees` },
-        {
-          label: "Role",
-          href: `/dashboard/employees/roles-responsibility`,
-        },
-      ],
-    },
-
     {
       label: "Financials",
 
@@ -143,17 +141,17 @@ export function SidebarDemo() {
       ],
     },
     {
-      label: "Contacts",
+      label: "Staff Management",
 
       icon: (
-        <IconUser className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        <IconUserCircle className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
       subLinks: [
-        { label: "Guest", href: `/dashboard/contacts/guest` },
-        // {
-        //   label: "Expenses",
-        //   href: `/dashboard/financials/expenses`,
-        // },
+        { label: "Employee Details", href: `/dashboard/employees` },
+        {
+          label: "Role",
+          href: `/dashboard/employees/roles-responsibility`,
+        },
       ],
     },
 
