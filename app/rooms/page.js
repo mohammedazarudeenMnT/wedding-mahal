@@ -5,12 +5,11 @@ import Facilities from "../../Components/home/Facilities";
 import ExtraService from "../../Components/home/ExtraService";
 import QuoteRequest from "../../Components/home/QuoteRequest";
 
-
 export const metadata = {
-  title: "Mahaal Rooms - Book Your Stay",
+  title: "Mahal Rooms - Book Your Stay",
   description:
-    "Browse and book our luxurious mahaal rooms. Find the perfect accommodation for your stay.",
-  keywords: "mahaal rooms, booking, accommodation, luxury rooms",
+    "Browse and book our luxurious mahal rooms. Find the perfect accommodation for your stay.",
+  keywords: "mahal rooms, booking, accommodation, luxury rooms",
 };
 
 async function getRoomData() {

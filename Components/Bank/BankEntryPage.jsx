@@ -197,120 +197,130 @@ const BankEntryPage = () => {
                   required
                 />
 
-              <Select
-                label="Transaction Type"
-                selectedKeys={[formData.transactionType]}
-                onChange={(e) =>
-                  handleSelectChange("transactionType", e.target.value)
-                }
-                required
-              >
-                <SelectItem key="deposit" value="deposit">
-                  Deposit
-                </SelectItem>
-                <SelectItem key="withdrawal" value="withdrawal">
-                  Withdrawal
-                </SelectItem>
-                <SelectItem key="transfer" value="transfer">
-                  Transfer
-                </SelectItem>
-              </Select>
-
-              <Select
-                label="Payment Type"
-                selectedKeys={[formData.paymentType]}
-                onChange={(e) =>
-                  handleSelectChange("paymentType", e.target.value)
-                }
-                required
-              >
-                <SelectItem key="bank" value="bank">
-                  Bank
-                </SelectItem>
-                <SelectItem key="cash" value="cash">
-                  Cash
-                </SelectItem>
-              </Select>
-
-              <Select
-                label="From Account"
-                selectedKeys={[formData.fromAccount]}
-                onChange={(e) =>
-                  handleSelectChange("fromAccount", e.target.value)
-                }
-                required
-              >
-                {bankAccounts.map((account) => (
-                  <SelectItem key={account._id} value={account._id}>
-                    {account.type === "bank" ? account.bankName : account.name}
-                    {account.type === "bank" ? ` (${account.name})` : ""}
-                  </SelectItem>
-                ))}
-              </Select>
-
-              {formData.transactionType === "transfer" && (
                 <Select
-                  label="To Account"
-                  selectedKeys={formData.toAccount ? [formData.toAccount] : []}
+                  label="Transaction Type"
+                  selectedKeys={
+                    formData.transactionType ? [formData.transactionType] : []
+                  }
                   onChange={(e) =>
-                    handleSelectChange("toAccount", e.target.value)
+                    handleSelectChange("transactionType", e.target.value)
                   }
                   required
                 >
-                  {bankAccounts
-                    .filter((account) => account._id !== formData.fromAccount)
-                    .map((account) => (
-                      <SelectItem key={account._id} value={account._id}>
-                        {account.type === "bank"
-                          ? account.bankName
-                          : account.name}
-                        {account.type === "bank" ? ` (${account.name})` : ""}
-                      </SelectItem>
-                    ))}
+                  <SelectItem key="deposit" value="deposit">
+                    Deposit
+                  </SelectItem>
+                  <SelectItem key="withdrawal" value="withdrawal">
+                    Withdrawal
+                  </SelectItem>
+                  <SelectItem key="transfer" value="transfer">
+                    Transfer
+                  </SelectItem>
                 </Select>
-              )}
 
-              <Input
-                type="number"
-                label="Amount"
-                name="amount"
-                value={formData.amount}
-                onChange={handleChange}
-                placeholder="Enter amount"
-                required
-              />
+                <Select
+                  label="Payment Type"
+                  selectedKeys={
+                    formData.paymentType ? [formData.paymentType] : []
+                  }
+                  onChange={(e) =>
+                    handleSelectChange("paymentType", e.target.value)
+                  }
+                  required
+                >
+                  <SelectItem key="bank" value="bank">
+                    Bank
+                  </SelectItem>
+                  <SelectItem key="cash" value="cash">
+                    Cash
+                  </SelectItem>
+                </Select>
 
-              <Input
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Enter description"
-              />
+                <Select
+                  label="From Account"
+                  defaultSelectedKeys={
+                    formData.fromAccount ? [formData.fromAccount] : []
+                  }
+                  onSelectionChange={(keys) => {
+                    const selectedKey = Array.from(keys)[0];
+                    handleSelectChange("fromAccount", selectedKey);
+                  }}
+                  required
+                >
+                  {bankAccounts.map((account) => (
+                    <SelectItem key={account._id} value={account._id}>
+                      {account.type === "bank"
+                        ? `${account.bankName} (${account.name})`
+                        : account.name}
+                    </SelectItem>
+                  ))}
+                </Select>
 
-              <Input
-                label="Reference"
-                name="reference"
-                value={formData.reference}
-                onChange={handleChange}
-                placeholder="Enter reference number"
-              />
+                {formData.transactionType === "transfer" && (
+                  <Select
+                    label="To Account"
+                    defaultSelectedKeys={
+                      formData.toAccount ? [formData.toAccount] : []
+                    }
+                    onSelectionChange={(keys) => {
+                      const selectedKey = Array.from(keys)[0];
+                      handleSelectChange("toAccount", selectedKey);
+                    }}
+                    required
+                  >
+                    {bankAccounts
+                      .filter((account) => account._id !== formData.fromAccount)
+                      .map((account) => (
+                        <SelectItem key={account._id} value={account._id}>
+                          {account.type === "bank"
+                            ? `${account.bankName} (${account.name})`
+                            : account.name}
+                        </SelectItem>
+                      ))}
+                  </Select>
+                )}
+
+                <Input
+                  type="number"
+                  label="Amount"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  placeholder="Enter amount"
+                  required
+                />
+
+                <Input
+                  label="Description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Enter description"
+                />
+
+                <Input
+                  label="Reference"
+                  name="reference"
+                  value={formData.reference}
+                  onChange={handleChange}
+                  placeholder="Enter reference number"
+                />
+              </div>
+
+              <div className="flex justify-end mt-6 gap-4">
+                <Button color="default" variant="light" onClick={resetForm}>
+                  Cancel
+                </Button>
+                <Button type="submit" color="warning" isLoading={loading}>
+                  Save
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="text-center p-4 text-gray-500">
+              You don&#39;t have permission to add bank entries
             </div>
-
-            <div className="flex justify-end mt-6 gap-4">
-              <Button color="default" variant="light" onClick={resetForm}>
-                Cancel
-              </Button>
-              <Button type="submit" color="warning" isLoading={loading}>
-                Save
-              </Button>
-            </div>
-          </form>
-             ) : (
-          <div className="text-center p-4 text-gray-500">
-            You don't have permission to add bank entries
-          </div>
-        )}
+          )}
         </div>
       </div>
       {/* Show entries table if user has view permission */}

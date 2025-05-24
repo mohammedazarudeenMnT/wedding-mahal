@@ -138,8 +138,7 @@ const ResetPasswordContent = () => {
               <div className="absolute top-12 left-1/2 -translate-x-1/2">
                 <div className="relative w-28 h-28">
                   <Image
-                    src={hotelLogo}
-                    alt="Mahaal Logo"
+                    src={hotelLogo}                    alt="Mahal Logo"
                     fill
                     sizes="(max-width: 768px) 96px, 112px"
                     priority
@@ -149,7 +148,7 @@ const ResetPasswordContent = () => {
               </div>
             )}
             <div className="mb-8">
-              <h1 className="text-2xl font-semibold">Mahaal Management</h1>
+              <h1 className="text-2xl font-semibold">Mahal Management</h1>
             </div>
             <h2 className="mb-6 text-4xl font-bold">Reset Your Password</h2>
             <p className="mb-12 text-lg">

@@ -317,7 +317,7 @@ export default function AddGuest() {
       // Trigger guest search by email
       debouncedSearch("email", email);
     }
-  }, []); // Empty dependency array as this should only run once on mount
+  }, [debouncedSearch, formData.email]); // Include the required dependencies
 
   const isRoomAvailableForDateRange = useCallback(
     (roomNumber, startDate, endDate) => {
@@ -769,7 +769,9 @@ export default function AddGuest() {
     selectedServices,
     totalGuests,
     roomSettings,
-    timeSlot,
+    totalAmount.discount,
+    calculateRoomPrice,
+    ,
   ]); // Add all dependencies that are used in the calculation
 
   useEffect(() => {
@@ -781,7 +783,7 @@ export default function AddGuest() {
     ) {
       calculateTotalAmount();
     }
-  }, [selectedRooms, dateRange, calculateTotalAmount]);
+  }, [selectedRooms, dateRange, calculateTotalAmount, totalAmount.total]);
 
   const handleRoomChange = (index, field, value) => {
     const newSelectedRooms = [...selectedRooms];

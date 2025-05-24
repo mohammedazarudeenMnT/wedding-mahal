@@ -15,7 +15,11 @@ export default function HeroSection() {
     const fetchHeroData = async () => {
       try {
         const response = await axios.get("/api/web-settings");
-        if (response.data && response.data.heroSections && response.data.heroSections[0]) {
+        if (
+          response.data &&
+          response.data.heroSections &&
+          response.data.heroSections[0]
+        ) {
           setHeroData(response.data.heroSections[0]);
         }
       } catch (error) {
@@ -28,40 +32,40 @@ export default function HeroSection() {
 
   const highlightJrvMahal = (text) => {
     const patterns = [
-        'JRV Mahal',
-        'jrv mahaal',
-        'JRV mahaal',
-        'JRV MAHAAL',
-        'Jrv Mahaal',
-        'JRV Mahaal',
-        'jrv mahal',
-        'J R V MAHAAL',
-        'J.R.V MAHAAL',
-        'J.R.V. MAHAAL',
-      
-        // Additional patterns
-        'J R V Mahal',
-        'j.r.v. mahal',
-        'J-R-V Mahal',
-        'J R V mahaal',
-        'jrv-malaal',
-        'j.r.v mahaal',
-        'JRV-MAHAAL',
-        'J R V Wedding Hall',
-        'J R V Convention',
-        'JRV Marriage Hall'
-      ];
-      
-    
+      "JRV Mahal",
+      "jrv mahal",
+      "JRV mahal",
+      "JRV MAHAL",
+      "Jrv Mahal",
+      "JRV Mahal",
+      "jrv mahal",
+      "J R V MAHAL",
+      "J.R.V MAHAL",
+      "J.R.V. MAHAL",
+
+      // Additional patterns
+      "J R V Mahal",
+      "j.r.v. mahal",
+      "J-R-V Mahal",
+      "J R V mahal",
+      "jrv-mahal",
+      "j.r.v mahal",
+      "JRV-MAHAL",
+      "J R V Wedding Hall",
+      "J R V Convention",
+      "JRV Marriage Hall",
+    ];
+
     let result = text;
-    patterns.forEach(pattern => {
-      const regex = new RegExp(pattern, 'gi');
-      result = result.replace(regex, `<span class="text-hotel-primary font-semibold">${pattern}</span>`);
+    patterns.forEach((pattern) => {
+      const regex = new RegExp(pattern, "gi");
+      result = result.replace(
+        regex,
+        `<span class="text-hotel-primary font-semibold">${pattern}</span>`
+      );
     });
-    
-    return (
-      <span dangerouslySetInnerHTML={{ __html: result }} />
-    );
+
+    return <span dangerouslySetInnerHTML={{ __html: result }} />;
   };
 
   if (!heroData) return null;
@@ -147,9 +151,9 @@ export default function HeroSection() {
         </motion.div>
       </div>
 
-      <BookingModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <BookingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );
