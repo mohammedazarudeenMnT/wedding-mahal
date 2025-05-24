@@ -240,7 +240,8 @@ export const authOptions: AuthOptions = {
         token.lastActivity = Date.now()
       } else if (token.lastActivity) {
         // Check for inactivity
-        const INACTIVE_THRESHOLD = 2 * 60 * 60 * 1000 // 2 hours
+        // const INACTIVE_THRESHOLD = 2 * 60 * 60 * 1000 // 2 hours
+        const INACTIVE_THRESHOLD = 5 * 60 * 60 * 1000 // 5 hours
         if (typeof token.lastActivity === 'number' && Date.now() - token.lastActivity > INACTIVE_THRESHOLD) {
           throw new Error('Session expired due to inactivity')
         }
@@ -263,7 +264,8 @@ export const authOptions: AuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60, // 8 hours in seconds
+    // maxAge: 8 * 60 * 60, // 8 hours in seconds
+    maxAge: 24 * 60 * 60, // 24 hours in seconds
   },
   cookies: {
     sessionToken: {
@@ -275,7 +277,8 @@ export const authOptions: AuthOptions = {
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 8 * 60 * 60 // 8 hours in seconds
+        // maxAge: 8 * 60 * 60 // 8 hours in seconds
+        maxAge: 24 * 60 * 60 // 24 hours in seconds
       }
     }
   },

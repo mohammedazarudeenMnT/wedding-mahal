@@ -17,7 +17,7 @@ export const AutoLogoutHandler = () => {
       clearTimeout(inactivityTimer)
       inactivityTimer = setTimeout(() => {
         handleLogout()
-      }, 2 * 60 * 60 * 1000) // 2 hours
+      }, 5 * 60 * 60 * 1000) // 5 hours
     }
 
     const handleUserActivity = () => {
