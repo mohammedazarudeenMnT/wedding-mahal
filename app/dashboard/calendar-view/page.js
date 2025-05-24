@@ -3,12 +3,12 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader";
-import CalendarView from "../../../Components/calendarView/calendarView";
+import CalendarView from "../../../Components/calendar-view/calendar-view"
 import { usePagePermission } from "../../../hooks/usePagePermission";
-import CalendarViewSkeleton from "../../../Components/calendarView/CalendarViewSkeleton";
+import CalendarViewSkeleton from "../../../Components/calendar-view/CalendarViewSkeleton";
 
 const CalendarViewPage = () => {
-  const hasPermission = usePagePermission("Calendar", "view");
+  const hasPermission = usePagePermission("calendar-view", "view");
   const router = useRouter();
 
   if (hasPermission === null) {

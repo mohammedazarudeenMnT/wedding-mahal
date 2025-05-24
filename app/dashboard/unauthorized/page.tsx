@@ -14,19 +14,24 @@ const UnauthorizedPage = () => {
 
   const pages = useMemo(() => [
     { path: "/dashboard", permission: "Dashboard" },
-    { path: "/dashboard/calendarView", permission: "Calendar" },
+    { path: "/dashboard/calendar-view", permission: "CalendarView" },
     { path: "/dashboard/bookings", permission: "bookings" },
     { path: "/dashboard/rooms", permission: "Rooms" },
     { path: "/dashboard/logBook", permission: "LogBook" },
     { path: "/dashboard/inventory", permission: "Inventory" },
     { path: "/dashboard/employees", permission: "Employees" },
     { path: "/dashboard/employees/roles-responsibility", permission: "Employees/roles-responsibility" },
-    { path: "/dashboard/crm", permission: "crm" },
-    { path: "/dashboard/crm/add-contact", permission: "crm/add-contact" },
+    { path: "/dashboard/financials/invoices", permission: "financials/Invoices" },
+    { path: "/dashboard/financials/expenses", permission: "financials/Expenses" },
+    { path: "/dashboard/financials/Bank", permission: "financials/Bank" },
+    { path: "/dashboard/financials/ledger-book", permission: "financials/LedgerBook" },
     { path: "/dashboard/contacts/guest", permission: "contacts/guest" },
-    { path: "/dashboard/financials", permission: "financials" },
-    { path: "/dashboard/financials/invoices", permission: "financials/invoices" },
-    { path: "/dashboard/financials/expenses", permission: "financials/expenses" },
+    { path: "/dashboard/crm", permission: "crm" },
+    { path: "/dashboard/web-settings", permission: "web-settings" },
+    /* { path: "/dashboard/crm/add-contact", permission: "crm/add-contact" }, */
+    
+/*     { path: "/dashboard/financials", permission: "financials" }, */
+    
   ], [])
 
   const permissions = pages.map((_, index) => {

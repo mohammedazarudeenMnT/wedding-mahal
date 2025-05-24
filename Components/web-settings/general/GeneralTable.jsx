@@ -3,8 +3,11 @@ import { FiTrash2, FiEdit } from 'react-icons/fi';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { usePagePermission } from '../../../hooks/usePagePermission';
 
 const GeneralTable = ({ onEdit }) => {
+  const hasEditPermission = usePagePermission('web-settings', 'edit');
+  const hasDeletePermission = usePagePermission('web-settings', 'delete');
   const [heroSections, setHeroSections] = useState([]);
 
   useEffect(() => {
@@ -21,6 +24,10 @@ const GeneralTable = ({ onEdit }) => {
   };
 
   const handleEdit = (item) => {
+    if (!hasEditPermission) {
+      toast.error('You don\'t have permission to edit hero sections');
+      return;
+    }
     onEdit({
       id: item._id,
       title: item.title,
@@ -30,6 +37,10 @@ const GeneralTable = ({ onEdit }) => {
   };
 
   const handleDelete = async (id) => {
+    if (!hasDeletePermission) {
+      toast.error('You don\'t have permission to delete hero sections');
+      return;
+    }
     try {
       await axios.delete(`/api/web-settings?heroSectionId=${id}`);
       await fetchData();

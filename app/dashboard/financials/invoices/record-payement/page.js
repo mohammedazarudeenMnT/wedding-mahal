@@ -7,11 +7,12 @@ import RecordPayement from "../../../../../Components/Invoice/RecordPayement.jsx
 import { usePagePermission } from "../../../../../hooks/usePagePermission";
 
 const InvoicesPage = () => {
-  const hasPermission = usePagePermission(
-    "Financials/Invoices/record-payement",
-    "view"
-  );
+  const hasFinancialsPermission = usePagePermission('Financials/Invoices/record-payement', 'view');
+  const hasBookingsAddPermission = usePagePermission('bookings', 'add');
   const router = useRouter();
+
+  // Check if user has either permission
+  const hasPermission = hasFinancialsPermission || hasBookingsAddPermission;
 
   if (hasPermission === null) {
     return null;

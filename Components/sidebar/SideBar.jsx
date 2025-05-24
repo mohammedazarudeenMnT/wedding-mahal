@@ -57,7 +57,7 @@ export function SidebarDemo() {
     },
     {
       label: "Calendar View",
-      href: `/dashboard/calendarView`,
+      href: `/dashboard/calendar-view`,
       icon: (
         <IconCalendar className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -70,7 +70,7 @@ export function SidebarDemo() {
       ),
     },
     {
-      label: "Rooms",
+      label: "Property Management",
       href: `/dashboard/rooms`,
       icon: (
         <IconHome className="text-gray-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />

@@ -832,7 +832,6 @@ export default function Inventory() {
         Sub category Name
       </label>
       <div className="relative">
-      <div className="relative" >
         <Input
           placeholder="Search or select subcategory"
           value={subCategoryInput}
@@ -912,7 +911,6 @@ export default function Inventory() {
     <div ref={brandInputRef}>
       <label className="block text-sm text-[#4B5563] mb-2">Brand Name</label>
       <div className="relative">
-      <div className="relative" >
         <Input
           placeholder="Search or create brand"
           value={brandInput}

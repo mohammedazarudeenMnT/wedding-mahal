@@ -31,7 +31,8 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Pagination } from "@heroui/pagination";
 import { Spinner } from "@heroui/spinner";
-
+import { usePagePermission } from "@/hooks/usePagePermission";
+import TableSkeleton from "@/Components/ui/TableSkeleton";
 import {
   ChevronDown,
   Download,
@@ -85,6 +86,12 @@ const formatCurrency = (amount) => {
 };
 
 export default function GuestInfoList() {
+  // Add permission checks
+  const hasViewPermission = usePagePermission("contacts/guest", "view");
+  const hasAddPermission = usePagePermission("contacts/guest", "add");
+  const hasEditPermission = usePagePermission("contacts/guest", "edit");
+  // const hasDeletePermission = usePagePermission("contacts/guest", "delete");
+
   const [filterValue, setFilterValue] = useState("");
   const [_selectedKeys, setSelectedKeys] = useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = useState(
@@ -326,48 +333,59 @@ export default function GuestInfoList() {
       case "actions":
         return (
           <div className="flex justify-center gap-2">
-            <Link href={`/dashboard/contacts/guest/${guest.guestId}`}>
-              <Button
-                isIconOnly
-                variant="flat"
-                aria-label="View"
-                className="bg-hotel-secondary-light-grey text-hotel-primary"
+            {/* View button - requires view permission */}
+            {hasViewPermission && (
+              <Link href={`/dashboard/contacts/guest/${guest.guestId}`}>
+                <Button
+                  isIconOnly
+                  variant="flat"
+                  aria-label="View"
+                  className="bg-hotel-secondary-light-grey text-hotel-primary"
+                >
+                  <Eye size={16} />
+                </Button>
+              </Link>
+            )}
+
+            {/* Edit button - requires edit permission */}
+            {hasEditPermission && (
+              <Link
+                href={`/dashboard/contacts/guest/edit-guest/${guest.guestId}`}
               >
-                <Eye size={16} />
-              </Button>
-            </Link>
-            <Link
-              href={`/dashboard/contacts/guest/edit-guest/${guest.guestId}`}
-            >
-              <Button
-                isIconOnly
-                variant="flat"
-                aria-label="Edit"
-                className="bg-hotel-secondary-light-grey text-hotel-primary"
-                title="Edit guest details"
+                <Button
+                  isIconOnly
+                  variant="flat"
+                  aria-label="Edit"
+                  className="bg-hotel-secondary-light-grey text-hotel-primary"
+                  title="Edit guest details"
+                >
+                  <FileEdit size={16} />
+                </Button>
+              </Link>
+            )}
+
+            {/* Create Booking button - requires booking add permission */}
+            {hasAddPermission && (
+              <Link
+                href={`/dashboard/bookings/add-booking?email=${guest.emailId}`}
               >
-                <FileEdit size={16} />
-              </Button>
-            </Link>
-            <Link
-              href={`/dashboard/bookings/add-booking?email=${guest.emailId}`}
-            >
-              <Button
-                isIconOnly
-                variant="flat"
-                aria-label="Create Booking"
-                className="bg-hotel-secondary-light-grey text-hotel-primary"
-                title="Create new booking for this guest"
-              >
-                <CalendarPlus size={16} />
-              </Button>
-            </Link>
+                <Button
+                  isIconOnly
+                  variant="flat"
+                  aria-label="Create Booking"
+                  className="bg-hotel-secondary-light-grey text-hotel-primary"
+                  title="Create new booking for this guest"
+                >
+                  <CalendarPlus size={16} />
+                </Button>
+              </Link>
+            )}
           </div>
         );
       default:
         return guest[columnKey];
     }
-  }, []);
+  }, [hasViewPermission, hasEditPermission, hasAddPermission]);
 
   const onSearchChange = useCallback((value) => {
     if (value) {
@@ -678,92 +696,109 @@ export default function GuestInfoList() {
                 input: "text-hotel-primary-text",
               }}
             />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Buttons
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal bg-hotel-secondary",
-                    !isValidDateRange(date) && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {isValidDateRange(date) ? (
-                    <>
-                      {format(date.from, "LLL dd, y")} -{" "}
-                      {format(date.to, "LLL dd, y")}
-                    </>
-                  ) : (
-                    <span className="text-hotel-primary-text">Pick a date</span>
-                  )}
-                </Buttons>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from || new Date()}
-                  selected={date}
-                  onSelect={handleDateChange}
-                  numberOfMonths={2}
-                  className="rounded-md border"
-                />
-              </PopoverContent>
-            </Popover>
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
+
+            {/* Date filter - requires view permission */}
+            {hasViewPermission && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Buttons
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal bg-hotel-secondary",
+                      !isValidDateRange(date) && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {isValidDateRange(date) ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      <span className="text-hotel-primary-text">Pick a date</span>
+                    )}
+                  </Buttons>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from || new Date()}
+                    selected={date}
+                    onSelect={handleDateChange}
+                    numberOfMonths={2}
+                    className="rounded-md border"
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Sort and filter dropdowns - requires view permission */}
+            {hasViewPermission && (
+              <>
+                <Dropdown>
+                  <DropdownTrigger className="hidden sm:flex">
+                    <Button
+                      endContent={<ChevronDown className="text-small" />}
+                      variant="flat"
+                      className="bg-hotel-secondary"
+                    >
+                      {sortOrder === "asc" ? "A to Z" : "Z to A"}
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu
+                    aria-label="Sort Options"
+                    disallowEmptySelection
+                    selectionMode="single"
+                    selectedKeys={new Set([sortOrder])}
+                    onSelectionChange={(keys) =>
+                      handleSortChange(Array.from(keys)[0])
+                    }
+                  >
+                    <DropdownItem key="asc">A to Z</DropdownItem>
+                    <DropdownItem key="desc">Z to A</DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+                <Dropdown>
+                  <DropdownTrigger className="hidden sm:flex">
+                    <Button className="min-w-20 bg-hotel-secondary text-hotel-primary-text">
+                      <PiFadersHorizontal />
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu
+                    disallowEmptySelection
+                    aria-label="Table Columns"
+                    closeOnSelect={false}
+                    selectedKeys={visibleColumns}
+                    selectionMode="multiple"
+                    onSelectionChange={setVisibleColumns}
+                  >
+                    {columns.map((column) => (
+                      <DropdownItem key={column.uid} className="capitalize">
+                        {capitalize(column.name)}
+                      </DropdownItem>
+                    ))}
+                  </DropdownMenu>
+                </Dropdown>
+              </>
+            )}
+
+            {/* Download button - requires view permission */}
+            {hasViewPermission && downloadButton}
+
+            {/* Add New button - requires add permission */}
+            {hasAddPermission && (
+              <Link href="/dashboard/contacts/guest/add-guest">
                 <Button
-                  endContent={<ChevronDown className="text-small" />}
-                  variant="flat"
-                  className="bg-hotel-secondary"
+                  color="warning"
+                  className="bg-hotel-primary-yellow text-black"
                 >
-                  {sortOrder === "asc" ? "A to Z" : "Z to A"}
+                  Add New
                 </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="Sort Options"
-                disallowEmptySelection
-                selectionMode="single"
-                selectedKeys={new Set([sortOrder])}
-                onSelectionChange={(keys) =>
-                  handleSortChange(Array.from(keys)[0])
-                }
-              >
-                <DropdownItem key="asc">A to Z</DropdownItem>
-                <DropdownItem key="desc">Z to A</DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button className="min-w-20 bg-hotel-secondary text-hotel-primary-text">
-                  <PiFadersHorizontal />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                disallowEmptySelection
-                aria-label="Table Columns"
-                closeOnSelect={false}
-                selectedKeys={visibleColumns}
-                selectionMode="multiple"
-                onSelectionChange={setVisibleColumns}
-              >
-                {columns.map((column) => (
-                  <DropdownItem key={column.uid} className="capitalize">
-                    {capitalize(column.name)}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
-            {downloadButton}
-            <Link href="/dashboard/contacts/guest/add-guest">
-              <Button
-                color="warning"
-                className="bg-hotel-primary-yellow text-black"
-              >
-                Add New
-              </Button>
-            </Link>
+              </Link>
+            )}
+
             {isLoading && <Spinner size="sm" />}
             {error && <span className="text-red-500">{error}</span>}
           </div>
@@ -804,6 +839,8 @@ export default function GuestInfoList() {
     downloadButton,
     sortOrder,
     handleSortChange,
+    hasViewPermission,
+    hasAddPermission,
   ]);
 
   const bottomContent = useMemo(() => {
@@ -827,6 +864,20 @@ export default function GuestInfoList() {
       </div>
     );
   }, [page, pages, filteredItems.length, rowsPerPage]);
+
+  // Show loading skeleton while checking permissions
+  if (isLoading) {
+    return <TableSkeleton />;
+  }
+
+  // Show unauthorized message if no view permission
+  if (!hasViewPermission) {
+    return (
+      <div className="p-4 text-center">
+        You don't have permission to view guests
+      </div>
+    );
+  }
 
   return (
     <div>
