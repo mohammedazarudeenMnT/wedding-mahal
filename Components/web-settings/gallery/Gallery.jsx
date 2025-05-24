@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 
 import GalleryTable from "./GalleryTable";
 
-const Gallery = () => {
+const Gallery = ({ hasAddPermission, hasEditPermission, hasDeletePermission }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -20,22 +20,32 @@ const Gallery = () => {
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const handleDragOver = (e) => {
+    if (!hasAddPermission) return;
     e.preventDefault();
     setIsDragging(true);
   };
 
   const handleDragLeave = () => {
+    if (!hasAddPermission) return;
     setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+    if (!hasAddPermission) {
+      toast.error("You don't have permission to add images");
+      return;
+    }
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
     handleFiles(files);
   };
 
   const handleFileUpload = (e) => {
+    if (!hasAddPermission) {
+      toast.error("You don't have permission to add images");
+      return;
+    }
     const files = Array.from(e.target.files);
     handleFiles(files);
   };
@@ -90,10 +100,19 @@ const Gallery = () => {
   };
 
   const removeFile = (preview) => {
+    if (!hasAddPermission) {
+      toast.error("You don't have permission to remove images");
+      return;
+    }
     setUploadedFiles((prev) => prev.filter((file) => file.preview !== preview));
   };
 
   const handleSave = async () => {
+    if (!hasAddPermission) {
+      toast.error("You don't have permission to add images");
+      return;
+    }
+
     if (uploadedFiles.length === 0) {
       setSaveStatus("error");
       return;
@@ -142,132 +161,139 @@ const Gallery = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold mb-4">Gallery Upload</h2>
+      {hasAddPermission && (
+        <>
+          <h2 className="text-2xl font-bold mb-4">Gallery Upload</h2>
 
-      <div
-        className={`border-2 border-dashed p-6 text-center rounded-lg mb-4 ${
-          isDragging ? "bg-gray-50 border-blue-500" : "border-gray-300"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <Form.Control
-          type="file"
-          id="fileUpload"
-          className="d-none"
-          onChange={handleFileUpload}
-          multiple
-          accept="image/*"
-        />
-        <Form.Label htmlFor="fileUpload" className="mb-0 cursor-pointer">
           <div
-            className="uploadingcenter d-flex flex-column align-items-center  justify-content-center"
-            style={{ justifyItems: "center" }}
+            className={`border-2 border-dashed p-6 text-center rounded-lg mb-4 ${
+              isDragging ? "bg-gray-50 border-blue-500" : "border-gray-300"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
-            <FaUpload className="text-4xl text-gray-400 mb-3" />
-            <p className="text-lg font-semibold mb-2">
-              Drop your images here or click to browse
-            </p>
-            <p className="text-sm text-gray-500">
-              Supports: JPEG, PNG, GIF 
-            </p>
-          </div>
-        </Form.Label>
-      </div>
-
-      {uploadedFiles.length > 0 && (
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Uploaded Files</h3>
-            <div className="flex gap-3 items-center">
-              <button
-                className="px-4 py-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center transition-colors duration-200"
-                onClick={() => setUploadedFiles([])}
+            <Form.Control
+              type="file"
+              id="fileUpload"
+              className="d-none"
+              onChange={handleFileUpload}
+              multiple
+              accept="image/*"
+            />
+            <Form.Label htmlFor="fileUpload" className="mb-0 cursor-pointer">
+              <div
+                className="uploadingcenter d-flex flex-column align-items-center  justify-content-center"
+                style={{ justifyItems: "center" }}
               >
-                <FaTrash className="mr-2" /> Clear All
-              </button>
-              <button
-                disabled={isSaving || uploadedFiles.length === 0}
-                onClick={handleSave}
-                className={`px-4 py-2 rounded-lg text-white flex items-center gap-2 transition-all duration-200 ${getSaveButtonStyles()} 
-                  ${
-                    isSaving || uploadedFiles.length === 0
-                      ? "opacity-60 cursor-not-allowed"
-                      : "transform hover:-translate-y-0.5"
-                  }`}
-              >
-                <FaSave className={`${isSaving ? "animate-spin" : ""}`} />
-                <span>
-                  {isSaving
-                    ? "Saving..."
-                    : saveStatus === "success"
-                    ? "Saved!"
-                    : "Save Changes"}
-                </span>
-              </button>
-            </div>
+                <FaUpload className="text-4xl text-gray-400 mb-3" />
+                <p className="text-lg font-semibold mb-2">
+                  Drop your images here or click to browse
+                </p>
+                <p className="text-sm text-gray-500">
+                  Supports: JPEG, PNG, GIF 
+                </p>
+              </div>
+            </Form.Label>
           </div>
 
-          {saveStatus === "error" && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-3 flex items-center">
-              <FaTimesCircle className="mr-2" />
-              Error saving changes. Please try again.
+          {uploadedFiles.length > 0 && (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">Uploaded Files</h3>
+                <div className="flex gap-3 items-center">
+                  <button
+                    className="px-4 py-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center transition-colors duration-200"
+                    onClick={() => setUploadedFiles([])}
+                  >
+                    <FaTrash className="mr-2" /> Clear All
+                  </button>
+                  <button
+                    disabled={isSaving || uploadedFiles.length === 0}
+                    onClick={handleSave}
+                    className={`px-4 py-2 rounded-lg text-white flex items-center gap-2 transition-all duration-200 ${getSaveButtonStyles()} 
+                      ${
+                        isSaving || uploadedFiles.length === 0
+                          ? "opacity-60 cursor-not-allowed"
+                          : "transform hover:-translate-y-0.5"
+                      }`}
+                  >
+                    <FaSave className={`${isSaving ? "animate-spin" : ""}`} />
+                    <span>
+                      {isSaving
+                        ? "Saving..."
+                        : saveStatus === "success"
+                        ? "Saved!"
+                        : "Save Changes"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {saveStatus === "error" && (
+                <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-3 flex items-center">
+                  <FaTimesCircle className="mr-2" />
+                  Error saving changes. Please try again.
+                </div>
+              )}
+
+              <Row className="g-4">
+                {uploadedFiles.map((file, index) => (
+                  <Col key={file.preview} xs={12} sm={6} md={4} lg={3}>
+                    <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                      <div className="relative">
+                        <img
+                          src={file.preview}
+                          alt={`Preview ${index}`}
+                          className="w-100 h-48 object-cover"
+                        />
+                        <button
+                          onClick={() => removeFile(file.preview)}
+                          className="absolute top-2 right-2 p-2 rounded-full bg-white text-red-500 hover:bg-gray-100"
+                        >
+                          <FaTimesCircle />
+                        </button>
+                      </div>
+                      <div className="p-3 bg-gray-50">
+                        <div className="flex items-center mb-2">
+                          <FaImage className="text-gray-400 mr-2" />
+                          <p className="text-sm text-gray-600 truncate flex-1">
+                            {file.file.name}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                          <span>{file.size}</span>
+                          <span>
+                            {file.status === "completed"
+                              ? "Completed"
+                              : "Uploading..."}
+                          </span>
+                        </div>
+                        <ProgressBar
+                          now={file.progress}
+                          variant={
+                            file.status === "completed" ? "success" : "primary"
+                          }
+                          className="h-1"
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
             </div>
           )}
-
-          <Row className="g-4">
-            {uploadedFiles.map((file, index) => (
-              <Col key={file.preview} xs={12} sm={6} md={4} lg={3}>
-                <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                  <div className="relative">
-                    <img
-                      src={file.preview}
-                      alt={`Preview ${index}`}
-                      className="w-100 h-48 object-cover"
-                    />
-                    <button
-                      onClick={() => removeFile(file.preview)}
-                      className="absolute top-2 right-2 p-2 rounded-full bg-white text-red-500 hover:bg-gray-100"
-                    >
-                      <FaTimesCircle />
-                    </button>
-                  </div>
-                  <div className="p-3 bg-gray-50">
-                    <div className="flex items-center mb-2">
-                      <FaImage className="text-gray-400 mr-2" />
-                      <p className="text-sm text-gray-600 truncate flex-1">
-                        {file.file.name}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                      <span>{file.size}</span>
-                      <span>
-                        {file.status === "completed"
-                          ? "Completed"
-                          : "Uploading..."}
-                      </span>
-                    </div>
-                    <ProgressBar
-                      now={file.progress}
-                      variant={
-                        file.status === "completed" ? "success" : "primary"
-                      }
-                      className="h-1"
-                    />
-                  </div>
-                </div>
-              </Col>
-            ))}
-          </Row>
-        </div>
+        </>
       )}
 
       <div className="rounded-lg shadow-sm p-6">
         <h2 className="text-2xl font-semibold mb-6 text-gray-800">
           Hero Sections List
         </h2>
-        <GalleryTable key={reloadTrigger} />
+        <GalleryTable 
+          key={reloadTrigger} 
+          hasDeletePermission={hasDeletePermission}
+        />
       </div>
     </div>
   );

@@ -3,16 +3,16 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import DashboardHeader from "../../../Components/dashboardHeader/DashboardHeader";
-import LogBook from "../../../Components/logBook/logBook";
+import CalendarView from "../../../Components/calendar-view/calendar-view"
 import { usePagePermission } from "../../../hooks/usePagePermission";
-import LogBookSkeleton from "../../../Components/logBook/LogBookSkeleton";
+import CalendarViewSkeleton from "../../../Components/calendar-view/CalendarViewSkeleton";
 
-const LogBookPage = () => {
-  const hasPermission = usePagePermission("LogBook", "view");
+const CalendarViewPage = () => {
+  const hasPermission = usePagePermission("calendar-view", "view");
   const router = useRouter();
 
   if (hasPermission === null) {
-    return <LogBookSkeleton />;
+    return <CalendarViewSkeleton />;
   }
 
   if (hasPermission === false) {
@@ -23,11 +23,11 @@ const LogBookPage = () => {
   return (
     <section>
       <div className="bgclrrr pt-3">
-        <DashboardHeader headerName="Log Book" />
+        <DashboardHeader headerName="Calendar View" />
       </div>
-      <LogBook />
+      <CalendarView />
     </section>
   );
 };
 
-export default LogBookPage;
+export default CalendarViewPage;

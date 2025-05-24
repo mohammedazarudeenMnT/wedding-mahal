@@ -7,7 +7,7 @@ import Settings from "../../../Components/web-settings/Settings"
 import { usePagePermission } from "../../../hooks/usePagePermission"
 
 const SettingsPage = () => {
-  const hasPermission = usePagePermission('settings', 'view')
+  const hasPermission = usePagePermission('web-settings', 'view')
   const router = useRouter()
 
   if (hasPermission === null) {

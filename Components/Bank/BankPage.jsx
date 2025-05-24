@@ -37,8 +37,15 @@ import * as XLSX from "xlsx";
 import { Parser } from "json2csv";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { usePagePermission } from "@/hooks/usePagePermission";
+// import TableSkeleton from "@/Components/ui/TableSkeleton";
 
 const BankPage = () => {
+ /*  const hasViewPermission = usePagePermission("Bank", "view"); */
+  const hasAddPermission = usePagePermission("Financials/Bank", "add");
+  const hasEditPermission = usePagePermission("Financials/Bank", "edit");
+  const hasDeletePermission = usePagePermission("Financials/Bank", "delete");
+
   const [activeTab, setActiveTab] = useState("bank");
   const [bankAccounts, setBankAccounts] = useState([]);
   const [cashAccounts, setCashAccounts] = useState([]);
@@ -58,6 +65,7 @@ const BankPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch bank accounts
   const fetchBankAccounts = async () => {
@@ -162,6 +170,11 @@ const BankPage = () => {
 
   // Handle edit
   const handleEdit = (account) => {
+    if (!hasEditPermission) {
+      toast.error("You don't have permission to edit bank accounts");
+      return;
+    }
+
     setEditMode(true);
     setEditId(account._id);
     setActiveTab(account.type);
@@ -197,6 +210,11 @@ const BankPage = () => {
 
   // Handle delete
   const handleDelete = async (id) => {
+    if (!hasDeletePermission) {
+      toast.error("You don't have permission to delete bank accounts");
+      return;
+    }
+
     if (window.confirm("Are you sure you want to delete this account?")) {
       try {
         const response = await axios.delete(`/api/financials/bank?id=${id}`);
@@ -500,6 +518,18 @@ const BankPage = () => {
     }
   }, [getExportData, activeTab]);
 
+/*   if (!hasViewPermission) {
+    return (
+      <div className="p-4 text-center">
+        You don't have permission to view bank accounts
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <TableSkeleton />;
+  } */
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Bank & Cash Management</h1>
@@ -549,95 +579,103 @@ const BankPage = () => {
           <h2 className="text-xl font-semibold mb-4">
             {activeTab === "bank" ? "Bank Account" : "Cash Account"}
           </h2>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeTab === "bank" && (
-                <>
-                  <Input
-                    label="Bank Name"
-                    name="bankName"
-                    value={formData.bankName}
-                    onChange={handleChange}
-                    placeholder="Enter bank name"
-                    required
-                  />
-                  <Input
-                    label="Account Number"
-                    name="accountNumber"
-                    value={formData.accountNumber}
-                    onChange={handleChange}
-                    placeholder="Enter account number"
-                    required
-                  />
-                  <Input
-                    label="Account Holder Name"
-                    name="accountHolderName"
-                    value={formData.accountHolderName}
-                    onChange={handleChange}
-                    placeholder="Enter account holder name"
-                  />
-                  <Input
-                    label="Branch Name"
-                    name="branchName"
-                    value={formData.branchName}
-                    onChange={handleChange}
-                    placeholder="Enter branch name"
-                  />
-                  <Input
-                    label="IFSC Code"
-                    name="ifscCode"
-                    value={formData.ifscCode}
-                    onChange={handleChange}
-                    placeholder="Enter IFSC code"
-                    required
-                  />
-                  <Input
-                    label="Account Type"
-                    name="accountType"
-                    value={formData.accountType}
-                    onChange={handleChange}
-                    placeholder="Enter account type"
-                  />
-                </>
-              )}
-              <Input
-                label="Name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder={
-                  activeTab === "bank"
-                    ? "Enter a name for this account"
-                    : "Enter cash account name"
-                }
-                required
-              />
-              <Input
-                type="number"
-                label="Opening Balance"
-                name="openingBalance"
-                value={formData.openingBalance}
-                onChange={handleChange}
-                placeholder="Enter opening balance"
-              />
-              <Input
-                type="date"
-                label="Date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-              />
-            </div>
+          {(hasAddPermission || (hasEditPermission && editMode)) && (
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeTab === "bank" && (
+                  <>
+                    <Input
+                      label="Bank Name"
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleChange}
+                      placeholder="Enter bank name"
+                      required
+                    />
+                    <Input
+                      label="Account Number"
+                      name="accountNumber"
+                      value={formData.accountNumber}
+                      onChange={handleChange}
+                      placeholder="Enter account number"
+                      required
+                    />
+                    <Input
+                      label="Account Holder Name"
+                      name="accountHolderName"
+                      value={formData.accountHolderName}
+                      onChange={handleChange}
+                      placeholder="Enter account holder name"
+                    />
+                    <Input
+                      label="Branch Name"
+                      name="branchName"
+                      value={formData.branchName}
+                      onChange={handleChange}
+                      placeholder="Enter branch name"
+                    />
+                    <Input
+                      label="IFSC Code"
+                      name="ifscCode"
+                      value={formData.ifscCode}
+                      onChange={handleChange}
+                      placeholder="Enter IFSC code"
+                      required
+                    />
+                    <Input
+                      label="Account Type"
+                      name="accountType"
+                      value={formData.accountType}
+                      onChange={handleChange}
+                      placeholder="Enter account type"
+                    />
+                  </>
+                )}
+                <Input
+                  label="Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder={
+                    activeTab === "bank"
+                      ? "Enter a name for this account"
+                      : "Enter cash account name"
+                  }
+                  required
+                />
+                <Input
+                  type="number"
+                  label="Opening Balance"
+                  name="openingBalance"
+                  value={formData.openingBalance}
+                  onChange={handleChange}
+                  placeholder="Enter opening balance"
+                />
+                <Input
+                  type="date"
+                  label="Date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                />
+              </div>
 
-            <div className="flex justify-end mt-6 gap-4">
-              <Button color="default" variant="light" onClick={resetForm}>
-                Cancel
-              </Button>
-              <Button type="submit" color="warning" isLoading={loading}>
-                {editMode ? "Update" : "Save"}
-              </Button>
+              <div className="flex justify-end mt-6 gap-4">
+                <Button color="default" variant="light" onClick={resetForm}>
+                  Cancel
+                </Button>
+                <Button type="submit" color="warning" isLoading={loading}>
+                  {editMode ? "Update" : "Save"}
+                </Button>
+              </div>
+            </form>
+          )}
+          {!hasAddPermission && !hasEditPermission && (
+            <div className="text-center p-4 text-gray-500">
+              You don't have permission to {editMode ? "edit" : "add"} bank
+              accounts
             </div>
-          </form>
+          )}
         </div>
       </div>
 
@@ -673,22 +711,26 @@ const BankPage = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      color="primary"
-                      onClick={() => handleEdit(account)}
-                    >
-                      <IconPencil size={16} />
-                    </Button>
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      color="danger"
-                      onClick={() => handleDelete(account._id)}
-                    >
-                      <IconTrash size={16} />
-                    </Button>
+                    {hasEditPermission && (
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color="primary"
+                        onClick={() => handleEdit(account)}
+                      >
+                        <IconPencil size={16} />
+                      </Button>
+                    )}
+                    {hasDeletePermission && (
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color="danger"
+                        onClick={() => handleDelete(account._id)}
+                      >
+                        <IconTrash size={16} />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

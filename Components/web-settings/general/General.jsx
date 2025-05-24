@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import GeneralTable from './GeneralTable';
 
-const General = () => {
+const General = ({ hasAddPermission, hasEditPermission, hasDeletePermission }) => {
   const [heroData, setHeroData] = useState({
     id: null,
     title: '',
@@ -17,6 +17,10 @@ const General = () => {
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const handleImageUpload = async (e) => {
+    if (!hasAddPermission && !hasEditPermission) {
+      toast.error("You don't have permission to upload images");
+      return;
+    }
     const file = e.target.files[0];
     if (file) {
       try {
@@ -35,11 +39,24 @@ const General = () => {
   };
 
   const handleEdit = (data) => {
+    if (!hasEditPermission) {
+      toast.error("You don't have permission to edit hero sections");
+      return;
+    }
     setHeroData(data);
     setIsEditing(true);
   };
 
   const handleSave = async () => {
+    if (isEditing && !hasEditPermission) {
+      toast.error("You don't have permission to edit hero sections");
+      return;
+    }
+    if (!isEditing && !hasAddPermission) {
+      toast.error("You don't have permission to add hero sections");
+      return;
+    }
+
     try {
       if (!heroData.title || !heroData.quote || !heroData.image) {
         return toast.error('Please fill all fields');
@@ -74,6 +91,23 @@ const General = () => {
       console.error('Error:', error);
     }
   };
+
+  // If user has no add/edit permissions, only show the table
+  if (!hasAddPermission && !hasEditPermission) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-2xl font-semibold mb-6 text-gray-800">Hero Sections List</h2>
+          <GeneralTable 
+            key={reloadTrigger} 
+            onEdit={() => {}} 
+            hasEditPermission={hasEditPermission}
+            hasDeletePermission={hasDeletePermission}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -151,7 +185,12 @@ const General = () => {
         {/* Table Section */}
         <div className="rounded-lg shadow-sm p-6">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800">Hero Sections List</h2>
-          <GeneralTable key={reloadTrigger} onEdit={handleEdit} />
+          <GeneralTable 
+            key={reloadTrigger} 
+            onEdit={handleEdit}
+            hasEditPermission={hasEditPermission}
+            hasDeletePermission={hasDeletePermission}
+          />
         </div>
       </div>
     </div>

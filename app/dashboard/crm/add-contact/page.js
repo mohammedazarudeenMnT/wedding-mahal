@@ -7,7 +7,7 @@ import DashboardHeader from "../../../../Components/dashboardHeader/DashboardHea
 import { usePagePermission } from "../../../../hooks/usePagePermission"
 
 const Page = () => {
-  const hasPermission = usePagePermission("crm/add-contact", "view");
+  const hasPermission = usePagePermission("crm/add-contact", "add");
   const router = useRouter();
 
   if (hasPermission === null) {
