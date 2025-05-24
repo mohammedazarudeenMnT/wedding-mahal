@@ -357,78 +357,139 @@ const RecordPaymentPage = () => {
           paymentType: paymentDetails.paymentType || "",
           ...(paymentDetails.bank && { bank: paymentDetails.bank }),
         };
-
         if (paymentMethod === "paymentLink") {
-          // Create payment link for existing booking
-          const paymentLinkResponse = await axios.post(
-            `/api/bookings/create-razorpay-payment-link`,
-            {
-              amount: paymentDetails.amount,
-              currency: "INR",
-              customer: {
-                name: paymentDetails.customerName,
-                email: selectedTransaction.customerEmail || "",
-                contact: selectedTransaction.customerPhone || "",
-              },
-            }
-          );
-
-          if (paymentLinkResponse.data.success) {
-            transactionData.razorpayPaymentLinkId =
-              paymentLinkResponse.data.paymentLinkId;
-            transactionData.status = "completed";
-            transactionData.paymentType = paymentDetails.paymentType;
-            transactionData.bank = paymentDetails.bank;
-            transactionData.transactionId = paymentDetails.transactionId || "";
-
-            // Update paymentDetails with the payment link ID
-            paymentDetails.razorpayPaymentLinkId =
-              paymentLinkResponse.data.paymentLinkId;
-
-            // Save the transaction
-            const transactionResponse = await axios.post(
-              "/api/financials/transactions",
-              transactionData
+          try {
+            // Create payment link for existing booking
+            const paymentLinkResponse = await axios.post(
+              `/api/bookings/create-razorpay-payment-link`,
+              {
+                amount: paymentDetails.amount,
+                currency: "INR",
+                customer: {
+                  name: paymentDetails.customerName,
+                  email: selectedTransaction.customerEmail || "",
+                  contact: selectedTransaction.customerPhone || "",
+                },
+              }
             );
 
-            // Record in bank entry and ledger
-            if (transactionResponse.data.success) {
-              try {
-                // Find the selected account
-                const selectedAccount = bankAccounts.find(
-                  (acc) => acc._id === paymentDetails.paymentType
-                );
+            if (paymentLinkResponse.data.success) {
+              // Open payment link in a new window
+              window.open(paymentLinkResponse.data.paymentLink, "_blank");
 
-                // Create bank entry
-                const bankEntryData = {
-                  transactionType: "deposit", // It's income for the business
-                  paymentType: "bank",
-                  fromAccount: paymentDetails.paymentType, // Account ID
-                  amount: paymentDetails.amount,
-                  date: paymentDetails.paymentDate,
-                  description: `Payment link generated for booking #${selectedTransaction.bookingNumber}`,
-                  bookingId: selectedTransaction.bookingId,
-                  bookingNumber: selectedTransaction.bookingNumber,
-                  customerName: paymentDetails.customerName,
-                  razorpayPaymentLinkId: paymentLinkResponse.data.paymentLinkId,
-                };
+              toast.info(
+                "Payment link generated. Waiting for payment confirmation..."
+              );
 
-                await axios.post("/api/financials/bank/entry", bankEntryData);
-              } catch (bankEntryError) {
-                console.error("Error recording bank entry:", bankEntryError);
-                // Don't throw error, just log it - payment is already recorded in transactions
-              }
+              // Wait for payment to be completed
+              const pollInterval = setInterval(async () => {
+                try {
+                  const statusResponse = await axios.get(
+                    `/api/bookings/check-payment-status/${paymentLinkResponse.data.paymentLinkId}`
+                  );
+
+                  if (statusResponse.data.status === "paid") {
+                    clearInterval(pollInterval);
+
+                    // Only proceed with transaction recording if payment is confirmed
+                    transactionData.razorpayPaymentLinkId =
+                      paymentLinkResponse.data.paymentLinkId;
+                    transactionData.status = "completed";
+                    transactionData.paymentType = paymentDetails.paymentType;
+                    transactionData.bank = paymentDetails.bank;
+                    transactionData.transactionId =
+                      paymentDetails.transactionId || "";
+
+                    // Update paymentDetails with the payment link ID
+                    paymentDetails.razorpayPaymentLinkId =
+                      paymentLinkResponse.data.paymentLinkId;
+
+                    try {
+                      // Save the transaction only after payment is confirmed
+                      const transactionResponse = await axios.post(
+                        "/api/financials/transactions",
+                        transactionData
+                      );
+
+                      if (transactionResponse.data.success) {
+                        try {
+                          // Create bank entry
+                          const bankEntryData = {
+                            transactionType: "deposit",
+                            paymentType: "bank",
+                            fromAccount: paymentDetails.paymentType,
+                            amount: paymentDetails.amount,
+                            date: paymentDetails.paymentDate,
+                            description: `Payment received via payment link for booking #${selectedTransaction.bookingNumber}`,
+                            bookingId: selectedTransaction.bookingId,
+                            bookingNumber: selectedTransaction.bookingNumber,
+                            customerName: paymentDetails.customerName,
+                            razorpayPaymentLinkId:
+                              paymentLinkResponse.data.paymentLinkId,
+                          };
+
+                          await axios.post(
+                            "/api/financials/bank/entry",
+                            bankEntryData
+                          );
+                          toast.success(
+                            "Payment completed and recorded successfully!"
+                          );
+
+                          // Redirect to bookings page after success
+                          setTimeout(() => {
+                            router.push("/dashboard/bookings");
+                          }, 2000);
+                        } catch (bankEntryError) {
+                          console.error(
+                            "Error recording bank entry:",
+                            bankEntryError
+                          );
+                          // Don't throw error, payment is already recorded
+                        }
+                      }
+                    } catch (err) {
+                      console.error("Error recording transaction:", err);
+                      toast.error(
+                        "Failed to record the payment. Please contact support."
+                      );
+                      setIsProcessing(false);
+                    }
+                  } else if (
+                    ["cancelled", "expired", "failed"].includes(
+                      statusResponse.data.status
+                    )
+                  ) {
+                    clearInterval(pollInterval);
+                    toast.error(`Payment ${statusResponse.data.status}`);
+                    setIsProcessing(false);
+                  }
+                } catch (error) {
+                  clearInterval(pollInterval);
+                  console.error("Error checking payment status:", error);
+                  toast.error("Failed to verify payment status");
+                  setIsProcessing(false);
+                }
+              }, 5000);
+
+              // Set a timeout to stop polling after 5 minutes
+              setTimeout(() => {
+                clearInterval(pollInterval);
+                if (isProcessing) {
+                  setIsProcessing(false);
+                  toast.warn(
+                    "Payment verification timed out. Please check your payments page for status."
+                  );
+                }
+              }, 300000); // 5 minutes
+            } else {
+              toast.error("Failed to generate payment link");
+              setIsProcessing(false);
             }
-
-            // Open payment link in a new window
-            window.open(paymentLinkResponse.data.paymentLink, "_blank");
-
-            toast.success("Payment link generated and transaction recorded!");
-            setTimeout(() => {
-              router.push("/dashboard/bookings");
-            }, 2000);
-          } else {
+          } catch (error) {
+            console.error("Error generating payment link:", error);
             toast.error("Failed to generate payment link");
+            setIsProcessing(false);
           }
         } else {
           // Process direct payment (cash, online)
@@ -475,7 +536,7 @@ const RecordPaymentPage = () => {
               await axios.post("/api/financials/bank/entry", bankEntryData);
             } catch (bankEntryError) {
               console.error("Error recording bank entry:", bankEntryError);
-              // Don't throw error, just log it - payment is already recorded in transactions
+              // Don't throw error, payment is already recorded in transactions
             }
           }
 
