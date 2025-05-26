@@ -27,11 +27,10 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
       <div className="absolute inset-0 flex items-center justify-center">
         {hotelLogo ? (
           <div className="relative w-16 h-16">
-            <Image
-              src={hotelLogo}
+            <Image              src={hotelLogo}
               alt="Hotel Logo"
               fill
-              className="object-contain animate-pulse filter brightness-0 invert"
+              className="object-contain animate-pulse"
             />
           </div>
         ) : (
@@ -208,13 +207,12 @@ export default function Login() {
             {hotelLogo && (
               <div className="absolute top-12 left-1/2 -translate-x-1/2">
                 <div className="relative w-28 h-28">
-                  <Image
-                    src={hotelLogo}
+                  <Image                    src={hotelLogo}
                     alt="Hotel Logo"
                     fill
                     sizes="(max-width: 768px) 96px, 112px"
                     priority
-                    className="object-contain drop-shadow-2xl filter brightness-0 invert opacity-90"
+                    className="object-contain drop-shadow-2xl opacity-90"
                   />
                 </div>
               </div>
@@ -262,13 +260,12 @@ export default function Login() {
             {hotelLogo && (
               <div className="mb-4 -mt-4 flex justify-center transition-transform duration-300 hover:scale-105">
                 <div className="relative w-20 h-20 md:w-24 md:h-24">
-                  <Image
-                    src={hotelLogo}
+                  <Image                    src={hotelLogo}
                     alt="Hotel Logo"
                     fill
                     sizes="(max-width: 768px) 80px, 96px"
                     priority
-                    className="object-contain drop-shadow-xl filter brightness-0 invert opacity-90"
+                    className="object-contain drop-shadow-xl opacity-90"
                   />
                 </div>
               </div>
