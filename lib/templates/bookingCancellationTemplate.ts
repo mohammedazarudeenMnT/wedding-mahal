@@ -1,4 +1,3 @@
-
 export const bookingCancellationTemplate = `
 <!DOCTYPE html>
 <html lang="en">
@@ -72,11 +71,25 @@ export const bookingCancellationTemplate = `
 
             <div class="booking-details">
                 <p><strong>Booking Reference:</strong> {{bookingNumber}}</p>
-                <p><strong>Hotel:</strong> {{hotelDisplayName}}</p>
+                <p><strong>Mahal:</strong> {{hotelDisplayName}}</p>
+                {{#if propertyType}}
+                <p><strong>Property Type:</strong> {{propertyType}}</p>
+                {{/if}}
                 <p><strong>Check-in Date:</strong> {{checkIn}}</p>
                 <p><strong>Check-out Date:</strong> {{checkOut}}</p>
-                <p><strong>Number of Rooms:</strong> {{numberOfRooms}}</p>
-                <p><strong>Room Type(s):</strong> {{roomTypes}}</p>
+                {{#if propertyType}}
+                    {{#if (eq propertyType "hall")}}
+                        {{#if eventType}}
+                        <p><strong>Event Type:</strong> {{eventType}}</p>
+                        {{/if}}
+                        {{#if timeSlot}}
+                        <p><strong>Time Slot:</strong> {{timeSlot.name}} ({{timeSlot.fromTime}} - {{timeSlot.toTime}})</p>
+                        {{/if}}
+                    {{else}}
+                        <p><strong>Number of Rooms:</strong> {{numberOfRooms}}</p>
+                        <p><strong>Room Type(s):</strong> {{roomTypes}}</p>
+                    {{/if}}
+                {{/if}}
             </div>
 
             <div class="notice-box">

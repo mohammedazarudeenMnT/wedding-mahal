@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
 import type { UserOptions } from "jspdf-autotable"
@@ -18,7 +17,7 @@ export async function generateBookingPDF(bookingDetails: BookingDetails): Promis
       addHeader(doc, bookingDetails, pageWidth)
       const currentY = addBookingDetails(doc, bookingDetails, margin, contentWidth)
       addImportantNotice(doc, currentY, margin, contentWidth)
-      addFooter(doc, bookingDetails, pageHeight, margin, pageWidth)
+      addFooter(doc, bookingDetails, currentY, margin, pageWidth)
 
       resolve(Buffer.from(doc.output("arraybuffer")))
     } catch (error) {
@@ -46,13 +45,13 @@ function getPageDimensions(doc: jsPDFWithAutoTable) {
 function addHeader(doc: jsPDFWithAutoTable, bookingDetails: BookingDetails, pageWidth: number) {
   // Add blue header background
   doc.setFillColor(0, 86, 155)
-  doc.rect(0, 0, pageWidth, 50, "F")
+  doc.rect(0, 0, pageWidth, 45, "F")
 
   // Add header text
   doc.setTextColor(255, 255, 255)
   /* addCenteredText(doc, bookingDetails.hotelName, 25, 24, "bold") */
-  addCenteredText(doc, bookingDetails.hotelDisplayName, 25, 24, "bold")
-  addCenteredText(doc, "Booking Confirmation", 40, 20)
+  addCenteredText(doc, bookingDetails.hotelDisplayName, 18, 20, "bold")
+  addCenteredText(doc, "Booking Confirmation", 32, 16)
   doc.setTextColor(0, 0, 0)
 }
 
@@ -82,12 +81,64 @@ function addBookingDetails(
     { label: "Guest Name:", value: bookingDetails.firstName },
     { label: "Check-in:", value: bookingDetails.checkIn },
     { label: "Check-out:", value: bookingDetails.checkOut },
-    { label: "Number of Rooms:", value: bookingDetails.numberOfRooms.toString() },
-    { label: "Number of Guests:", value: bookingDetails.numberOfGuests.toString() },
-    { label: "Room Type(s):", value: bookingDetails.roomTypes },
-    { label: "Room Number(s):", value: bookingDetails.roomNumbers },
-    { label: "Total Amount:", value: formattedAmount },
   ]
+
+  // Add property type specific details
+  if (bookingDetails.propertyType) {
+    details.push({ label: "Property Type:", value: bookingDetails.propertyType })
+
+    if (bookingDetails.propertyType === "hall") {
+      if (bookingDetails.eventType) {
+        details.push({ label: "Event Type:", value: bookingDetails.eventType })
+      }
+      if (bookingDetails.timeSlot) {
+        details.push({ 
+          label: "Time Slot:", 
+          value: `${bookingDetails.timeSlot.name} (${bookingDetails.timeSlot.fromTime} - ${bookingDetails.timeSlot.toTime})` 
+        })
+      }
+      if (bookingDetails.groomDetails) {
+        details.push({ 
+          label: "Groom Details:", 
+          value: `Name: ${bookingDetails.groomDetails.name}` 
+        })
+      }
+      if (bookingDetails.brideDetails) {
+        details.push({ 
+          label: "Bride Details:", 
+          value: `Name: ${bookingDetails.brideDetails.name}` 
+        })
+      }
+      if (bookingDetails.selectedServices) {
+        details.push({ 
+          label: "Selected Services:", 
+          value: bookingDetails.selectedServices.map(service => `• ${service.name}`).join('\n') 
+        })
+      }
+    } else {
+      if (bookingDetails.numberOfRooms) {
+        details.push({ label: "Number of Rooms:", value: bookingDetails.numberOfRooms.toString() })
+      }
+      if (bookingDetails.numberOfGuests) {
+        details.push({ label: "Number of Guests:", value: bookingDetails.numberOfGuests.toString() })
+      }
+      if (bookingDetails.roomTypes) {
+        details.push({ label: "Room Type(s):", value: bookingDetails.roomTypes })
+      }
+      if (bookingDetails.roomNumbers) {
+        details.push({ label: "Room Number(s):", value: bookingDetails.roomNumbers })
+      }
+    }
+  }
+
+  details.push({ label: "Total Amount:", value: formattedAmount })
+
+  if (bookingDetails.discountPercentage) {
+    details.push({ 
+      label: "Discount:", 
+      value: `${bookingDetails.discountPercentage}% (${bookingDetails.discountAmount})` 
+    })
+  }
 
   doc.autoTable({
     startY: startY + 10,
@@ -96,8 +147,8 @@ function addBookingDetails(
     theme: "grid",
     styles: {
       font: "helvetica",
-      fontSize: 11,
-      cellPadding: 5,
+      fontSize: 10,
+      cellPadding: 3,
       overflow: "linebreak",
     },
     headStyles: {
@@ -113,7 +164,7 @@ function addBookingDetails(
     alternateRowStyles: { fillColor: [240, 240, 240] },
   })
 
-  return (doc.lastAutoTable?.finalY ?? startY + 50) + 10
+  return (doc.lastAutoTable?.finalY ?? startY + 50) + 5
 }
 
 function addImportantNotice(doc: jsPDFWithAutoTable, currentY: number, margin: number, contentWidth: number) {
@@ -123,51 +174,66 @@ function addImportantNotice(doc: jsPDFWithAutoTable, currentY: number, margin: n
   // Add notice box
   doc.setFillColor(230, 247, 255)
   doc.setDrawColor(0, 86, 155)
-  doc.roundedRect(margin, currentY, contentWidth, 20, 3, 3, "FD")
+  doc.roundedRect(margin, currentY, contentWidth, 18, 3, 3, "FD")
 
   // Add notice text
   doc.setTextColor(0, 86, 155)
-  doc.setFontSize(11)
+  doc.setFontSize(10)
   const splitNotice = doc.splitTextToSize(noticeText, contentWidth - 10)
-  doc.text(splitNotice, margin + 5, currentY + 7)
+  doc.text(splitNotice, margin + 5, currentY + 6)
   doc.setTextColor(0, 0, 0)
+
+  // Calculate the final Y position after the notice box and text
+  const finalY = currentY + 18; // Base height of the box
+  // We don't need to add text height directly because the box size should accommodate it
+  // Add a small buffer below the box
+  return finalY + 5; // Adjusted spacing
 }
 
 function addFooter(
   doc: jsPDFWithAutoTable,
   bookingDetails: BookingDetails,
-  pageHeight: number,
+  currentY: number,
   margin: number,
   pageWidth: number,
 ): number {
-  const footerY = pageHeight - margin
+  // Ensure minimum spacing from the bottom of the page
+  const pageHeight = doc.internal.pageSize.height
+  const minSpacingFromBottom = 40 // Minimum space needed for footer content
+  
+  // Calculate footer start position
+  let footerStartY = Math.min(currentY + 30, pageHeight - minSpacingFromBottom)
+  
+  // If content would overflow to next page, start a new page
+  if (footerStartY + minSpacingFromBottom > pageHeight) {
+    doc.addPage()
+    footerStartY = 30 // Start at top of new page with some margin
+  }
 
   // Add generation date above the footer line
-  addCenteredText(doc, `Generated on ${new Date().toLocaleDateString("en-IN")}`, footerY - 35, 9)
+  addCenteredText(doc, `Generated on ${new Date().toLocaleDateString("en-IN")}`, footerStartY - 8, 9)
 
   // Add footer line
   doc.setDrawColor(0, 86, 155)
   doc.setLineWidth(0.5)
-  doc.line(margin, footerY - 25, pageWidth - margin, footerY - 25)
-
+  doc.line(margin, footerStartY, pageWidth - margin, footerStartY)
   // Add footer content
-  let currentY = footerY - 20
-/*   currentY = addCenteredText(doc, bookingDetails.hotelName, currentY, 14, "bold") */
-  currentY = addCenteredText(doc, bookingDetails.hotelDisplayName, currentY, 14, "bold")
+  let nextY = footerStartY + 10
+  nextY = addCenteredText(doc, bookingDetails.hotelDisplayName, nextY, 12, "bold")
 
   if (bookingDetails.hotelAddress) {
-    currentY = addCenteredText(doc, bookingDetails.hotelAddress, currentY + 5, 11)
+    nextY = addCenteredText(doc, bookingDetails.hotelAddress, nextY + 5, 10)
   }
 
   if (bookingDetails.hotelPhone) {
-    currentY = addCenteredText(doc, `Phone: ${bookingDetails.hotelPhone}`, currentY + 5, 11)
+    nextY = addCenteredText(doc, `Phone: ${bookingDetails.hotelPhone}`, nextY + 5, 10)
   }
 
   if (bookingDetails.hotelEmail) {
-    currentY = addCenteredText(doc, `Email: ${bookingDetails.hotelEmail}`, currentY + 5, 11)
+    nextY = addCenteredText(doc, `Email: ${bookingDetails.hotelEmail}`, nextY + 5, 10)
   }
 
-  return currentY
+  return nextY
 }
 
 function addCenteredText(

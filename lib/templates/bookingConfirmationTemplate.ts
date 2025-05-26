@@ -1,4 +1,3 @@
-
 export const bookingConfirmationTemplate = `
 <!DOCTYPE html>
 <html lang="en">
@@ -327,7 +326,7 @@ export const bookingConfirmationTemplate = `
     <div class="container">
         <div class="header">
             <h1>Booking Confirmation</h1>
-            <p>Thank you for choosing our hotel</p>
+            <p>Thank you for choosing our Mahal</p>
         </div>
         
         <div class="content">
@@ -341,6 +340,12 @@ export const bookingConfirmationTemplate = `
                         <div class="label">Booking Reference</div>
                         <div class="value">{{bookingNumber}}</div>
                     </div>
+                    {{#if propertyType}}
+                    <div class="booking-info-item">
+                        <div class="label">Property Type</div>
+                        <div class="value">{{propertyType}}</div>
+                    </div>
+                    {{/if}}
                     <div class="booking-info-item">
                         <div class="label">Check-in Date</div>
                         <div class="value">{{checkIn}}</div>
@@ -349,34 +354,87 @@ export const bookingConfirmationTemplate = `
                         <div class="label">Check-out Date</div>
                         <div class="value">{{checkOut}}</div>
                     </div>
-                    <div class="booking-info-item">
-                        <div class="label">Number of Rooms</div>
-                        <div class="value">{{numberOfRooms}}</div>
-                    </div>
-                    <div class="booking-info-item">
-                        <div class="label">Number of Guests</div>
-                        <div class="value">{{numberOfGuests}}</div>
-                    </div>
-                    <div class="booking-info-item">
-                        <div class="label">Room Type(s)</div>
-                        <div class="value">{{roomTypes}}</div>
-                    </div>
-                    <div class="booking-info-item">
-                        <div class="label">Room Number(s)</div>
-                        <div class="value">{{roomNumbers}}</div>
-                    </div>
+                    {{#if propertyType}}
+                        {{#if (eq propertyType "hall")}}
+                            {{#if eventType}}
+                            <div class="booking-info-item">
+                                <div class="label">Event Type</div>
+                                <div class="value">{{eventType}}</div>
+                            </div>
+                            {{/if}}
+                            {{#if timeSlot}}
+                            <div class="booking-info-item">
+                                <div class="label">Time Slot</div>
+                                <div class="value">{{timeSlot.name}} ({{timeSlot.fromTime}} - {{timeSlot.toTime}})</div>
+                            </div>
+                            {{/if}}
+                            {{#if groomDetails}}
+                            <div class="booking-info-item">
+                                <div class="label">Groom Details</div>
+                                <div class="value">
+                                    Name: {{groomDetails.name}}<br>
+                                </div>
+                            </div>
+                            {{/if}}
+                            {{#if brideDetails}}
+                            <div class="booking-info-item">
+                                <div class="label">Bride Details</div>
+                                <div class="value">
+                                    Name: {{brideDetails.name}}<br>
+                                </div>
+                            </div>
+                            {{/if}}
+                            {{#if selectedServices}}
+                            <div class="booking-info-item">
+                                <div class="label">Selected Services</div>
+                                <div class="value">
+                                    {{#each selectedServices}}
+                                    • {{this.name}}<br>
+                                    {{/each}}
+                                </div>
+                            </div>
+                            {{/if}}
+                        {{else}}
+                            <div class="booking-info-item">
+                                <div class="label">Number of Rooms</div>
+                                <div class="value">{{numberOfRooms}}</div>
+                            </div>
+                            <div class="booking-info-item">
+                                <div class="label">Number of Guests</div>
+                                <div class="value">{{numberOfGuests}}</div>
+                            </div>
+                            <div class="booking-info-item">
+                                <div class="label">Room Type(s)</div>
+                                <div class="value">{{roomTypes}}</div>
+                            </div>
+                            <div class="booking-info-item">
+                                <div class="label">Room Number(s)</div>
+                                <div class="value">{{roomNumbers}}</div>
+                            </div>
+                        {{/if}}
+                    {{/if}}
                     <div class="booking-info-item">
                         <div class="label">Total Amount</div>
                         <div class="value">{{totalAmount}}</div>
                     </div>
+                    {{#if discountPercentage}}
+                    <div class="booking-info-item">
+                        <div class="label">Discount</div>
+                        <div class="value">{{discountPercentage}}% ({{discountAmount}})</div>
+                    </div>
+                    {{/if}}
                 </div>
             </div>
 
             <div class="notice">
                 <p><strong>Important:</strong> If you need to modify or cancel your reservation, please contact us at least 24 hours before your check-in date.</p>
-            </div>            <p>We're excited to welcome you to {{hotelDisplayName}}. If you have any questions or need to make changes to your reservation, please don't hesitate to reach out to us.</p>
+            </div>
 
+            <p>We're excited to welcome you to {{hotelDisplayName}}. If you have any questions or need to make changes to your reservation, please don't hesitate to reach out to us.</p>
+
+            {{#if hotelWebsite}}
             <a href="{{hotelWebsite}}" class="btn">Visit Our Website</a>
+            {{/if}}
 
             <div class="attachment-info">
                 <p>
