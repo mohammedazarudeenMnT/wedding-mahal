@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SessionProvider } from "next-auth/react";
@@ -8,8 +7,8 @@ export function ClientSessionProvider({ children }) {
     <SessionProvider 
       // Refetch session every 5 minutes
       refetchInterval={300}
-      // Only refetch when window is focused
-      refetchOnWindowFocus={true}
+      // Disable window focus refetch in production for better security and performance
+      refetchOnWindowFocus={false}
     >
       {children}
     </SessionProvider>

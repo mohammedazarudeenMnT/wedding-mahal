@@ -7,11 +7,15 @@ import { generateBookingPDF } from "../lib/pdfGenerator"
 import { bookingCancellationTemplate } from "./templates/bookingCancellationTemplate";
 import { getModel } from "../utils/helpers/getModel";
 
+// Register Handlebars helper for equality comparison
+Handlebars.registerHelper('eq', function (a, b) {
+  return a === b;
+});
+
 export async function sendBookingConfirmationEmail({
   to,
   name,
   bookingDetails,
- 
 }: {
   to: string;
   name: string;
@@ -20,24 +24,39 @@ export async function sendBookingConfirmationEmail({
     firstName: string;
     checkIn: string;
     checkOut: string;
-    numberOfRooms: number;
-    numberOfGuests: number;
-    roomTypes: string;
-    roomNumbers: string;
+    numberOfRooms?: number;
+    numberOfGuests?: number;
+    roomTypes?: string;
+    roomNumbers?: string;
+    propertyType?: string;
+    eventType?: string;
+    timeSlot?: {
+      name: string;
+      fromTime: string;
+      toTime: string;
+    };
+    groomDetails?: {
+      name: string;
+    };
+    brideDetails?: {
+      name: string;
+    };
+    selectedServices?: Array<{
+      name: string;
+    }>;
     hotelName: string;
     hotelDisplayName: string;
     hotelWebsite?: string;
-    hotelAddress: string;  // Make this required
-    hotelPhone: string;    // Make this required
-    hotelEmail: string;    // Make this required
+    hotelAddress: string;
+    hotelPhone: string;
+    hotelEmail: string;
     totalAmount: number;
+    discountPercentage?: number;
+    discountAmount?: number;
   };
- 
 }) {
   try {
-    // Get hotel database using the same method as addbooking route
     const { hotelData } = await getHotelDatabase();  
-    // Get email configuration from the user's database
     const EmailConfig = getModel("EmailConfiguration", emailConfigurationSchema);
     const emailConfig = await EmailConfig.findOne();
 
@@ -45,21 +64,18 @@ export async function sendBookingConfirmationEmail({
       throw new Error("Email configuration not found");
     }
 
-      // Clean up the hotel name
-      const cleanHotelName = bookingDetails.hotelName
+    const cleanHotelName = bookingDetails.hotelName
       .split('-')
-      .slice(0, -1) // Remove the last part (ID)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
-      .join(' '); // Join with spaces instead of hyphens
+      .slice(0, -1)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
 
-      // Format the amount to Indian Rupees
     const formattedAmount = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 2
     }).format(bookingDetails.totalAmount);
 
-    // Validate required fields
     const requiredFields = ['smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'senderEmail'];
     for (const field of requiredFields) {
       if (!emailConfig[field]) {
@@ -67,7 +83,6 @@ export async function sendBookingConfirmationEmail({
       }
     }
 
-    // Create transport with email configuration
     const transport = nodemailer.createTransport({
       host: emailConfig.smtpHost,
       port: parseInt(emailConfig.smtpPort),
@@ -77,24 +92,10 @@ export async function sendBookingConfirmationEmail({
         pass: emailConfig.smtpPassword
       },
       tls: {
-        rejectUnauthorized: false // Only use this in development
+        rejectUnauthorized: false
       }
     });
 
-    // const transport = nodemailer.createTransport({
-    //   host: 'smtp.example.com',
-    //   port: 465,
-    //   secure: true, // Use SSL/TLS
-    //   auth: {
-    //     user: 'user@example.com',
-    //     pass: 'password'
-    //   },
-    //   tls: {
-    //     rejectUnauthorized: true // Always validate certificates in production
-    //   }
-    // });
-
-    // Format dates if they are Date objects
     if (bookingDetails.checkIn && new Date(bookingDetails.checkIn).toString() !== 'Invalid Date') {
       bookingDetails.checkIn = new Date(bookingDetails.checkIn).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -113,30 +114,26 @@ export async function sendBookingConfirmationEmail({
       });
     }
 
-    // Compile template with booking details
     const compiledTemplate = Handlebars.compile(bookingConfirmationTemplate);
     const htmlBody = compiledTemplate({
       ...bookingDetails,
-      hotelDisplayName: bookingDetails.hotelDisplayName || cleanHotelName, // Use cleaned hotel name in template
+      hotelDisplayName: bookingDetails.hotelDisplayName || cleanHotelName,
       totalAmount: formattedAmount,
-      name, // Add guest name to template context
-      currentYear: new Date().getFullYear() // Add current year for footer
+      name,
+      currentYear: new Date().getFullYear()
     });
 
-    // Verify SMTP connection
     await transport.verify();
 
-        // Generate PDF
-        const pdfBuffer = await generateBookingPDF({
-          ...bookingDetails,
-          hotelDisplayName: bookingDetails.hotelDisplayName || cleanHotelName,
-          totalAmount: bookingDetails.totalAmount // Use the original number value
-        });
+    const pdfBuffer = await generateBookingPDF({
+      ...bookingDetails,
+      hotelDisplayName: bookingDetails.hotelDisplayName || cleanHotelName,
+      totalAmount: bookingDetails.totalAmount
+    });
 
-    // Send email
     const sendResult = await transport.sendMail({
       from: {
-        name: bookingDetails.hotelDisplayName || cleanHotelName, // Use hotelDisplayName or cleanHotelName
+        name: bookingDetails.hotelDisplayName || cleanHotelName,
         address: emailConfig.senderEmail
       },
       to,
@@ -157,15 +154,12 @@ export async function sendBookingConfirmationEmail({
   } catch (error) {
     console.error("Error sending booking confirmation email:", error);
     return false;
-  } finally {
-    // Connection cleanup is handled by getHotelDatabase
   }
 }
 
 export async function sendBookingCancellationEmail({
   to,
   bookingDetails,
-  
 }: {
   to: string;
   bookingDetails: {
@@ -173,10 +167,17 @@ export async function sendBookingCancellationEmail({
     firstName: string;
     checkIn: string;
     checkOut: string;
-    numberOfRooms: number;
-    roomTypes: string;
+    propertyType?: string;
+    eventType?: string;
+    timeSlot?: {
+      name: string;
+      fromTime: string;
+      toTime: string;
+    };
+    numberOfRooms?: number;
+    roomTypes?: string;
     hotelName: string;
-    hotelDisplayName: string; // Add this field
+    hotelDisplayName: string;
     hotelAddress?: string;
     hotelPhone?: string;
     hotelEmail?: string;
@@ -200,7 +201,7 @@ export async function sendBookingCancellationEmail({
     const compiledTemplate = Handlebars.compile(bookingCancellationTemplate);
     const htmlBody = compiledTemplate({
       ...bookingDetails,
-      hotelDisplayName: bookingDetails.hotelDisplayName
+      hotelDisplayName: bookingDetails.hotelDisplayName || cleanHotelName
     });
 
     const transport = nodemailer.createTransport({
@@ -215,7 +216,7 @@ export async function sendBookingCancellationEmail({
 
     await transport.sendMail({
       from: {
-        name: bookingDetails.hotelDisplayName || cleanHotelName, // Add the hotel name here
+        name: bookingDetails.hotelDisplayName || cleanHotelName,
         address: emailConfig.senderEmail
       },
       to,
