@@ -8,7 +8,7 @@ const nextConfig = {
       },
     ],
 
-    domains: ["hoteldemo.mntfuture.com"],
+    domains: ["jrvmahal.com"],
     unoptimized: true,
   },
 
