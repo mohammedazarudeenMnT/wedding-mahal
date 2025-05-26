@@ -189,16 +189,40 @@ export default function CrmList() {
   }, [sortDescriptor, items]);
 
   const handleMoveToBooking = useCallback(
-    (contact) => {
-      const queryParams = new URLSearchParams({
-        firstName: contact.firstName || "",
-        lastName: contact.lastName || "",
-        email: contact.email || "",
-        mobileNo: contact.mobileno || "",
-        notes: contact.notes || "",
-      }).toString();
+    async (contact) => {
+      try {
+        // Mark the contact as moved in the database
+        const response = await fetch("/api/crm", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contactId: contact._id,
+          }),
+        });
 
-      router.push(`/dashboard/bookings/add-booking?${queryParams}`);
+        if (!response.ok) {
+          throw new Error("Failed to update contact status");
+        }
+
+        // Remove the contact from the local state
+        setContacts((prevContacts) =>
+          prevContacts.filter((c) => c._id !== contact._id)
+        );
+
+        // Format dates for URL parameters
+        const startDate = new Date(contact.eventStartDate).toISOString();
+        const endDate = new Date(contact.eventEndDate).toISOString();
+
+        // Navigate to booking page with contact data
+        router.push(
+          `/dashboard/bookings/add-booking?firstName=${contact.firstName}&lastName=${contact.lastName}&email=${contact.email}&mobileno=${contact.mobileno}&propertyType=${contact.propertyType}&eventType=${contact.eventType}&startDate=${startDate}&endDate=${endDate}&notes=${contact.notes}`
+        );
+      } catch (error) {
+        console.error("Error moving contact to booking:", error);
+        // You might want to show an error toast/notification here
+      }
     },
     [router]
   );
@@ -346,6 +370,18 @@ export default function CrmList() {
       // Configure table
       doc.autoTable({
         head: [
+          Object.keys(
+            exportData[0] || {
+              Name: "",
+              Email: "",
+              "Mobile No": "",
+              "Property Type": "",
+              "Event Start Date": "",
+              "Event End Date": "",
+              "Event Type": "",
+              Notes: "",
+            }
+          ),
           Object.keys(
             exportData[0] || {
               Name: "",

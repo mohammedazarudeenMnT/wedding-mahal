@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   Row,
@@ -25,6 +25,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { toast } from "react-toastify";
 import ClientSelect from "./ClientSelect.js"; // Import the ClientSelect component
 import AddBookingSkeleton from "./AddBookingSkeleton"; // Import the skeleton component
+import { useSearchParams } from "next/navigation";
 
 import { countries } from "countries-list";
 import ConfirmationModal from "../../ui/BookingConfirmationModal.jsx";
@@ -298,26 +299,61 @@ export default function AddGuest() {
     fetchInitialData();
   }, []);
 
-  // Modify this useEffect to avoid continuous re-renders
+  const searchParams = useSearchParams();
+  const hasSearched = useRef(false);
+
+  // Email search effect - runs only once for initial email param
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const email = params.get("email");
+    const email = searchParams.get("email");
 
-    // Only run this effect on mount
-    if (email && !formData.email) {
-      setFormData((prev) => ({
-        ...prev,
-        firstName: params.get("firstName") || "",
-        lastName: params.get("lastName") || "",
-        email: email,
-        mobileNo: params.get("mobileNo") || "",
-        notes: params.get("notes") || "",
-      }));
-
-      // Trigger guest search by email
+    if (email && !isAutofilling && !hasSearched.current) {
+      hasSearched.current = true;
       debouncedSearch("email", email);
     }
-  }, [debouncedSearch, formData.email]); // Include the required dependencies
+  }, [searchParams, debouncedSearch, isAutofilling]);
+
+  // Modify this useEffect to avoid continuous re-renders
+  useEffect(() => {
+    // Pre-fill form data from URL parameters if they exist
+    const firstName = searchParams.get("firstName");
+    const lastName = searchParams.get("lastName");
+    const email = searchParams.get("email");
+    const mobileno = searchParams.get("mobileno");
+    const propertyType = searchParams.get("propertyType");
+    const eventType = searchParams.get("eventType");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const notes = searchParams.get("notes");
+
+    if (firstName || lastName || email || mobileno) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        email: email || "",
+        mobileNo: mobileno || "",
+        clientRequest: notes || "",
+      }));
+    }
+
+    if (propertyType) {
+      setPropertyType(propertyType.toLowerCase());
+    }
+
+    if (eventType) {
+      setEventType(eventType);
+    }
+
+    if (startDate && endDate) {
+      setDateRange([
+        {
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          key: "selection",
+        },
+      ]);
+    }
+  }, [searchParams]);
 
   const isRoomAvailableForDateRange = useCallback(
     (roomNumber, startDate, endDate) => {
