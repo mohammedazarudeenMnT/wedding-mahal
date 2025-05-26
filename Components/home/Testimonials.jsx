@@ -6,25 +6,25 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const testimonials = [
   {
-    name: "John D. Alexon",
-    role: "Traveler",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    name: "Manoj Kumar M",
+    // role: "Traveler",
+    image: "https://6dfa0433ff.imgdist.com/pub/bfra/9ghkfuy7/mjl/svm/g9s/Frame%201171275512.png",
     comment:
-      "Rapideously procrastinate cross-platform intellectual capital after marketing model. Appropriately interactive infrastructures after maintainable are",
+      "Spacious hall with ample parking space. The AC worked great even with a full crowd. overall a great experience.",
   },
   {
-    name: "Zaman D. John",
-    role: "Tourist",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
+    name: "Varun P",
+    // role: "Tourist",
+    image: "https://6dfa0433ff.imgdist.com/pub/bfra/9ghkfuy7/hgd/swn/now/Frame%201171275513.png",
     comment:
-      "Rapideously procrastinate cross-platform intellectual capital after marketing model. Appropriately interactive infrastructures after maintainable are",
+      "The decor, the management, and the ambience were simply outstanding. Thank you for making our wedding day magical!",
   },
   {
-    name: "Mukul Ansari",
-    role: "Business",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+    name: "Gokul K",
+    // role: "Business",
+    image: "https://6dfa0433ff.imgdist.com/pub/bfra/9ghkfuy7/rbr/l09/wy8/5727%201%20%282%29.png",
     comment:
-      "Rapideously procrastinate cross-platform intellectual capital after marketing model. Appropriately interactive infrastructures after maintainable are",
+      "Perfect for traditional South Indian weddings. Management helped us with last-minute changes too. Will book again for future family functions.",
   },
 ];
 
