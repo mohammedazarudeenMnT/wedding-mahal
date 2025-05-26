@@ -44,6 +44,7 @@ import * as XLSX from "xlsx";
 import { Parser } from "json2csv";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { CalendarDate } from "@internationalized/date";
+import { Pagination } from "@heroui/pagination";
 
 const formatCurrency = (amount) => {
   if (!amount || isNaN(amount)) return "₹0.00";
@@ -93,6 +94,9 @@ const LedgerBookPage = () => {
   const [accountType, setAccountType] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
   const [bankBalance, setBankBalance] = useState(0);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPageOptions = [5, 10, 15, 20, 25, 30];
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
 
@@ -534,7 +538,29 @@ const LedgerBookPage = () => {
     setSelectedEntry(null);
   };
 
-  // Download button component
+  // Update pagination calculation
+  const totalEntries = filteredEntries.length;
+  const totalPages = Math.ceil(totalEntries / rowsPerPage);
+  const start = (page - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+
+  // Get paginated entries
+  const paginatedEntries = useMemo(() => {
+    if (!filteredEntries || filteredEntries.length === 0) return [];
+    return filteredEntries.slice(start, end);
+  }, [filteredEntries, start, end]);
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  // Handle rows per page change
+  const handleRowsPerPageChange = (e) => {
+    const newRowsPerPage = Number(e.target.value);
+    setRowsPerPage(newRowsPerPage);
+    setPage(1); // Reset to first page when changing rows per page
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -720,7 +746,7 @@ const LedgerBookPage = () => {
                   <TableCell></TableCell>
                 </TableRow>
 
-                {filteredEntries.map((entry) => (
+                {paginatedEntries.map((entry) => (
                   <TableRow key={entry._id}>
                     <TableCell>
                       {new Date(entry.date).toLocaleDateString()}
@@ -802,6 +828,48 @@ const LedgerBookPage = () => {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination controls */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mt-6 px-2 custom-pagination">
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="text-sm">Rows per page:</span>
+            <Select
+              aria-label="Rows per page"
+              selectedKeys={[String(rowsPerPage)]}
+              onChange={handleRowsPerPageChange}
+              className="w-24 min-w-[96px]"
+              size="sm"
+            >
+              {rowsPerPageOptions.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option}
+                </SelectItem>
+              ))}
+            </Select>
+            <span className="text-sm whitespace-nowrap">
+              {start + 1}-{Math.min(end, totalEntries)} of {totalEntries}
+            </span>
+          </div>{" "}
+          <Pagination
+            showControls
+            total={totalPages}
+            initialPage={1}
+            page={page}
+            onChange={handlePageChange}
+            variant="bordered"
+            size="sm"
+            color="primary"
+            radius="sm"
+            className="gap-1 custom-pagination"
+            classNames={{
+              wrapper: "gap-0 overflow-visible h-8",
+              item: "w-8 h-8 text-small bg-transparent hover:bg-gray-100",
+              cursor: "text-white font-medium",
+              next: "bg-transparent hover:bg-gray-100",
+              prev: "bg-transparent hover:bg-gray-100",
+            }}
+          />
+        </div>
       </div>
 
       {/* Entry Details Modal */}
