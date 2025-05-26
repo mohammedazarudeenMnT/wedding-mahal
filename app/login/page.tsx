@@ -30,7 +30,7 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
             <Image              src={hotelLogo}
               alt="Mahal Logo"
               fill
-              className="object-contain animate-pulse filter brightness-0 invert"
+              className="object-contain animate-pulse"
             />
           </div>
         ) : (
@@ -212,7 +212,7 @@ export default function Login() {
                     fill
                     sizes="(max-width: 768px) 96px, 112px"
                     priority
-                    className="object-contain drop-shadow-2xl filter brightness-0 invert opacity-90"
+                    className="object-contain drop-shadow-2xl opacity-90"
                   />
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function Login() {
                     fill
                     sizes="(max-width: 768px) 80px, 96px"
                     priority
-                    className="object-contain drop-shadow-xl filter brightness-0 invert opacity-90"
+                    className="object-contain drop-shadow-xl opacity-90"
                   />
                 </div>
               </div>
