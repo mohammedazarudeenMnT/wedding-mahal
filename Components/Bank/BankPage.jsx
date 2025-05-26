@@ -9,7 +9,6 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Chip } from "@heroui/chip";
 import { Input } from "@heroui/input";
 import {
   IconBuildingBank,
@@ -41,7 +40,7 @@ import { usePagePermission } from "@/hooks/usePagePermission";
 // import TableSkeleton from "@/Components/ui/TableSkeleton";
 
 const BankPage = () => {
- /*  const hasViewPermission = usePagePermission("Bank", "view"); */
+  /*  const hasViewPermission = usePagePermission("Bank", "view"); */
   const hasAddPermission = usePagePermission("Financials/Bank", "add");
   const hasEditPermission = usePagePermission("Financials/Bank", "edit");
   const hasDeletePermission = usePagePermission("Financials/Bank", "delete");
@@ -65,7 +64,6 @@ const BankPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch bank accounts
   const fetchBankAccounts = async () => {
@@ -518,7 +516,7 @@ const BankPage = () => {
     }
   }, [getExportData, activeTab]);
 
-/*   if (!hasViewPermission) {
+  /*   if (!hasViewPermission) {
     return (
       <div className="p-4 text-center">
         You don't have permission to view bank accounts
@@ -661,7 +659,7 @@ const BankPage = () => {
               </div>
 
               <div className="flex justify-end mt-6 gap-4">
-                <Button color="default" variant="light" onClick={resetForm}>
+                <Button color="default" variant="light" onPress={resetForm}>
                   Cancel
                 </Button>
                 <Button type="submit" color="warning" isLoading={loading}>
@@ -672,7 +670,7 @@ const BankPage = () => {
           )}
           {!hasAddPermission && !hasEditPermission && (
             <div className="text-center p-4 text-gray-500">
-              You don't have permission to {editMode ? "edit" : "add"} bank
+              You don&apos;t have permission to {editMode ? "edit" : "add"} bank
               accounts
             </div>
           )}
