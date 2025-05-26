@@ -35,7 +35,6 @@ const BankEntryPage = () => {
     reference: "",
   });
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch bank accounts
   const fetchBankAccounts = async () => {

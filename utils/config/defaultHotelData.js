@@ -1,8 +1,7 @@
-
 const email = process.env.ADMINEMAIL;
 
 export const DEFAULT_HOTEL_DATA = {
-  hotelName: "taj",
+  hotelName: "JRV Mahal",
   preferenceId: "ISH20240002",
   gstNo: "456456",
   firstName: "test",
@@ -16,5 +15,4 @@ export const DEFAULT_HOTEL_DATA = {
   district: "fghj",
   state: "test",
   country: "test",
- 
 };
