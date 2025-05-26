@@ -304,88 +304,91 @@ export default function GuestInfoList() {
     });
   }, [sortDescriptor, items]);
 
-  const renderCell = useCallback((guest, columnKey) => {
-    switch (columnKey) {
-      case "guest":
-        return guest.name;
-      case "mobileNo":
-        return guest.mobileNo;
-      case "emailId":
-        return guest.emailId;
-      case "stayDates":
-        return guest.stayDates;
-      case "totalVisit":
-        return guest.totalVisit;
-      case "totalAmount":
-        return guest.totalAmount;
-      case "roomCategory":
-        return guest.roomCategory;
-      case "bookingId":
-        return guest.bookingId;
-      case "guestId":
-        return guest.guestId || "N/A"; // Add case for guestId
-      case "idProof":
-        return guest.idProof;
-      case "address":
-        return guest.address;
-      case "notes":
-        return guest.notes;
-      case "actions":
-        return (
-          <div className="flex justify-center gap-2">
-            {/* View button - requires view permission */}
-            {hasViewPermission && (
-              <Link href={`/dashboard/contacts/guest/${guest.guestId}`}>
-                <Button
-                  isIconOnly
-                  variant="flat"
-                  aria-label="View"
-                  className="bg-hotel-secondary-light-grey text-hotel-primary"
-                >
-                  <Eye size={16} />
-                </Button>
-              </Link>
-            )}
+  const renderCell = useCallback(
+    (guest, columnKey) => {
+      switch (columnKey) {
+        case "guest":
+          return guest.name;
+        case "mobileNo":
+          return guest.mobileNo;
+        case "emailId":
+          return guest.emailId;
+        case "stayDates":
+          return guest.stayDates;
+        case "totalVisit":
+          return guest.totalVisit;
+        case "totalAmount":
+          return guest.totalAmount;
+        case "roomCategory":
+          return guest.roomCategory;
+        case "bookingId":
+          return guest.bookingId;
+        case "guestId":
+          return guest.guestId || "N/A"; // Add case for guestId
+        case "idProof":
+          return guest.idProof;
+        case "address":
+          return guest.address;
+        case "notes":
+          return guest.notes;
+        case "actions":
+          return (
+            <div className="flex justify-center gap-2">
+              {/* View button - requires view permission */}
+              {hasViewPermission && (
+                <Link href={`/dashboard/contacts/guest/${guest.guestId}`}>
+                  <Button
+                    isIconOnly
+                    variant="flat"
+                    aria-label="View"
+                    className="bg-hotel-secondary-light-grey text-hotel-primary"
+                  >
+                    <Eye size={16} />
+                  </Button>
+                </Link>
+              )}
 
-            {/* Edit button - requires edit permission */}
-            {hasEditPermission && (
-              <Link
-                href={`/dashboard/contacts/guest/edit-guest/${guest.guestId}`}
-              >
-                <Button
-                  isIconOnly
-                  variant="flat"
-                  aria-label="Edit"
-                  className="bg-hotel-secondary-light-grey text-hotel-primary"
-                  title="Edit guest details"
+              {/* Edit button - requires edit permission */}
+              {hasEditPermission && (
+                <Link
+                  href={`/dashboard/contacts/guest/edit-guest/${guest.guestId}`}
                 >
-                  <FileEdit size={16} />
-                </Button>
-              </Link>
-            )}
+                  <Button
+                    isIconOnly
+                    variant="flat"
+                    aria-label="Edit"
+                    className="bg-hotel-secondary-light-grey text-hotel-primary"
+                    title="Edit guest details"
+                  >
+                    <FileEdit size={16} />
+                  </Button>
+                </Link>
+              )}
 
-            {/* Create Booking button - requires booking add permission */}
-            {hasAddPermission && (
-              <Link
-                href={`/dashboard/bookings/add-booking?email=${guest.emailId}`}
-              >
-                <Button
-                  isIconOnly
-                  variant="flat"
-                  aria-label="Create Booking"
-                  className="bg-hotel-secondary-light-grey text-hotel-primary"
-                  title="Create new booking for this guest"
+              {/* Create Booking button - requires booking add permission */}
+              {hasAddPermission && (
+                <Link
+                  href={`/dashboard/bookings/add-booking?email=${guest.emailId}`}
                 >
-                  <CalendarPlus size={16} />
-                </Button>
-              </Link>
-            )}
-          </div>
-        );
-      default:
-        return guest[columnKey];
-    }
-  }, [hasViewPermission, hasEditPermission, hasAddPermission]);
+                  <Button
+                    isIconOnly
+                    variant="flat"
+                    aria-label="Create Booking"
+                    className="bg-hotel-secondary-light-grey text-hotel-primary"
+                    title="Create new booking for this guest"
+                  >
+                    <CalendarPlus size={16} />
+                  </Button>
+                </Link>
+              )}
+            </div>
+          );
+        default:
+          return guest[columnKey];
+      }
+    },
+    [hasViewPermission, hasEditPermission, hasAddPermission]
+  );
 
   const onSearchChange = useCallback((value) => {
     if (value) {
@@ -716,7 +719,9 @@ export default function GuestInfoList() {
                         {format(date.to, "LLL dd, y")}
                       </>
                     ) : (
-                      <span className="text-hotel-primary-text">Pick a date</span>
+                      <span className="text-hotel-primary-text">
+                        Pick a date
+                      </span>
                     )}
                   </Buttons>
                 </PopoverTrigger>
@@ -874,7 +879,7 @@ export default function GuestInfoList() {
   if (!hasViewPermission) {
     return (
       <div className="p-4 text-center">
-        You don't have permission to view guests
+        You don&apos;t have permission to view guests
       </div>
     );
   }

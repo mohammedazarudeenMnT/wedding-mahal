@@ -473,61 +473,81 @@ export default function GuestProfile({ params }) {
 
                         {/* Bride and Groom Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                          {booking.groomDetails && (
-                            <div className="p-3 bg-white rounded shadow-sm">
-                              <h5 className="font-semibold mb-3">
-                                Groom Details
-                              </h5>
-                              <div className="space-y-2">
-                                <p>
-                                  <span className="text-gray-600">Name:</span>{" "}
-                                  {booking.groomDetails.name}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">Mobile:</span>{" "}
-                                  {booking.groomDetails.mobileNo}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">Email:</span>{" "}
-                                  {booking.groomDetails.email}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">
-                                    Address:
-                                  </span>{" "}
-                                  {booking.groomDetails.address}
-                                </p>
+                          {booking.groomDetails &&
+                            Object.keys(booking.groomDetails).length > 0 && (
+                              <div className="p-3 bg-white rounded shadow-sm">
+                                <h5 className="font-semibold mb-3">
+                                  Groom Details
+                                </h5>
+                                <div className="space-y-2">
+                                  <p>
+                                    <span className="text-gray-600">Name:</span>{" "}
+                                    {booking.groomDetails.name || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Gender
+                                    </span>{" "}
+                                    {booking.groomDetails.gender || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Address:
+                                    </span>{" "}
+                                    {booking.groomDetails.address || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">DOB:</span>{" "}
+                                    {booking.groomDetails.dob || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Verification ID:
+                                    </span>{" "}
+                                    {booking.groomDetails.verificationId ||
+                                      "N/A"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {booking.brideDetails && (
-                            <div className="p-3 bg-white rounded shadow-sm">
-                              <h5 className="font-semibold mb-3">
-                                Bride Details
-                              </h5>
-                              <div className="space-y-2">
-                                <p>
-                                  <span className="text-gray-600">Name:</span>{" "}
-                                  {booking.brideDetails.name}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">Mobile:</span>{" "}
-                                  {booking.brideDetails.mobileNo}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">Email:</span>{" "}
-                                  {booking.brideDetails.email}
-                                </p>
-                                <p>
-                                  <span className="text-gray-600">
-                                    Address:
-                                  </span>{" "}
-                                  {booking.brideDetails.address}
-                                </p>
+                          {booking.brideDetails &&
+                            Object.keys(booking.brideDetails).length > 0 && (
+                              <div className="p-3 bg-white rounded shadow-sm">
+                                <h5 className="font-semibold mb-3">
+                                  Bride Details
+                                </h5>
+                                <div className="space-y-2">
+                                  <p>
+                                    <span className="text-gray-600">Name:</span>{" "}
+                                    {booking.brideDetails.name || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Gender
+                                    </span>{" "}
+                                    {booking.brideDetails.gender || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Address:
+                                    </span>{" "}
+                                    {booking.brideDetails.address || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">DOB:</span>{" "}
+                                    {booking.brideDetails.dob || "N/A"}
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">
+                                      Verification ID:
+                                    </span>{" "}
+                                    {booking.brideDetails.verificationId ||
+                                      "N/A"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                         </div>
 
                         {/* Selected Services */}

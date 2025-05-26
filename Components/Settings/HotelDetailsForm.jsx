@@ -29,7 +29,7 @@ export default function HotelManagementInterface() {
           const hotelData = response.data.hotelData;
           setHotelData(hotelData);
         } else {
-          setError(response.data.message || "Failed to fetch mahaal data.");
+          setError(response.data.message || "Failed to fetch mahal data.");
         }
       } catch (err) {
         setError(err.message || "An error occurred.");

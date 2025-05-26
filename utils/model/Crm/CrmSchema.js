@@ -38,6 +38,10 @@ const crmSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    movedToBooking: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

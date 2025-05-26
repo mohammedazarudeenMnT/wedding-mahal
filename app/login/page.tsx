@@ -28,7 +28,7 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
         {hotelLogo ? (
           <div className="relative w-16 h-16">
             <Image              src={hotelLogo}
-              alt="Hotel Logo"
+              alt="Mahal Logo"
               fill
               className="object-contain animate-pulse"
             />
@@ -208,7 +208,7 @@ export default function Login() {
               <div className="absolute top-12 left-1/2 -translate-x-1/2">
                 <div className="relative w-28 h-28">
                   <Image                    src={hotelLogo}
-                    alt="Hotel Logo"
+                    alt="Mahal Logo"
                     fill
                     sizes="(max-width: 768px) 96px, 112px"
                     priority
@@ -218,7 +218,7 @@ export default function Login() {
               </div>
             )}
             <div className="mb-8">
-              <h1 className="text-2xl font-semibold">Hotel Management</h1>
+              <h1 className="text-2xl font-semibold">Mahal Management</h1>
             </div>
             <h2 className="mb-6 text-4xl font-bold">Welcome Back</h2>
             <p className="mb-12 text-lg">
@@ -261,7 +261,7 @@ export default function Login() {
               <div className="mb-4 -mt-4 flex justify-center transition-transform duration-300 hover:scale-105">
                 <div className="relative w-20 h-20 md:w-24 md:h-24">
                   <Image                    src={hotelLogo}
-                    alt="Hotel Logo"
+                    alt="Mahal Logo"
                     fill
                     sizes="(max-width: 768px) 80px, 96px"
                     priority

@@ -1,21 +1,4 @@
-import { notFound } from "next/navigation";
-import PolicyLayout from "../../Components/PolicyLayout.jsx";
-import { getPolicyData } from "../../lib/policyData";
+import { redirect } from "next/navigation";
 
-export default async function PrivacyPolicyPage() {
-  const policyData = await getPolicyData();
-
-  if (!policyData) {
-    notFound();
-  }
-
-  return (
-    <PolicyLayout title="Privacy Policy" logoPath={policyData.hotelLogo}>
-      <div
-        dangerouslySetInnerHTML={{
-          __html: policyData.policy.privacyPolicy || "",
-        }}
-      />
-    </PolicyLayout>
-  );
+export default async function PrivacyPolicyPage() {  redirect('/policies#privacy-policy');
 }

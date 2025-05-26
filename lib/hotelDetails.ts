@@ -7,13 +7,13 @@ export async function getHotelDetails() {
       },
     });
     
-    if (!response.ok) {      throw new Error('Failed to fetch mahaal details');
+    if (!response.ok) {      throw new Error('Failed to fetch mahal details');
     }
 
     const data = await response.json();
     return data.hotelData;
   } catch (error) {
-    console.error('Error fetching mahaal details:', error);
+    console.error('Error fetching mahal details:', error);
     return null;
   }
 }

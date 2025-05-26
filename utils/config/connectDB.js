@@ -8,7 +8,7 @@ const connectDb = async () => {
   const uri = `${process.env.MONGO_URI}`;
   const cleanUri = uri.replace(/\/$/, "");
   // const fullUri = `${cleanUri}/hoteldemo?retryWrites=true&w=majority`;
-  const fullUri = `${cleanUri}/taj?retryWrites=true&w=majority`;
+  const fullUri = `${cleanUri}/JrvMahal?retryWrites=true&w=majority`;
 
   try {
     connection = await mongoose.connect(fullUri, {
