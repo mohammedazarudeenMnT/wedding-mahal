@@ -10,7 +10,9 @@ export async function GET() {
     await getHotelDatabase();
     const CrmModel = getModel("Crm", Crm);
 
-    const contacts = await CrmModel.find({}).sort({ createdAt: -1 });
+    const contacts = await CrmModel.find({ movedToBooking: false }).sort({
+      createdAt: -1,
+    });
 
     return NextResponse.json(
       {
@@ -100,6 +102,59 @@ export async function POST(request) {
         message: "Contact created successfully",
       },
       { status: 201 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    await getHotelDatabase();
+    const CrmModel = getModel("Crm", Crm);
+
+    const body = await request.json();
+    const { contactId } = body;
+
+    if (!contactId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Contact ID is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const contact = await CrmModel.findByIdAndUpdate(
+      contactId,
+      { movedToBooking: true },
+      { new: true }
+    );
+
+    if (!contact) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Contact not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        contact,
+        message: "Contact marked as moved to booking",
+      },
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
