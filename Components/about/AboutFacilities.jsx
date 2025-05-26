@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Crown } from "lucide-react";
 
 const facilities = [
   {
@@ -33,13 +34,7 @@ export default function About() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
-            <Image
-              src="/icons/event-planning.png"
-              alt="Crown"
-              width={48}
-              height={48}
-              className="text-hotel-primary"
-            />
+            <Crown className="w-10 h-10 text-hotel-primary" />
           </div>
           <h2 className="text-3xl font-serif mb-4">
             Experience the JRV Mahal Advantage{" "}
