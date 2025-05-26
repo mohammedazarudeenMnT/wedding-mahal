@@ -187,8 +187,6 @@ export default function App() {
     }-${keyCounterRef.current}`;
   };
 
-  const columns = React.useMemo(() => ALL_COLUMNS, []);
-
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return ALL_COLUMNS;
     return ALL_COLUMNS.filter((column) =>
@@ -233,7 +231,14 @@ export default function App() {
     }
 
     return filteredInventory;
-  }, [inventory, filterValue, categoryFilter, brandFilter, statusFilter]);
+  }, [
+    inventory,
+    filterValue,
+    categoryFilter,
+    brandFilter,
+    statusFilter,
+    hasSearchFilter,
+  ]);
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -315,25 +320,6 @@ export default function App() {
     },
     [hasViewPermission, hasEditPermission]
   );
-
-  const onRowsPerPageChange = React.useCallback((e) => {
-    setRowsPerPage(Number(e.target.value));
-    setPage(1);
-  }, []);
-
-  const onSearchChange = React.useCallback((value) => {
-    if (value) {
-      setFilterValue(value);
-      setPage(1);
-    } else {
-      setFilterValue("");
-    }
-  }, []);
-
-  const onClear = React.useCallback(() => {
-    setFilterValue("");
-    setPage(1);
-  }, []);
 
   // Function to get export data
   const getExportData = useCallback(() => {
@@ -762,7 +748,7 @@ export default function App() {
         </div>
       </div>
     );
-  }, [selectedKeys, filteredItems.length, page, pages, rowsPerPage]);
+  }, [filteredItems.length, page, pages, rowsPerPage]);
 
   if (!hasViewPermission) {
     return (
