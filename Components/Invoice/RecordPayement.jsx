@@ -31,8 +31,11 @@ import { Divider } from "@heroui/divider";
 import { Badge } from "@heroui/badge";
 
 const RecordPaymentPage = () => {
-  const hasFinancialsPermission = usePagePermission('Financials/Invoices/record-payement', 'view');
-  const hasBookingsAddPermission = usePagePermission('bookings', 'add');
+  const hasFinancialsPermission = usePagePermission(
+    "Financials/Invoices/record-payement",
+    "view"
+  );
+  const hasBookingsAddPermission = usePagePermission("bookings", "add");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1346,67 +1349,92 @@ const RecordPaymentPage = () => {
 
                 {/* Payment Method Selection */}
                 <div className="mb-5">
-                  <label className="block text-sm font-semibold mb-3 text-gray-700">
-                    Payment Method
+                  <label className="block text-sm font-medium mb-3 text-gray-700">
+                    Select Payment Method
                   </label>
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={setPaymentMethod}
-                    orientation="horizontal"
-                    className="flex flex-wrap gap-4"
-                  >
-                    <Radio
-                      value="online"
-                      color="primary"
-                      className="p-2 relative"
-                      classNames={{
-                        base: "data-[selected=true]:bg-hotel-primary/10 data-[selected=true]:border-hotel-primary/30 border border-gray-200 rounded-lg transition-all duration-200 p-3 max-w-[180px]",
-                        labelWrapper: "w-full",
-                        label: "font-medium",
-                      }}
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      onClick={() => setPaymentMethod("online")}
+                      className={`flex items-center p-4 border rounded-lg transition-all duration-200 min-w-[200px] ${
+                        paymentMethod === "online"
+                          ? "bg-blue-50 border-blue-200"
+                          : "bg-white border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <div className="flex flex-col items-center">
+                      <div className="mr-3">
                         <FaCreditCard
-                          className="text-hotel-primary mb-2"
-                          size={24}
+                          className={`${
+                            paymentMethod === "online"
+                              ? "text-blue-500"
+                              : "text-gray-400"
+                          }`}
+                          size={20}
                         />
-                        <span>Pay Via Online</span>
                       </div>
-                    </Radio>
-                    <Radio
-                      value="cod"
-                      color="primary"
-                      className="p-2"
-                      classNames={{
-                        base: "data-[selected=true]:bg-green-50 data-[selected=true]:border-green-200 border border-gray-200 rounded-lg transition-all duration-200 p-3 max-w-[180px]",
-                        labelWrapper: "w-full",
-                        label: "font-medium",
-                      }}
+                      <div className="text-left">
+                        <div className="font-medium text-gray-700">
+                          Online Payment
+                        </div>
+                        <div className="text-xs text-gray-500">Net Banking</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setPaymentMethod("cod")}
+                      className={`flex items-center p-4 border rounded-lg transition-all duration-200 min-w-[200px] ${
+                        paymentMethod === "cod"
+                          ? "bg-green-50 border-green-200"
+                          : "bg-white border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <div className="flex flex-col items-center">
+                      <div className="mr-3">
                         <FaMoneyBillWave
-                          className="text-green-500 mb-2"
-                          size={24}
+                          className={`${
+                            paymentMethod === "cod"
+                              ? "text-green-500"
+                              : "text-gray-400"
+                          }`}
+                          size={20}
                         />
-                        <span>Pay at Hotel</span>
                       </div>
-                    </Radio>
-                    <Radio
-                      value="paymentLink"
-                      color="primary"
-                      className="p-2"
-                      classNames={{
-                        base: "data-[selected=true]:bg-purple-50 data-[selected=true]:border-purple-200 border border-gray-200 rounded-lg transition-all duration-200 p-3 max-w-[180px]",
-                        labelWrapper: "w-full",
-                        label: "font-medium",
-                      }}
+                      <div className="text-left">
+                        <div className="font-medium text-gray-700">
+                          Pay at Hotel
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Cash at venue
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setPaymentMethod("paymentLink")}
+                      className={`flex items-center p-4 border rounded-lg transition-all duration-200 min-w-[200px] ${
+                        paymentMethod === "paymentLink"
+                          ? "bg-purple-50 border-purple-200"
+                          : "bg-white border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <div className="flex flex-col items-center">
-                        <FaLink className="text-purple-500 mb-2" size={24} />
-                        <span>Generate Payment Link</span>
+                      <div className="mr-3">
+                        <FaLink
+                          className={`${
+                            paymentMethod === "paymentLink"
+                              ? "text-purple-500"
+                              : "text-gray-400"
+                          }`}
+                          size={20}
+                        />
                       </div>
-                    </Radio>
-                  </RadioGroup>
+                      <div className="text-left">
+                        <div className="font-medium text-gray-700">
+                          Payment Link
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Send link to customer
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Form Fields */}
