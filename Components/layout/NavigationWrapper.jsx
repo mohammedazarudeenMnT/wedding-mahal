@@ -43,12 +43,17 @@ export default function NavigationWrapper({ children }) {
     // Show simple loading spinner for other pages
     return null;
   }
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
   return (
     <>
-      {!isDashboard && <Navbar logoUrl={logoUrl} />}
+      {!isDashboard && !isAuthPage && <Navbar logoUrl={logoUrl} />}
       {children}
-      {!isDashboard && <Footer logoUrl={logoUrl} />}
+      {!isDashboard && !isAuthPage && <Footer logoUrl={logoUrl} />}
     </>
   );
 }

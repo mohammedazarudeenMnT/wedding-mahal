@@ -52,14 +52,16 @@ export default function Navbar({ logoUrl }) {
   return (
     <nav
       className={`w-full md:fixed top-0 z-50 transition-all duration-300 ${
-        scrolled ? "fixed bg-white text-black shadow-lg" : "bg-transparent text-white"
+        scrolled
+          ? "fixed bg-white text-black shadow-lg"
+          : "bg-transparent text-white"
       }`}
     >
       <div className="max-w-7xl mx-auto ">
         {/* Mobile Menu Button */}
         <div className="flex items-center justify-between py-4 lg:hidden px-3">
           <Link
-            href={`/dashboard`}
+            href={`/`}
             className="logo-container h-16 flex items-center px-4 transition-all duration-300"
           >
             <div className="logo-wrapper relative w-[130px] h-16">
@@ -153,12 +155,11 @@ export default function Navbar({ logoUrl }) {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden p-4 bg-black text-white">
-            <div className="flex flex-col space-y-4">
-              <Link href="/" className="hover:text-hotel-primary">
+          <div className="lg:hidden p-4 bg-black text-white">            <div className="flex flex-col space-y-4">
+              <Link href="/" className="hover:text-hotel-primary" onClick={() => setIsMenuOpen(false)}>
                 HOME
               </Link>
-              <Link href="/about" className="hover:text-hotel-primary">
+              <Link href="/about" className="hover:text-hotel-primary" onClick={() => setIsMenuOpen(false)}>
                 ABOUT
               </Link>
 
@@ -176,23 +177,31 @@ export default function Navbar({ logoUrl }) {
                     <Link
                       href="/hall"
                       className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setRoomsDropdown(false);
+                      }}
                     >
                       Hall
                     </Link>
                     <Link
                       href="/rooms"
                       className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setRoomsDropdown(false);
+                      }}
                     >
                       Rooms
                     </Link>
                   </div>
                 )}
               </div>
-              <Link href="/gallery" className={getLinkStyles("/galley")}>
+              <Link href="/gallery" className={getLinkStyles("/galley")} onClick={() => setIsMenuOpen(false)}>
                 GALLERY
               </Link>
 
-              <Link href="/contact" className="hover:text-hotel-primary">
+              <Link href="/contact" className="hover:text-hotel-primary" onClick={() => setIsMenuOpen(false)}>
                 CONTACT
               </Link>
 
@@ -200,6 +209,7 @@ export default function Navbar({ logoUrl }) {
                 <Link
                   href="/login"
                   className="block text-center hover:text-hotel-primary transition"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   LOGIN
                 </Link>
