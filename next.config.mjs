@@ -6,9 +6,12 @@ const nextConfig = {
         protocol: "https",
         hostname: "**",
       },
+      {
+        protocol: "https",
+        hostname: `${process.env.DO_SPACE_BUCKET}.${process.env.DO_SPACE_REGION}.digitaloceanspaces.com`,
+      },
     ],
-
-    domains: ["jrvmahal.com"],
+    domains: ["jrvmahal.com", "jrv-mahal.nyc3.digitaloceanspaces.com"],
     unoptimized: true,
   },
 
@@ -34,4 +37,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
- 
