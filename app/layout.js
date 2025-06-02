@@ -13,11 +13,13 @@ async function getSeoData() {
   try {
     await getHotelDatabase();
     const seoData = await SeoSchema.findOne({});
-    return seoData || {
-      metaTitle: "Default Title",
-      metaDescription: "Default Description",
-      metaKeywords: "default, keywords"
-    };
+    return (
+      seoData || {
+        metaTitle: "Default Title",
+        metaDescription: "Default Description",
+        metaKeywords: "default, keywords",
+      }
+    );
   } catch (error) {
     console.error("Error fetching SEO data:", error);
     return null;
@@ -26,10 +28,11 @@ async function getSeoData() {
 
 export async function generateMetadata() {
   const seoData = await getSeoData();
-  
+
   return {
     title: seoData?.metaTitle || "Your App Name",
-    description: seoData?.metaDescription || "Your app description for SEO purposes",
+    description:
+      seoData?.metaDescription || "Your app description for SEO purposes",
     keywords: seoData?.metaKeywords || "",
   };
 }
@@ -37,10 +40,11 @@ export async function generateMetadata() {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+      </head>
       <body className={`${lato.className} template-color-1`}>
-        <ClientProviders>
-          {children}
-        </ClientProviders> 
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
