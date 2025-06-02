@@ -4,6 +4,8 @@ import ClientProviders from "../Components/providers/ClientProviders";
 import { getHotelDatabase } from "../utils/config/hotelConnection";
 import { SeoSchema } from "../utils/model/webSettings/SeoSchema";
 
+export const dynamic = "force-dynamic";
+
 const lato = Lato({
   subsets: ["latin"],
   weight: ["400", "700"],
