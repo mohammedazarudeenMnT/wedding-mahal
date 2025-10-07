@@ -26,7 +26,13 @@ const publicRoutes = [
   // Add other frontend API routes as needed
 ]
 
-// Add security headers
+// Add security headers and CORS configuration
+const allowedOrigins = [
+  'https://www.jrvmahal.com',
+  'https://jrvmahal.com',
+  'http://localhost:3000'
+];
+
 const securityHeaders = {
   'X-DNS-Prefetch-Control': 'on',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
@@ -46,9 +52,26 @@ const MAX_REQUESTS = 10000 // Max requests per minute
 export async function middleware(request: NextRequest) {
   try {
     const pathname = request.nextUrl.pathname
-
+    const origin = request.headers.get('origin') || ''
+    
     // Handle API routes first
     if (pathname.startsWith('/api/')) {
+      // Handle CORS
+      const response = allowedOrigins.includes(origin)
+        ? NextResponse.next({
+            headers: {
+              'Access-Control-Allow-Origin': origin,
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Allow-Credentials': 'true',
+            },
+          })
+        : NextResponse.next()
+
+      // Handle preflight requests
+      if (request.method === 'OPTIONS') {
+        return response
+      }
       if (pathname === '/api/hotelDetails') {
         // Check if it's a client-side request
         const isClientSideRequest = request.headers.get('sec-fetch-site') === 'same-origin';
