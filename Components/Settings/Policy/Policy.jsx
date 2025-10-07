@@ -134,7 +134,7 @@ export default function PolicyEditor() {
       <Card className="mb-6">
         <CardHeader>
           <h2 className="text-hotel-primary-text text-xl font-semibold mb-0">
-            Cancellation Policy
+            Privacy Policy
           </h2>
         </CardHeader>
         <Divider />
